@@ -36,7 +36,11 @@ class XbStructureViewBuilderFactory(
 private class XbStructureViewModel(
     psiFile: PsiFile,
     rootItem: XbStructureItem,
-) : StructureViewModelBase(psiFile, XbStructureViewElement(psiFile, rootItem)),
+    private val delegate: StructureViewModel = StructureViewModelBase(
+        psiFile,
+        XbStructureViewElement(psiFile, rootItem),
+    ),
+) : StructureViewModel by delegate,
     StructureViewModel.ElementInfoProvider {
     override fun isAlwaysShowsPlus(element: StructureViewTreeElement): Boolean = false
 
