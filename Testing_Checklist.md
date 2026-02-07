@@ -33,9 +33,9 @@
 - [ ] Interpreter-facing logic (if applicable) has full branch coverage.
 
 ## UI (Swing)
-- [ ] Settings logic is covered with headless unit tests.
-- [ ] Presenter/model state transitions are fully tested.
-- [ ] Snapshot tests verify stable component structure (non-rendering).
+- [x] Settings logic is covered with headless unit tests.
+- [x] Presenter/model state transitions are fully tested.
+- [x] Snapshot tests verify stable component structure (non-rendering).
 
 ## CI and Tooling
 - [ ] Coverage threshold check fails the build if any threshold is missed.
