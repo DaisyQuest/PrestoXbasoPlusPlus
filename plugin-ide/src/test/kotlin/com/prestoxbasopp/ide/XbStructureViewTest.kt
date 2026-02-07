@@ -20,6 +20,7 @@ class XbStructureViewTest {
                     name = "main",
                     textRange = XbTextRange(0, 10),
                     text = "function main()",
+                    parameters = listOf("arg1", "arg2"),
                 ),
                 XbPsiSnapshot(
                     elementType = XbPsiElementType.BLOCK,
@@ -33,7 +34,7 @@ class XbStructureViewTest {
         val structure = XbStructureViewBuilder().build(snapshot)
 
         assertThat(structure.name).isEqualTo("file")
-        assertThat(structure.children.map { it.name }).containsExactly("main", "block")
+        assertThat(structure.children.map { it.name }).containsExactly("main(arg1, arg2)")
     }
 
     @Test
@@ -55,6 +56,36 @@ class XbStructureViewTest {
 
         val breadcrumbs = XbBreadcrumbsService().breadcrumbs(snapshot, 20)
         assertThat(breadcrumbs.map { it.name }).containsExactly("root", "main")
+    }
+
+    @Test
+    fun `promotes nested function declarations into the structure tree`() {
+        val snapshot = XbPsiSnapshot(
+            elementType = XbPsiElementType.FILE,
+            name = "root",
+            textRange = XbTextRange(0, 200),
+            text = "file",
+            children = listOf(
+                XbPsiSnapshot(
+                    elementType = XbPsiElementType.BLOCK,
+                    name = null,
+                    textRange = XbTextRange(0, 100),
+                    text = "{ }",
+                    children = listOf(
+                        XbPsiSnapshot(
+                            elementType = XbPsiElementType.FUNCTION_DECLARATION,
+                            name = "inner",
+                            textRange = XbTextRange(10, 90),
+                            text = "function inner()",
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val structure = XbStructureViewBuilder().build(snapshot)
+
+        assertThat(structure.children.map { it.name }).containsExactly("inner")
     }
 
     @Test

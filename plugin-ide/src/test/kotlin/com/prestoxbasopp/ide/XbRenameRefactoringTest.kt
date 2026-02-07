@@ -66,4 +66,86 @@ class XbRenameRefactoringTest {
         assertThat(result.errors).isEmpty()
         assertThat(result.edits).isEmpty()
     }
+
+    @Test
+    fun `renames symbols across project scope`() {
+        val fileOne = XbRenameTarget(
+            sourceId = "file-1",
+            snapshot = XbPsiSnapshot(
+                elementType = XbPsiElementType.FILE,
+                name = "fileOne",
+                textRange = XbTextRange(0, 20),
+                text = "file",
+                children = listOf(
+                    XbPsiSnapshot(
+                        elementType = XbPsiElementType.FUNCTION_DECLARATION,
+                        name = "foo",
+                        textRange = XbTextRange(0, 10),
+                        text = "function foo()",
+                    ),
+                ),
+            ),
+        )
+        val fileTwo = XbRenameTarget(
+            sourceId = "file-2",
+            snapshot = XbPsiSnapshot(
+                elementType = XbPsiElementType.FILE,
+                name = "fileTwo",
+                textRange = XbTextRange(0, 30),
+                text = "file",
+                children = listOf(
+                    XbPsiSnapshot(
+                        elementType = XbPsiElementType.SYMBOL_REFERENCE,
+                        name = "foo",
+                        textRange = XbTextRange(15, 18),
+                        text = "foo",
+                    ),
+                ),
+            ),
+        )
+
+        val result = XbRenameRefactoring().renameProject(listOf(fileOne, fileTwo), "foo", "bar")
+
+        assertThat(result.errors).isEmpty()
+        assertThat(result.edits).hasSize(2)
+        assertThat(result.edits.map { it.sourceId }).containsExactly("file-1", "file-2")
+        assertThat(result.updatedTargets.map { it.snapshot.children.first().name }).containsExactly("bar", "bar")
+    }
+
+    @Test
+    fun `project rename rejects blank name`() {
+        val target = XbRenameTarget(
+            sourceId = "file-1",
+            snapshot = XbPsiSnapshot(
+                elementType = XbPsiElementType.FILE,
+                name = "root",
+                textRange = XbTextRange(0, 10),
+                text = "file",
+            ),
+        )
+
+        val result = XbRenameRefactoring().renameProject(listOf(target), "foo", " ")
+
+        assertThat(result.errors).containsExactly("New name must not be blank.")
+        assertThat(result.edits).isEmpty()
+    }
+
+    @Test
+    fun `project rename no ops when name is unchanged`() {
+        val target = XbRenameTarget(
+            sourceId = "file-1",
+            snapshot = XbPsiSnapshot(
+                elementType = XbPsiElementType.FILE,
+                name = "root",
+                textRange = XbTextRange(0, 10),
+                text = "file",
+            ),
+        )
+
+        val result = XbRenameRefactoring().renameProject(listOf(target), "foo", "foo")
+
+        assertThat(result.errors).isEmpty()
+        assertThat(result.edits).isEmpty()
+        assertThat(result.updatedTargets).containsExactly(target)
+    }
 }

@@ -9,9 +9,26 @@ data class XbRenameEdit(
     val replacement: String,
 )
 
+data class XbRenameTarget(
+    val sourceId: String,
+    val snapshot: XbPsiSnapshot,
+)
+
+data class XbProjectRenameEdit(
+    val sourceId: String,
+    val textRange: XbTextRange,
+    val replacement: String,
+)
+
 data class XbRenameResult(
     val updatedSnapshot: XbPsiSnapshot,
     val edits: List<XbRenameEdit>,
+    val errors: List<String>,
+)
+
+data class XbProjectRenameResult(
+    val updatedTargets: List<XbRenameTarget>,
+    val edits: List<XbProjectRenameEdit>,
     val errors: List<String>,
 )
 
@@ -26,6 +43,25 @@ class XbRenameRefactoring {
         val edits = mutableListOf<XbRenameEdit>()
         val updated = renameInSnapshot(snapshot, oldName, newName, edits)
         return XbRenameResult(updated, edits, emptyList())
+    }
+
+    fun renameProject(targets: List<XbRenameTarget>, oldName: String, newName: String): XbProjectRenameResult {
+        if (newName.isBlank()) {
+            return XbProjectRenameResult(targets, emptyList(), listOf("New name must not be blank."))
+        }
+        if (oldName == newName) {
+            return XbProjectRenameResult(targets, emptyList(), emptyList())
+        }
+        val edits = mutableListOf<XbProjectRenameEdit>()
+        val updatedTargets = targets.map { target ->
+            val localEdits = mutableListOf<XbRenameEdit>()
+            val updatedSnapshot = renameInSnapshot(target.snapshot, oldName, newName, localEdits)
+            localEdits.forEach { edit ->
+                edits += XbProjectRenameEdit(target.sourceId, edit.textRange, edit.replacement)
+            }
+            target.copy(snapshot = updatedSnapshot)
+        }
+        return XbProjectRenameResult(updatedTargets, edits, emptyList())
     }
 
     private fun renameInSnapshot(

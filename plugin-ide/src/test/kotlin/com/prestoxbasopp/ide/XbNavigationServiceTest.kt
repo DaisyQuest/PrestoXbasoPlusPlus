@@ -3,6 +3,7 @@ package com.prestoxbasopp.ide
 import com.prestoxbasopp.core.api.XbTextRange
 import com.prestoxbasopp.core.psi.XbPsiFile
 import com.prestoxbasopp.core.psi.XbPsiFunctionDeclaration
+import com.prestoxbasopp.core.psi.XbPsiSnapshot
 import com.prestoxbasopp.core.psi.XbPsiSymbolReference
 import com.prestoxbasopp.core.psi.XbPsiVariableDeclaration
 import com.prestoxbasopp.core.stubs.XbStubType
@@ -101,5 +102,90 @@ class XbNavigationServiceTest {
         assertThat(targets.declarations).isEmpty()
         assertThat(targets.usages).isEmpty()
         assertThat(jumpTarget).isNull()
+    }
+
+    @Test
+    fun `ctrl click on function definition returns usages`() {
+        val root = XbPsiFile(
+            name = "sample",
+            textRange = XbTextRange(0, 40),
+            text = "file",
+            children = listOf(
+                XbPsiFunctionDeclaration(
+                    symbolName = "main",
+                    parameters = emptyList(),
+                    textRange = XbTextRange(0, 10),
+                    text = "function main()",
+                ),
+                XbPsiSymbolReference(
+                    symbolName = "main",
+                    textRange = XbTextRange(20, 24),
+                    text = "main",
+                ),
+            ),
+        )
+        val snapshot = XbPsiSnapshot.fromElement(root.children.first())
+
+        val service = XbNavigationService()
+        val index = service.buildIndex(root)
+
+        val usages = service.findUsagesFromDefinition(snapshot, index)
+
+        assertThat(usages).hasSize(1)
+        assertThat(usages.first().symbolName).isEqualTo("main")
+    }
+
+    @Test
+    fun `ctrl click on invocation jumps to definition`() {
+        val root = XbPsiFile(
+            name = "sample",
+            textRange = XbTextRange(0, 40),
+            text = "file",
+            children = listOf(
+                XbPsiFunctionDeclaration(
+                    symbolName = "main",
+                    parameters = emptyList(),
+                    textRange = XbTextRange(0, 10),
+                    text = "function main()",
+                ),
+                XbPsiSymbolReference(
+                    symbolName = "main",
+                    textRange = XbTextRange(20, 24),
+                    text = "main",
+                ),
+            ),
+        )
+        val snapshot = XbPsiSnapshot.fromElement(root.children.last())
+
+        val service = XbNavigationService()
+        val index = service.buildIndex(root)
+
+        val target = service.jumpToDefinitionFromInvocation(snapshot, index)
+
+        assertThat(target?.name).isEqualTo("main")
+    }
+
+    @Test
+    fun `ctrl click navigation returns empty when symbol name is missing`() {
+        val root = XbPsiFile(
+            name = "sample",
+            textRange = XbTextRange(0, 10),
+            text = "file",
+        )
+        val snapshot = XbPsiSnapshot(
+            elementType = com.prestoxbasopp.core.psi.XbPsiElementType.FUNCTION_DECLARATION,
+            name = " ",
+            textRange = XbTextRange(0, 1),
+            text = "function",
+        )
+
+        val service = XbNavigationService()
+        val index = service.buildIndex(root)
+
+        val usages = service.findUsagesFromDefinition(snapshot, index)
+        val target = service.jumpToDefinitionFromInvocation(snapshot, index)
+
+        assertThat(usages).isEmpty()
+        assertThat(target).isNull()
     }
 }
