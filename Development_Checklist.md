@@ -10,10 +10,10 @@
 - [x] **DP-0005**: Create golden test harness framework, AST dumper format, and baseline test utilities.
 
 ## Parallel Track A — Specification & Fixtures
-- [ ] **DP-0101**: Author `operations.yaml` skeleton with IDs, categories, and precedence groups.
-- [ ] **DP-0102**: Define canonical fixtures and edge fixtures under `spec/xbasepp/fixtures/operations/`.
-- [ ] **DP-0103**: Document normalized AST shapes and expected diagnostic rules.
-- [ ] **DP-0104**: Maintain compat matrix for dialect and version nuances.
+- [x] **DP-0101**: Author `operations.yaml` skeleton with IDs, categories, and precedence groups.
+- [x] **DP-0102**: Define canonical fixtures and edge fixtures under `spec/xbasepp/fixtures/operations/`.
+- [x] **DP-0103**: Document normalized AST shapes and expected diagnostic rules.
+- [x] **DP-0104**: Maintain compat matrix for dialect and version nuances.
 
 ## Parallel Track B — Lexer & Preprocessor
 - [ ] **DP-0201**: Implement token definitions and keyword groups.
