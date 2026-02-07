@@ -1,19 +1,7 @@
 package com.prestoxbasopp.core.parser
 
-import com.prestoxbasopp.core.ast.XbBinaryExpression
-import com.prestoxbasopp.core.ast.XbBlock
-import com.prestoxbasopp.core.ast.XbExpression
-import com.prestoxbasopp.core.ast.XbExpressionStatement
-import com.prestoxbasopp.core.ast.XbIdentifierExpression
-import com.prestoxbasopp.core.ast.XbIfStatement
-import com.prestoxbasopp.core.ast.XbLiteralExpression
 import com.prestoxbasopp.core.ast.XbProgram
-import com.prestoxbasopp.core.ast.XbReturnStatement
-import com.prestoxbasopp.core.ast.XbStatement
-import com.prestoxbasopp.core.ast.XbUnaryExpression
-import com.prestoxbasopp.core.ast.XbWhileStatement
 import com.prestoxbasopp.testframework.golden.AstDumpFormat
-import com.prestoxbasopp.testframework.golden.AstDumpNode
 import com.prestoxbasopp.testframework.golden.GoldenTestCase
 import com.prestoxbasopp.testframework.golden.GoldenTestHarness
 import com.prestoxbasopp.testframework.golden.ParseResult
@@ -27,89 +15,279 @@ class XbParserGoldenTest {
                 id = "precedence-multiplication",
                 source = "1 + 2 * 3;",
                 expectedAst = """
-                    Program
-                      ExprStmt
-                        Binary[op="+"]
-                          Literal[kind=number, value=1]
-                          Binary[op="*"]
-                            Literal[kind=number, value=2]
-                            Literal[kind=number, value=3]
+                    File
+                      Expr.Binary.Add
+                        Expr.Literal.Number[value=1]
+                        Expr.Binary.Multiply
+                          Expr.Literal.Number[value=2]
+                          Expr.Literal.Number[value=3]
                 """.trimIndent(),
             ),
             GoldenTestCase(
                 id = "precedence-associativity",
                 source = "1 - 2 - 3;",
                 expectedAst = """
-                    Program
-                      ExprStmt
-                        Binary[op=-]
-                          Binary[op=-]
-                            Literal[kind=number, value=1]
-                            Literal[kind=number, value=2]
-                          Literal[kind=number, value=3]
+                    File
+                      Expr.Binary.Subtract
+                        Expr.Binary.Subtract
+                          Expr.Literal.Number[value=1]
+                          Expr.Literal.Number[value=2]
+                        Expr.Literal.Number[value=3]
                 """.trimIndent(),
             ),
             GoldenTestCase(
                 id = "unary-and-grouping",
                 source = "(1 + 2) * -3;",
                 expectedAst = """
-                    Program
-                      ExprStmt
-                        Binary[op="*"]
-                          Binary[op="+"]
-                            Literal[kind=number, value=1]
-                            Literal[kind=number, value=2]
-                          Unary[op=-]
-                            Literal[kind=number, value=3]
+                    File
+                      Expr.Binary.Multiply
+                        Expr.Binary.Add
+                          Expr.Literal.Number[value=1]
+                          Expr.Literal.Number[value=2]
+                        Expr.Unary.Negation
+                          Expr.Literal.Number[value=3]
                 """.trimIndent(),
             ),
             GoldenTestCase(
                 id = "if-else-return",
                 source = "if x < 10 then return x; else return 0; endif",
                 expectedAst = """
-                    Program
-                      IfStmt
-                        Condition
-                          Binary[op="<"]
-                            Identifier[name=x]
-                            Literal[kind=number, value=10]
-                        Then
-                          Block
-                            ReturnStmt
-                              Identifier[name=x]
-                        Else
-                          Block
-                            ReturnStmt
-                              Literal[kind=number, value=0]
+                    File
+                      Stmt.If
+                        Expr.Binary.LessThan
+                          Expr.Identifier[name=x]
+                          Expr.Literal.Number[value=10]
+                        Block[branch=then]
+                          Stmt.Return
+                            Expr.Identifier[name=x]
+                        Block[branch=else]
+                          Stmt.Return
+                            Expr.Literal.Number[value=0]
                 """.trimIndent(),
             ),
             GoldenTestCase(
                 id = "string-literal",
                 source = "\"hi\" + name;",
                 expectedAst = """
-                    Program
-                      ExprStmt
-                        Binary[op="+"]
-                          Literal[kind=string, value=hi]
-                          Identifier[name=name]
+                    File
+                      Expr.Binary.Add
+                        Expr.Literal.String[value=hi]
+                        Expr.Identifier[name=name]
                 """.trimIndent(),
             ),
             GoldenTestCase(
                 id = "while-loop",
                 source = "while n > 0 do n - 1; enddo",
                 expectedAst = """
-                    Program
-                      WhileStmt
-                        Condition
-                          Binary[op=">"]
-                            Identifier[name=n]
-                            Literal[kind=number, value=0]
-                        Body
-                          Block
-                            ExprStmt
-                              Binary[op=-]
-                                Identifier[name=n]
-                                Literal[kind=number, value=1]
+                    File
+                      Stmt.While
+                        Expr.Binary.GreaterThan
+                          Expr.Identifier[name=n]
+                          Expr.Literal.Number[value=0]
+                        Block
+                          Stmt.Expression
+                            Expr.Binary.Subtract
+                              Expr.Identifier[name=n]
+                              Expr.Literal.Number[value=1]
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "function-and-procedure",
+                source = """
+                    FUNCTION LoadInventory()
+                       LOCAL items := { "Mouse", "Keyboard" }
+                       RETURN items
+                    ENDFUNCTION
+
+                    PROCEDURE InventoryReport()
+                       LOCAL data := LoadInventory()
+                       ? data[1]
+                    ENDPROC
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Decl.Function[name=LoadInventory]
+                        Params
+                        Block
+                          Stmt.Local
+                            Local.Binding[name=items]
+                              Expr.ArrayLiteral
+                                Expr.Literal.String[value=Mouse]
+                                Expr.Literal.String[value=Keyboard]
+                          Stmt.Return
+                            Expr.Identifier[name=items]
+                      Decl.Procedure[name=InventoryReport]
+                        Params
+                        Block
+                          Stmt.Local
+                            Local.Binding[name=data]
+                              Expr.Call
+                                Expr.Identifier[name=LoadInventory]
+                          Stmt.Print
+                            Expr.Index
+                              Expr.Identifier[name=data]
+                              Expr.Literal.Number[value=1]
+                """.trimIndent(),
+            ),
+        )
+
+        GoldenTestHarness.assertCases(cases, ::parseSource, ::dumpProgram)
+    }
+
+    @Test
+    fun `parses inventory sample without spurious diagnostics`() {
+        val cases = listOf<GoldenTestCase<XbProgram>>(
+            GoldenTestCase(
+                id = "inventory-sample",
+                source = """
+                    FUNCTION LoadInventory()
+                       LOCAL items := { "Mouse", "Keyboard", "Monitor" }
+                       LOCAL count := 0
+
+                       WHILE count < Len(items)
+                          ? "Loaded: " + items[count + 1]
+                          count := count + 1
+                       ENDDO
+
+                    RETURN items
+                    ENDFUNCTION
+
+
+                    FUNCTION FindItem(items, query)
+                       LOCAL index := 1
+
+                       WHILE index <= Len(items)
+                          IF items[index] == query
+                             RETURN index
+                          ENDIF
+                          index := index + 1
+                       ENDDO
+
+                    RETURN 0
+                    ENDFUNCTION
+
+
+                    PROCEDURE InventoryReport()
+                       LOCAL data := LoadInventory()
+                       LOCAL target := "Keyboard"
+                       LOCAL position := FindItem(data, target)
+
+                       IF position == 0
+                          ? "Item not found: " + target
+                       ELSE
+                          ? "Found " + target + " at position " + LTrim(Str(position))
+                       ENDIF
+
+                    RETURN
+                    ENDPROC
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Decl.Function[name=LoadInventory]
+                        Params
+                        Block
+                          Stmt.Local
+                            Local.Binding[name=items]
+                              Expr.ArrayLiteral
+                                Expr.Literal.String[value=Mouse]
+                                Expr.Literal.String[value=Keyboard]
+                                Expr.Literal.String[value=Monitor]
+                          Stmt.Local
+                            Local.Binding[name=count]
+                              Expr.Literal.Number[value=0]
+                          Stmt.While
+                            Expr.Binary.LessThan
+                              Expr.Identifier[name=count]
+                              Expr.Call
+                                Expr.Identifier[name=Len]
+                                Expr.Identifier[name=items]
+                            Block
+                              Stmt.Print
+                                Expr.Binary.Add
+                                  Expr.Literal.String[value="Loaded: "]
+                                  Expr.Index
+                                    Expr.Identifier[name=items]
+                                    Expr.Binary.Add
+                                      Expr.Identifier[name=count]
+                                      Expr.Literal.Number[value=1]
+                              Stmt.Assignment
+                                Expr.Identifier[name=count]
+                                Expr.Binary.Add
+                                  Expr.Identifier[name=count]
+                                  Expr.Literal.Number[value=1]
+                          Stmt.Return
+                            Expr.Identifier[name=items]
+                      Decl.Function[name=FindItem]
+                        Params
+                          Expr.Identifier[name=items]
+                          Expr.Identifier[name=query]
+                        Block
+                          Stmt.Local
+                            Local.Binding[name=index]
+                              Expr.Literal.Number[value=1]
+                          Stmt.While
+                            Expr.Binary.LessThanOrEqual
+                              Expr.Identifier[name=index]
+                              Expr.Call
+                                Expr.Identifier[name=Len]
+                                Expr.Identifier[name=items]
+                            Block
+                              Stmt.If
+                                Expr.Binary.Equal
+                                  Expr.Index
+                                    Expr.Identifier[name=items]
+                                    Expr.Identifier[name=index]
+                                  Expr.Identifier[name=query]
+                                Block[branch=then]
+                                  Stmt.Return
+                                    Expr.Identifier[name=index]
+                                Block[branch=else]
+                              Stmt.Assignment
+                                Expr.Identifier[name=index]
+                                Expr.Binary.Add
+                                  Expr.Identifier[name=index]
+                                  Expr.Literal.Number[value=1]
+                          Stmt.Return
+                            Expr.Literal.Number[value=0]
+                      Decl.Procedure[name=InventoryReport]
+                        Params
+                        Block
+                          Stmt.Local
+                            Local.Binding[name=data]
+                              Expr.Call
+                                Expr.Identifier[name=LoadInventory]
+                          Stmt.Local
+                            Local.Binding[name=target]
+                              Expr.Literal.String[value=Keyboard]
+                          Stmt.Local
+                            Local.Binding[name=position]
+                              Expr.Call
+                                Expr.Identifier[name=FindItem]
+                                Expr.Identifier[name=data]
+                                Expr.Identifier[name=target]
+                          Stmt.If
+                            Expr.Binary.Equal
+                              Expr.Identifier[name=position]
+                              Expr.Literal.Number[value=0]
+                            Block[branch=then]
+                              Stmt.Print
+                                Expr.Binary.Add
+                                  Expr.Literal.String[value="Item not found: "]
+                                  Expr.Identifier[name=target]
+                            Block[branch=else]
+                              Stmt.Print
+                                Expr.Binary.Add
+                                  Expr.Binary.Add
+                                    Expr.Binary.Add
+                                      Expr.Literal.String[value="Found "]
+                                      Expr.Identifier[name=target]
+                                    Expr.Literal.String[value=" at position "]
+                                  Expr.Call
+                                    Expr.Identifier[name=LTrim]
+                                    Expr.Call
+                                      Expr.Identifier[name=Str]
+                                      Expr.Identifier[name=position]
+                          Stmt.Return
                 """.trimIndent(),
             ),
         )
@@ -124,11 +302,11 @@ class XbParserGoldenTest {
                 id = "sync-on-semicolon",
                 source = "return 1; @@@; return 2;",
                 expectedAst = """
-                    Program
-                      ReturnStmt
-                        Literal[kind=number, value=1]
-                      ReturnStmt
-                        Literal[kind=number, value=2]
+                    File
+                      Stmt.Return
+                        Expr.Literal.Number[value=1]
+                      Stmt.Return
+                        Expr.Literal.Number[value=2]
                 """.trimIndent(),
                 expectedErrors = listOf("Unexpected token '@' at 10"),
             ),
@@ -136,56 +314,49 @@ class XbParserGoldenTest {
                 id = "missing-endif",
                 source = "if 1 then return 2;",
                 expectedAst = """
-                    Program
-                      IfStmt
-                        Condition
-                          Literal[kind=number, value=1]
-                        Then
-                          Block
-                            ReturnStmt
-                              Literal[kind=number, value=2]
+                    File
+                      Stmt.If
+                        Expr.Literal.Number[value=1]
+                        Block[branch=then]
+                          Stmt.Return
+                            Expr.Literal.Number[value=2]
+                        Block[branch=else]
                 """.trimIndent(),
                 expectedErrors = listOf("Expected ENDIF to close IF at 19"),
             ),
             GoldenTestCase(
-                id = "missing-then",
+                id = "optional-then",
                 source = "if 1 return 2; endif",
                 expectedAst = """
-                    Program
-                      IfStmt
-                        Condition
-                          Literal[kind=number, value=1]
-                        Then
-                          Block
-                            ReturnStmt
-                              Literal[kind=number, value=2]
+                    File
+                      Stmt.If
+                        Expr.Literal.Number[value=1]
+                        Block[branch=then]
+                          Stmt.Return
+                            Expr.Literal.Number[value=2]
+                        Block[branch=else]
                 """.trimIndent(),
-                expectedErrors = listOf("Expected THEN after IF condition at 5"),
             ),
             GoldenTestCase(
-                id = "missing-do",
+                id = "optional-do",
                 source = "while 1 return 2; enddo",
                 expectedAst = """
-                    Program
-                      WhileStmt
-                        Condition
-                          Literal[kind=number, value=1]
-                        Body
-                          Block
-                            ReturnStmt
-                              Literal[kind=number, value=2]
+                    File
+                      Stmt.While
+                        Expr.Literal.Number[value=1]
+                        Block
+                          Stmt.Return
+                            Expr.Literal.Number[value=2]
                 """.trimIndent(),
-                expectedErrors = listOf("Expected DO after WHILE condition at 8"),
             ),
             GoldenTestCase(
                 id = "missing-rparen",
                 source = "(1 + 2;",
                 expectedAst = """
-                    Program
-                      ExprStmt
-                        Binary[op="+"]
-                          Literal[kind=number, value=1]
-                          Literal[kind=number, value=2]
+                    File
+                      Expr.Binary.Add
+                        Expr.Literal.Number[value=1]
+                        Expr.Literal.Number[value=2]
                 """.trimIndent(),
                 expectedErrors = listOf("Expected ')' after expression at 6"),
             ),
@@ -201,18 +372,17 @@ class XbParserGoldenTest {
                 id = "return-without-expression",
                 source = "return;",
                 expectedAst = """
-                    Program
-                      ReturnStmt
+                    File
+                      Stmt.Return
                 """.trimIndent(),
             ),
             GoldenTestCase(
                 id = "unary-missing-operand",
                 source = "-;",
                 expectedAst = """
-                    Program
-                      ExprStmt
-                        Unary[op=-]
-                          Identifier[name="<error>"]
+                    File
+                      Expr.Unary.Negation
+                        Expr.Identifier[name="<error>"]
                 """.trimIndent(),
                 expectedErrors = listOf(
                     "Unexpected token SEMICOLON at 1",
@@ -223,11 +393,10 @@ class XbParserGoldenTest {
                 id = "binary-missing-right-hand-side",
                 source = "1 + ;",
                 expectedAst = """
-                    Program
-                      ExprStmt
-                        Binary[op="+"]
-                          Literal[kind=number, value=1]
-                          Identifier[name="<error>"]
+                    File
+                      Expr.Binary.Add
+                        Expr.Literal.Number[value=1]
+                        Expr.Identifier[name="<error>"]
                 """.trimIndent(),
                 expectedErrors = listOf(
                     "Unexpected token SEMICOLON at 4",
@@ -238,26 +407,24 @@ class XbParserGoldenTest {
                 id = "if-missing-condition",
                 source = "if then return 1; endif",
                 expectedAst = """
-                    Program
-                      IfStmt
-                        Condition
-                          Identifier[name="<error>"]
-                        Then
-                          Block
+                    File
+                      Stmt.If
+                        Expr.Identifier[name="<error>"]
+                        Block[branch=then]
+                        Block[branch=else]
                 """.trimIndent(),
                 expectedErrors = listOf(
                     "Unexpected token THEN at 3",
                     "Expected condition after IF at 8",
-                    "Expected THEN after IF condition at 18",
                 ),
             ),
             GoldenTestCase(
                 id = "unexpected-terminator",
                 source = "endif return 1;",
                 expectedAst = """
-                    Program
-                      ReturnStmt
-                        Literal[kind=number, value=1]
+                    File
+                      Stmt.Return
+                        Expr.Literal.Number[value=1]
                 """.trimIndent(),
                 expectedErrors = listOf("Unexpected ENDIF at 0"),
             ),
@@ -273,23 +440,22 @@ class XbParserGoldenTest {
                 id = "define-directive",
                 source = "#define FOO 1\nreturn FOO;",
                 expectedAst = """
-                    Program
-                      ReturnStmt
-                        Identifier[name=FOO]
+                    File
+                      Stmt.Return
+                        Expr.Identifier[name=FOO]
                 """.trimIndent(),
             ),
             GoldenTestCase(
                 id = "include-directive",
                 source = "#include \"defs.ch\"\nif 1 then return 2; endif",
                 expectedAst = """
-                    Program
-                      IfStmt
-                        Condition
-                          Literal[kind=number, value=1]
-                        Then
-                          Block
-                            ReturnStmt
-                              Literal[kind=number, value=2]
+                    File
+                      Stmt.If
+                        Expr.Literal.Number[value=1]
+                        Block[branch=then]
+                          Stmt.Return
+                            Expr.Literal.Number[value=2]
+                        Block[branch=else]
                 """.trimIndent(),
             ),
         )
@@ -304,74 +470,5 @@ class XbParserGoldenTest {
 
     private fun dumpProgram(program: XbProgram): String {
         return AstDumpFormat.render(program.toDumpNode())
-    }
-}
-
-private fun XbProgram.toDumpNode(): AstDumpNode {
-    return AstDumpNode(
-        name = "Program",
-        children = statements.map { it.toDumpNode() },
-    )
-}
-
-private fun XbStatement.toDumpNode(): AstDumpNode {
-    return when (this) {
-        is XbExpressionStatement -> AstDumpNode(
-            name = "ExprStmt",
-            children = listOf(expression.toDumpNode()),
-        )
-        is XbReturnStatement -> AstDumpNode(
-            name = "ReturnStmt",
-            children = expression?.let { listOf(it.toDumpNode()) } ?: emptyList(),
-        )
-        is XbIfStatement -> AstDumpNode(
-            name = "IfStmt",
-            children = buildList {
-                add(AstDumpNode(name = "Condition", children = listOf(condition.toDumpNode())))
-                add(AstDumpNode(name = "Then", children = listOf(thenBlock.toDumpNode())))
-                elseBlock?.let { elseNode ->
-                    add(AstDumpNode(name = "Else", children = listOf(elseNode.toDumpNode())))
-                }
-            },
-        )
-        is XbWhileStatement -> AstDumpNode(
-            name = "WhileStmt",
-            children = listOf(
-                AstDumpNode(name = "Condition", children = listOf(condition.toDumpNode())),
-                AstDumpNode(name = "Body", children = listOf(body.toDumpNode())),
-            ),
-        )
-        is XbBlock -> AstDumpNode(
-            name = "Block",
-            children = statements.map { it.toDumpNode() },
-        )
-        else -> AstDumpNode(name = "UnknownStatement")
-    }
-}
-
-private fun XbExpression.toDumpNode(): AstDumpNode {
-    return when (this) {
-        is XbLiteralExpression -> AstDumpNode(
-            name = "Literal",
-            attributes = mapOf(
-                "kind" to kind.name.lowercase(),
-                "value" to value,
-            ),
-        )
-        is XbIdentifierExpression -> AstDumpNode(
-            name = "Identifier",
-            attributes = mapOf("name" to name),
-        )
-        is XbUnaryExpression -> AstDumpNode(
-            name = "Unary",
-            attributes = mapOf("op" to operator),
-            children = listOf(expression.toDumpNode()),
-        )
-        is XbBinaryExpression -> AstDumpNode(
-            name = "Binary",
-            attributes = mapOf("op" to operator),
-            children = listOf(left.toDumpNode(), right.toDumpNode()),
-        )
-        else -> AstDumpNode(name = "UnknownExpression")
     }
 }

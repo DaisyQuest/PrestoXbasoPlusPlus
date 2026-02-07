@@ -38,13 +38,25 @@ class XbLexer(
             current == '/' -> token(TokenType.SLASH, "/", start, index)
             current == '(' -> token(TokenType.LPAREN, "(", start, index)
             current == ')' -> token(TokenType.RPAREN, ")", start, index)
+            current == '[' -> token(TokenType.LBRACKET, "[", start, index)
+            current == ']' -> token(TokenType.RBRACKET, "]", start, index)
+            current == '{' -> token(TokenType.LBRACE, "{", start, index)
+            current == '}' -> token(TokenType.RBRACE, "}", start, index)
             current == ';' -> token(TokenType.SEMICOLON, ";", start, index)
             current == ',' -> token(TokenType.COMMA, ",", start, index)
+            current == '?' -> token(TokenType.QUESTION, "?", start, index)
             current == '=' -> {
                 if (match('=')) {
                     token(TokenType.EQ, "==", start, index)
                 } else {
                     token(TokenType.EQ, "=", start, index)
+                }
+            }
+            current == ':' -> {
+                if (match('=')) {
+                    token(TokenType.ASSIGN, ":=", start, index)
+                } else {
+                    token(TokenType.ERROR, ":", start, index)
                 }
             }
             current == '!' -> {
@@ -121,6 +133,16 @@ class XbLexer(
             "do" -> TokenType.DO
             "enddo" -> TokenType.ENDDO
             "return" -> TokenType.RETURN
+            "function" -> TokenType.FUNCTION
+            "procedure" -> TokenType.PROCEDURE
+            "endfunction" -> TokenType.ENDFUNCTION
+            "endproc" -> TokenType.ENDPROC
+            "local" -> TokenType.LOCAL
+            "for" -> TokenType.FOR
+            "to" -> TokenType.TO
+            "step" -> TokenType.STEP
+            "next" -> TokenType.NEXT
+            "nil" -> TokenType.NIL
             "and" -> TokenType.AND
             "or" -> TokenType.OR
             "not" -> TokenType.NOT

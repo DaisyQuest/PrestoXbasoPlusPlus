@@ -27,6 +27,9 @@
         <toolWindow id="Xbase++ Macros"
                     anchor="left"
                     factoryClass="com.prestoxbasopp.ide.XbMacroExpansionToolWindowFactory" />
+        <toolWindow id="Xbase++ AST"
+                    anchor="left"
+                    factoryClass="com.prestoxbasopp.ide.XbAstToolWindowFactory" />
         <gotoDeclarationHandler implementation="com.prestoxbasopp.ide.XbGotoDeclarationHandler" />
         <localInspection language="Xbase++"
                          implementationClass="com.prestoxbasopp.ide.XbInspectionTool" />

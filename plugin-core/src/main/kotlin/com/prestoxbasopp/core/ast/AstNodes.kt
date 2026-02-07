@@ -18,8 +18,30 @@ data class XbBlock(
     override val range: XbTextRange,
 ) : XbStatement
 
+data class XbLocalDeclarationStatement(
+    val bindings: List<XbLocalBinding>,
+    override val range: XbTextRange,
+) : XbStatement
+
+data class XbLocalBinding(
+    val name: String,
+    val initializer: XbExpression?,
+    val range: XbTextRange,
+)
+
 data class XbExpressionStatement(
     val expression: XbExpression,
+    override val range: XbTextRange,
+) : XbStatement
+
+data class XbAssignmentStatement(
+    val target: XbExpression,
+    val value: XbExpression,
+    override val range: XbTextRange,
+) : XbStatement
+
+data class XbPrintStatement(
+    val expressions: List<XbExpression>,
     override val range: XbTextRange,
 ) : XbStatement
 
@@ -41,11 +63,35 @@ data class XbWhileStatement(
     override val range: XbTextRange,
 ) : XbStatement
 
+data class XbForStatement(
+    val iterator: XbIdentifierExpression,
+    val start: XbExpression,
+    val end: XbExpression,
+    val step: XbExpression,
+    val body: XbBlock,
+    override val range: XbTextRange,
+) : XbStatement
+
+data class XbFunctionDeclaration(
+    val name: String,
+    val parameters: List<String>,
+    val body: XbBlock,
+    override val range: XbTextRange,
+) : XbStatement
+
+data class XbProcedureDeclaration(
+    val name: String,
+    val parameters: List<String>,
+    val body: XbBlock,
+    override val range: XbTextRange,
+) : XbStatement
+
 sealed interface XbExpression : XbAstNode
 
 enum class XbLiteralKind {
     NUMBER,
     STRING,
+    NIL,
 }
 
 data class XbLiteralExpression(
@@ -69,5 +115,22 @@ data class XbBinaryExpression(
     val operator: String,
     val left: XbExpression,
     val right: XbExpression,
+    override val range: XbTextRange,
+) : XbExpression
+
+data class XbCallExpression(
+    val callee: XbExpression,
+    val arguments: List<XbExpression>,
+    override val range: XbTextRange,
+) : XbExpression
+
+data class XbIndexExpression(
+    val target: XbExpression,
+    val index: XbExpression,
+    override val range: XbTextRange,
+) : XbExpression
+
+data class XbArrayLiteralExpression(
+    val elements: List<XbExpression>,
     override val range: XbTextRange,
 ) : XbExpression

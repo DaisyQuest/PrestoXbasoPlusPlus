@@ -1,9 +1,11 @@
 package com.prestoxbasopp.ide.inspections
 
 import com.prestoxbasopp.core.ast.XbBinaryExpression
+import com.prestoxbasopp.core.ast.XbCallExpression
 import com.prestoxbasopp.core.ast.XbExpression
 import com.prestoxbasopp.core.ast.XbIdentifierExpression
 import com.prestoxbasopp.core.ast.XbIfStatement
+import com.prestoxbasopp.core.ast.XbIndexExpression
 import com.prestoxbasopp.core.ast.XbLiteralExpression
 import com.prestoxbasopp.core.ast.XbReturnStatement
 import com.prestoxbasopp.core.ast.XbUnaryExpression
@@ -172,6 +174,9 @@ object XbStandardInspections {
                                 child.elseBlock?.let { checkSequence(it.statements) }
                             }
                             is com.prestoxbasopp.core.ast.XbWhileStatement -> checkSequence(child.body.statements)
+                            is com.prestoxbasopp.core.ast.XbForStatement -> checkSequence(child.body.statements)
+                            is com.prestoxbasopp.core.ast.XbFunctionDeclaration -> checkSequence(child.body.statements)
+                            is com.prestoxbasopp.core.ast.XbProcedureDeclaration -> checkSequence(child.body.statements)
                             is com.prestoxbasopp.core.ast.XbBlock -> checkSequence(child.statements)
                             else -> Unit
                         }
@@ -200,5 +205,9 @@ private fun XbExpression.isConstantExpression(): Boolean {
         is XbUnaryExpression -> expression.isConstantExpression()
         is XbBinaryExpression -> left.isConstantExpression() && right.isConstantExpression()
         is XbIdentifierExpression -> false
+        is XbCallExpression -> false
+        is XbIndexExpression -> false
+        is com.prestoxbasopp.core.ast.XbArrayLiteralExpression ->
+            elements.all { it.isConstantExpression() }
     }
 }
