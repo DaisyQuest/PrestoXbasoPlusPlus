@@ -29,6 +29,42 @@ class XbIdeRegistrationTest {
     }
 
     @Test
+    fun `plugin xml registers annotator and inspections`() {
+        val pluginXmlUrl: URL? = javaClass.classLoader.getResource("META-INF/plugin.xml")
+        assertThat(pluginXmlUrl).withFailMessage("Expected plugin.xml to be on the test classpath.").isNotNull()
+
+        val pluginXml = pluginXmlUrl!!.readText()
+        val annotatorClass =
+            Regex("""<annotator\s+[^>]*implementationClass="([^"]+)"""").find(pluginXml)?.groupValues?.get(1)
+        val inspectionClass =
+            Regex("""<localInspection\s+[^>]*implementationClass="([^"]+)"""").find(pluginXml)?.groupValues?.get(1)
+
+        assertThat(annotatorClass).isEqualTo("com.prestoxbasopp.ide.XbIdeAnnotator")
+        assertThat(inspectionClass).isEqualTo("com.prestoxbasopp.ide.XbInspectionTool")
+    }
+
+    @Test
+    fun `plugin xml registers settings configurable`() {
+        val pluginXmlUrl: URL? = javaClass.classLoader.getResource("META-INF/plugin.xml")
+        assertThat(pluginXmlUrl).withFailMessage("Expected plugin.xml to be on the test classpath.").isNotNull()
+
+        val pluginXml = pluginXmlUrl!!.readText()
+        val configurableClass =
+            Regex("""<applicationConfigurable\s+[^>]*implementationClass="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
+        val configurableName =
+            Regex("""<applicationConfigurable\s+[^>]*displayName="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
+
+        assertThat(configurableClass).isEqualTo("com.prestoxbasopp.ide.XbSettingsConfigurable")
+        assertThat(configurableName).isEqualTo("xbase++ Settings")
+    }
+
+    @Test
     fun `syntax highlighter maps known tokens to attributes`() {
         val highlighter = XbSyntaxHighlighterAdapter()
 
