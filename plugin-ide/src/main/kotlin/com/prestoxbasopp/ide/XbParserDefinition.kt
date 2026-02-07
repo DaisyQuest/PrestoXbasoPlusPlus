@@ -9,8 +9,9 @@ import com.intellij.psi.FileViewProvider
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.TokenType
-import com.intellij.psi.impl.source.PsiFileBase
-import com.intellij.psi.impl.source.tree.ASTWrapperPsiElement
+import com.intellij.extapi.psi.ASTWrapperPsiElement
+import com.intellij.extapi.psi.PsiFileBase
+import com.intellij.psi.tree.IElementType
 import com.intellij.psi.tree.IFileElementType
 import com.intellij.psi.tree.TokenSet
 import com.prestoxbasopp.core.lexer.XbTokenType as CoreTokenType
@@ -53,7 +54,7 @@ class XbParserDefinition : ParserDefinition {
 }
 
 private class XbPsiParser : PsiParser {
-    override fun parse(root: IFileElementType, builder: com.intellij.lang.PsiBuilder): ASTNode {
+    override fun parse(root: IElementType, builder: com.intellij.lang.PsiBuilder): ASTNode {
         val marker = builder.mark()
         while (!builder.eof()) {
             builder.advanceLexer()
