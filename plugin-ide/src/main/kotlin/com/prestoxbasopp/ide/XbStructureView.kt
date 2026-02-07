@@ -44,6 +44,7 @@ class XbStructureViewBuilder {
         return when (snapshot.elementType) {
             XbPsiElementType.FILE,
             XbPsiElementType.FUNCTION_DECLARATION,
+            XbPsiElementType.VARIABLE_DECLARATION,
             -> true
             else -> false
         }

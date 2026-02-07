@@ -1,0 +1,23 @@
+// Basic Xbase++ sample to exercise navigation and structure view.
+
+function Main()
+   local name := "Presto"
+   local greeting := BuildGreeting(name)
+
+   if greeting == "" 
+      ? "No greeting available"
+   else
+      ? greeting
+   endif
+
+   PrintBanner()
+   return nil
+endfunction
+
+function BuildGreeting(name)
+   return "Hello, " + name + "!"
+endfunction
+
+procedure PrintBanner()
+   ? "== Welcome to Xbase++ =="
+return
