@@ -24,11 +24,42 @@ class XbInspectionEngineTest {
     }
 
     @Test
+    fun `does not flag parentheses used for calls`() {
+        val findings = engine.inspect("return LTrim(Str(position))")
+
+        assertThat(findings.any { it.id == "XB210" }).isFalse()
+    }
+
+    @Test
     fun `flags constant conditions and unreachable statements`() {
         val findings = engine.inspect("if 1 then return 1; foo endif")
 
         assertThat(findings.any { it.id == "XB220" }).isTrue()
         assertThat(findings.any { it.id == "XB240" }).isTrue()
+    }
+
+    @Test
+    fun `does not mark else blocks unreachable when then returns`() {
+        val findings = engine.inspect("if 1 then return 1; else foo; endif")
+
+        assertThat(findings.any { it.id == "XB240" }).isFalse()
+    }
+
+    @Test
+    fun `does not treat later function declarations as unreachable`() {
+        val source = """
+            function First()
+               return 1
+            endfunction
+
+            function Second()
+               return 2
+            endfunction
+        """.trimIndent()
+
+        val findings = engine.inspect(source)
+
+        assertThat(findings.any { it.id == "XB240" }).isFalse()
     }
 
     @Test

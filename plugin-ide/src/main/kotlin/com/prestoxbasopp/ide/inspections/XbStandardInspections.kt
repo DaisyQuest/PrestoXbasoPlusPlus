@@ -76,10 +76,14 @@ object XbStandardInspections {
                         close.type == XbTokenType.PUNCTUATION && close.text == ")" &&
                         middle.type in setOf(XbTokenType.IDENTIFIER, XbTokenType.NUMBER, XbTokenType.STRING)
                     ) {
-                        emitter.report(
-                            com.prestoxbasopp.core.api.XbTextRange(open.range.startOffset, close.range.endOffset),
-                            "Parentheses around a single value are redundant.",
-                        )
+                        val previous = significant.getOrNull(index - 1)
+                        val isCallLike = previous?.type == XbTokenType.IDENTIFIER
+                        if (!isCallLike) {
+                            emitter.report(
+                                com.prestoxbasopp.core.api.XbTextRange(open.range.startOffset, close.range.endOffset),
+                                "Parentheses around a single value are redundant.",
+                            )
+                        }
                         index += 3
                         continue
                     }
@@ -133,10 +137,29 @@ object XbStandardInspections {
         ) {
             description = "Flags statements that appear after a RETURN in the same block."
             severity = XbInspectionSeverity.WARNING
-            onAst { program, emitter, _ ->
+            onAst { program, emitter, context ->
+                val sectionStarts = context.tokens
+                    .filter { token -> token.text.lowercase() in FUNCTION_BOUNDARY_TOKENS }
+                    .map { it.range.startOffset }
+                    .plus(0)
+                    .distinct()
+                    .sorted()
+
+                fun sectionStartFor(offset: Int): Int {
+                    return sectionStarts.lastOrNull { it <= offset } ?: 0
+                }
+
                 fun checkSequence(statements: List<com.prestoxbasopp.core.ast.XbStatement>) {
                     var seenReturn = false
+                    var currentSectionStart = sectionStartFor(
+                        statements.firstOrNull()?.range?.startOffset ?: 0,
+                    )
                     statements.forEach { child ->
+                        val childSectionStart = sectionStartFor(child.range.startOffset)
+                        if (childSectionStart != currentSectionStart) {
+                            currentSectionStart = childSectionStart
+                            seenReturn = false
+                        }
                         if (seenReturn) {
                             emitter.report(child.range, "Statement is unreachable after RETURN.")
                         }
@@ -160,6 +183,16 @@ object XbStandardInspections {
         },
     )
 }
+
+private val FUNCTION_BOUNDARY_TOKENS = setOf(
+    "function",
+    "procedure",
+    "method",
+    "endfunction",
+    "endprocedure",
+    "endproc",
+    "endmethod",
+)
 
 private fun XbExpression.isConstantExpression(): Boolean {
     return when (this) {
