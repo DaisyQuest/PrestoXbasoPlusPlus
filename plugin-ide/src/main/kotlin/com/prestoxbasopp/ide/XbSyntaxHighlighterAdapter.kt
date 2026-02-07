@@ -10,6 +10,9 @@ class XbSyntaxHighlighterAdapter : SyntaxHighlighterBase() {
     override fun getHighlightingLexer() = XbLexerAdapter()
 
     override fun getTokenHighlights(tokenType: IElementType): Array<TextAttributesKey> {
+        if (tokenType == XbHighlighterTokenSet.MACRO_DEFINITION) {
+            return arrayOf(MACRO_DEFINITION)
+        }
         val tokenName = tokenType.toString()
         val token = runCatching { XbLexerTokenType.valueOf(tokenName) }.getOrNull()
         val attributes = when (token) {
@@ -30,5 +33,12 @@ class XbSyntaxHighlighterAdapter : SyntaxHighlighterBase() {
             -> null
         }
         return attributes?.let { arrayOf(it) } ?: emptyArray()
+    }
+
+    companion object {
+        internal val MACRO_DEFINITION: TextAttributesKey = TextAttributesKey.createTextAttributesKey(
+            "XBASEPP_MACRO_DEFINITION",
+            DefaultLanguageHighlighterColors.METADATA,
+        )
     }
 }

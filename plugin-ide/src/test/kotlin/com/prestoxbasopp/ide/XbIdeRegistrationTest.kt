@@ -2,6 +2,7 @@ package com.prestoxbasopp.ide
 
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.psi.TokenType
+import com.intellij.psi.tree.IElementType
 import com.prestoxbasopp.core.lexer.XbTokenType as CoreTokenType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -75,11 +76,13 @@ class XbIdeRegistrationTest {
         val keyword = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.KEYWORD))
         val identifier = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.IDENTIFIER))
         val preprocessor = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.PREPROCESSOR))
+        val macroDefinition = highlighter.getTokenHighlights(XbHighlighterTokenSet.MACRO_DEFINITION)
         val error = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.UNKNOWN))
 
         assertThat(keyword).containsExactly(DefaultLanguageHighlighterColors.KEYWORD)
         assertThat(identifier).containsExactly(DefaultLanguageHighlighterColors.IDENTIFIER)
         assertThat(preprocessor).containsExactly(DefaultLanguageHighlighterColors.PREDEFINED_SYMBOL)
+        assertThat(macroDefinition).containsExactly(XbSyntaxHighlighterAdapter.MACRO_DEFINITION)
         assertThat(error).containsExactly(DefaultLanguageHighlighterColors.INVALID_STRING_ESCAPE)
     }
 
@@ -130,6 +133,26 @@ class XbIdeRegistrationTest {
         assertThat(lexer.tokenType).isEqualTo(TokenType.WHITE_SPACE)
         assertThat(lexer.tokenStart).isEqualTo(10)
         assertThat(lexer.tokenEnd).isEqualTo(buffer.length)
+    }
+
+    @Test
+    fun `lexer adapter uses macro definition token type for define directives`() {
+        val lexer = XbLexerAdapter()
+        val buffer = "#define FOO 1\n#include \"defs.ch\""
+        lexer.start(buffer, 0, buffer.length, 0)
+
+        val significantTokens = mutableListOf<IElementType>()
+        while (lexer.tokenType != null) {
+            if (lexer.tokenType != TokenType.WHITE_SPACE) {
+                significantTokens += lexer.tokenType
+            }
+            lexer.advance()
+        }
+
+        assertThat(significantTokens).containsExactly(
+            XbHighlighterTokenSet.MACRO_DEFINITION,
+            XbHighlighterTokenSet.forToken(CoreTokenType.PREPROCESSOR),
+        )
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.prestoxbasopp.ide
 
 import com.prestoxbasopp.core.api.XbTextRange
 import com.prestoxbasopp.core.lexer.XbLexer
+import com.prestoxbasopp.core.lexer.XbToken
 import com.prestoxbasopp.core.lexer.XbTokenType
 
 enum class XbHighlightStyle {
@@ -13,6 +14,7 @@ enum class XbHighlightStyle {
     SYMBOL,
     CODEBLOCK,
     PREPROCESSOR,
+    MACRO_DEFINITION,
     OPERATOR,
     PUNCTUATION,
     COMMENT,
@@ -31,7 +33,7 @@ class XbSyntaxHighlighter {
             .asSequence()
             .filter { it.type != XbTokenType.EOF }
             .mapNotNull { token ->
-                val style = styleFor(token.type) ?: return@mapNotNull null
+                val style = styleFor(token) ?: return@mapNotNull null
                 XbHighlightSpan(
                     textRange = token.range,
                     style = style,
@@ -40,8 +42,8 @@ class XbSyntaxHighlighter {
             .toList()
     }
 
-    private fun styleFor(type: XbTokenType): XbHighlightStyle? {
-        return when (type) {
+    private fun styleFor(token: XbToken): XbHighlightStyle? {
+        return when (token.type) {
             XbTokenType.KEYWORD -> XbHighlightStyle.KEYWORD
             XbTokenType.IDENTIFIER -> XbHighlightStyle.IDENTIFIER
             XbTokenType.NUMBER -> XbHighlightStyle.NUMBER
@@ -49,7 +51,11 @@ class XbSyntaxHighlighter {
             XbTokenType.DATE -> XbHighlightStyle.DATE
             XbTokenType.SYMBOL -> XbHighlightStyle.SYMBOL
             XbTokenType.CODEBLOCK -> XbHighlightStyle.CODEBLOCK
-            XbTokenType.PREPROCESSOR -> XbHighlightStyle.PREPROCESSOR
+            XbTokenType.PREPROCESSOR -> if (isMacroDefinitionDirective(token.text)) {
+                XbHighlightStyle.MACRO_DEFINITION
+            } else {
+                XbHighlightStyle.PREPROCESSOR
+            }
             XbTokenType.OPERATOR -> XbHighlightStyle.OPERATOR
             XbTokenType.PUNCTUATION -> XbHighlightStyle.PUNCTUATION
             XbTokenType.COMMENT -> XbHighlightStyle.COMMENT
