@@ -1,0 +1,6 @@
+File
+  Decl.Function[name=Foo]
+    Params
+    Block
+      Stmt.Return
+        Expr.Literal.Nil

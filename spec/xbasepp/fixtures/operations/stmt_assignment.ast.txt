@@ -1,0 +1,4 @@
+File
+  Stmt.Assignment
+    Expr.Identifier[name=x]
+    Expr.Literal.Number[value=1]

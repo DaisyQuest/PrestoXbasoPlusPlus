@@ -1,2 +1,87 @@
 version: 1
-operations: []
+operations:
+  - id: expr_identifier
+    category: expression
+    precedence_group: primary
+    example_min: "foo"
+    example_edge: "_private"
+    expected_ast_shape: Expr.Identifier
+    expected_errors: []
+  - id: expr_literal_integer
+    category: expression
+    precedence_group: primary
+    example_min: "1"
+    example_edge: "2147483647"
+    expected_ast_shape: Expr.Literal.Number
+    expected_errors: []
+  - id: expr_literal_string
+    category: expression
+    precedence_group: primary
+    example_min: "\"hello\""
+    example_edge: "\"\""
+    expected_ast_shape: Expr.Literal.String
+    expected_errors: []
+  - id: expr_unary_negation
+    category: expression
+    precedence_group: unary
+    example_min: "-1"
+    example_edge: "-(2)"
+    expected_ast_shape: Expr.Unary.Negation
+    expected_errors: []
+  - id: expr_binary_multiplication
+    category: expression
+    precedence_group: multiplicative
+    example_min: "2 * 3"
+    example_edge: "2 * 3 * 4"
+    expected_ast_shape: Expr.Binary.Multiply
+    expected_errors: []
+  - id: expr_binary_addition
+    category: expression
+    precedence_group: additive
+    example_min: "1 + 2"
+    example_edge: "1 + 2 * 3"
+    expected_ast_shape: Expr.Binary.Add
+    expected_errors: []
+  - id: stmt_assignment
+    category: statement
+    precedence_group: statement
+    example_min: "x := 1"
+    example_edge: "x := y + 2"
+    expected_ast_shape: Stmt.Assignment
+    expected_errors: []
+  - id: stmt_if_else
+    category: statement
+    precedence_group: statement
+    example_min: |-
+      IF x
+      ENDIF
+    example_edge: |-
+      IF x
+      ELSE
+      ENDIF
+    expected_ast_shape: Stmt.If
+    expected_errors: []
+  - id: stmt_for_loop
+    category: statement
+    precedence_group: statement
+    example_min: |-
+      FOR i := 1 TO 10
+      NEXT
+    example_edge: |-
+      FOR i := 1 TO 10 STEP 2
+      NEXT
+    expected_ast_shape: Stmt.For
+    expected_errors: []
+  - id: decl_function
+    category: declaration
+    precedence_group: declaration
+    example_min: |-
+      FUNCTION Foo()
+      RETURN NIL
+      ENDFUNCTION
+    example_edge: |-
+      FUNCTION Foo(a, b)
+      RETURN a + b
+      ENDFUNCTION
+    expected_ast_shape: Decl.Function
+    expected_errors: []

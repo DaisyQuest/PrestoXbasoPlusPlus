@@ -1,0 +1,2 @@
+File
+  Expr.Identifier[name=foo]

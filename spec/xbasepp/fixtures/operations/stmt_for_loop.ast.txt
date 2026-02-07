@@ -1,0 +1,6 @@
+File
+  Stmt.For
+    Expr.Identifier[name=i]
+    Expr.Literal.Number[value=1]
+    Expr.Literal.Number[value=10]
+    Expr.Literal.Number[value=1]
