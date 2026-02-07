@@ -1,0 +1,9 @@
+version: 1
+operations:
+  - id: OP_0001
+    category: literals
+    example_min: "1"
+    example_edge: "-1"
+    expected_ast_shape: "NumberLiteral"
+    expected_errors: []
+    precedence_group: arithmetic

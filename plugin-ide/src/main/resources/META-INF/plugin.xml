@@ -1,0 +1,9 @@
+<idea-plugin>
+    <id>com.prestoxbasopp</id>
+    <name>Presto Xbase++</name>
+    <vendor email="support@prestoxbasopp.com" url="https://example.com">PrestoXbasoPlusPlus</vendor>
+    <description><![CDATA[
+        IntelliJ IDEA support for the xbase++ language.
+    ]]></description>
+    <depends>com.intellij.modules.platform</depends>
+</idea-plugin>

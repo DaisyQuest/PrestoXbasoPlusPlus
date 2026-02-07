@@ -3,11 +3,11 @@
 > Each checklist item maps 1:1 to `Development_Plan.md` and must be checked **only after completion**.
 
 ## Foundation
-- [ ] **DP-0001**: Initialize repository structure per `PRE-PLAN.MD` (modules: `plugin-core`, `plugin-ide`, `plugin-ui`, `test-framework`, `spec/xbasepp`).
-- [ ] **DP-0002**: Establish shared interfaces and contracts between modules (e.g., PSI interfaces, stub contracts, service boundaries).
-- [ ] **DP-0003**: Define IntelliJ SDK-compatible Gradle configuration and baseline plugin metadata.
-- [ ] **DP-0004**: Implement operations registry schema for `operations.yaml` and the coverage gate mechanism.
-- [ ] **DP-0005**: Create golden test harness framework, AST dumper format, and baseline test utilities.
+- [x] **DP-0001**: Initialize repository structure per `PRE-PLAN.MD` (modules: `plugin-core`, `plugin-ide`, `plugin-ui`, `test-framework`, `spec/xbasepp`).
+- [x] **DP-0002**: Establish shared interfaces and contracts between modules (e.g., PSI interfaces, stub contracts, service boundaries).
+- [x] **DP-0003**: Define IntelliJ SDK-compatible Gradle configuration and baseline plugin metadata.
+- [x] **DP-0004**: Implement operations registry schema for `operations.yaml` and the coverage gate mechanism.
+- [x] **DP-0005**: Create golden test harness framework, AST dumper format, and baseline test utilities.
 
 ## Parallel Track A — Specification & Fixtures
 - [ ] **DP-0101**: Author `operations.yaml` skeleton with IDs, categories, and precedence groups.
@@ -51,4 +51,3 @@
 - [ ] **DP-0703**: Property-based and fuzz testing integration.
 - [ ] **DP-0704**: Mutation testing pipeline for precedence/expressions.
 - [ ] **DP-0705**: IntelliJ SDK compatibility checks and CI validation.
-
