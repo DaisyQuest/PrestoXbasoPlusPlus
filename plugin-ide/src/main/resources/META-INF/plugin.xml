@@ -10,6 +10,8 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <moduleType id="XBASEPP_MODULE"
+                    implementationClass="com.prestoxbasopp.ide.modules.XbModuleType" />
         <fileType name="Xbase++ File"
                   language="Xbase++"
                   extensions="xb;prg;ch"
@@ -38,5 +40,6 @@
         <applicationConfigurable id="com.prestoxbasopp.settings"
                                  displayName="xbase++ Settings"
                                  instance="com.prestoxbasopp.ide.XbSettingsConfigurable" />
+        <startupActivity implementation="com.prestoxbasopp.ide.modules.XbModuleStartupActivity" />
     </extensions>
 </idea-plugin>

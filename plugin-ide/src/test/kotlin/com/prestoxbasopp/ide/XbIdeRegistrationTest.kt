@@ -89,6 +89,33 @@ class XbIdeRegistrationTest {
     }
 
     @Test
+    fun `plugin xml registers module type and startup activity`() {
+        val pluginXmlUrl: URL? = javaClass.classLoader.getResource("META-INF/plugin.xml")
+        assertThat(pluginXmlUrl).withFailMessage("Expected plugin.xml to be on the test classpath.").isNotNull()
+
+        val pluginXml = pluginXmlUrl!!.readText()
+        val moduleTypeId =
+            Regex("""<moduleType\s+[^>]*id="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
+        val moduleTypeClass =
+            Regex("""<moduleType\s+[^>]*implementationClass="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
+        val startupActivity =
+            Regex("""<startupActivity\s+[^>]*implementation="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
+
+        assertThat(moduleTypeId).isEqualTo("XBASEPP_MODULE")
+        assertThat(moduleTypeClass).isEqualTo("com.prestoxbasopp.ide.modules.XbModuleType")
+        assertThat(startupActivity).isEqualTo("com.prestoxbasopp.ide.modules.XbModuleStartupActivity")
+    }
+
+    @Test
     fun `syntax highlighter maps known tokens to attributes`() {
         val highlighter = XbSyntaxHighlighterAdapter()
 
