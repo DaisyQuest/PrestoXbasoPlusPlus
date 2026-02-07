@@ -18,8 +18,8 @@
                                implementationClass="com.prestoxbasopp.ide.XbParserDefinition" />
         <lang.syntaxHighlighterFactory language="Xbase++"
                                        implementationClass="com.prestoxbasopp.ide.XbSyntaxHighlighterFactory" />
-        <lang.structureViewBuilder language="Xbase++"
-                                   implementationClass="com.prestoxbasopp.ide.XbStructureViewBuilderFactory" />
+        <lang.psiStructureViewFactory language="Xbase++"
+                                      implementationClass="com.prestoxbasopp.ide.XbStructureViewBuilderFactory" />
         <gotoDeclarationHandler implementation="com.prestoxbasopp.ide.XbGotoDeclarationHandler" />
     </extensions>
 </idea-plugin>

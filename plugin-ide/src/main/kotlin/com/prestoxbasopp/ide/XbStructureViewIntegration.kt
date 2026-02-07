@@ -7,7 +7,7 @@ import com.intellij.ide.structureView.TreeBasedStructureViewBuilder
 import com.intellij.ide.structureView.StructureViewModelBase
 import com.intellij.ide.util.treeView.smartTree.SortableTreeElement
 import com.intellij.ide.util.treeView.smartTree.TreeElement
-import com.intellij.lang.LanguageStructureViewBuilder
+import com.intellij.lang.PsiStructureViewFactory
 import com.intellij.navigation.ItemPresentation
 import com.intellij.openapi.editor.Editor
 import com.intellij.psi.NavigatablePsiElement
@@ -18,7 +18,7 @@ import com.intellij.psi.util.PsiTreeUtil
 class XbStructureViewBuilderFactory(
     private val snapshotBuilder: XbPsiTextBuilder = XbPsiTextBuilder(),
     private val structureViewBuilder: XbStructureViewBuilder = XbStructureViewBuilder(),
-) : LanguageStructureViewBuilder {
+) : PsiStructureViewFactory {
     override fun getStructureViewBuilder(psiFile: PsiFile): StructureViewBuilder? {
         if (psiFile !is XbPsiFile) {
             return null
