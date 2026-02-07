@@ -10,6 +10,22 @@ This plan derives from `PRE-PLAN.MD` and organizes work into discrete, independe
 - **DP-0004**: Implement operations registry schema for `operations.yaml` and the coverage gate mechanism.
 - **DP-0005**: Create golden test harness framework, AST dumper format, and baseline test utilities.
 
+### Shared Code & Contract References (Frozen after DP-0002)
+These files define the shared APIs and test harnesses that all tracks must reference instead of duplicating contracts.
+
+- `plugin-core/src/main/kotlin/com/prestoxbasopp/core/api/XbContracts.kt`
+  - `XbPsiElementContract`, `XbStubElementContract`, `XbLanguageService`, `XbTextRange`.
+- `test-framework/src/main/kotlin/com/prestoxbasopp/testframework/operations/OperationsRegistry.kt`
+  - Operations registry loader and validation entry points.
+- `test-framework/src/main/kotlin/com/prestoxbasopp/testframework/operations/OperationsCoverageGate.kt`
+  - Coverage gate enforcing 100% operation coverage.
+- `test-framework/src/main/kotlin/com/prestoxbasopp/testframework/golden/GoldenTestHarness.kt`
+  - Golden test harness used across parser/lexer/PSI tests.
+- `test-framework/src/main/kotlin/com/prestoxbasopp/testframework/golden/AstDumpFormat.kt`
+  - AST dump formatting contract for golden comparisons.
+- `spec/xbasepp/operations.yaml`
+  - Source of truth for operation coverage.
+
 ## Parallel Track A — Specification & Fixtures
 - **DP-0101**: Author `operations.yaml` skeleton with IDs, categories, and precedence groups.
 - **DP-0102**: Define canonical fixtures and edge fixtures under `spec/xbasepp/fixtures/operations/`.
@@ -54,13 +70,19 @@ This plan derives from `PRE-PLAN.MD` and organizes work into discrete, independe
 - **DP-0705**: IntelliJ SDK compatibility checks and CI validation.
 
 ## Parallelization Strategy (5–10x)
-- After **DP-0001** to **DP-0005** are completed, work splits cleanly by track with minimal overlap:
-  - Track A: `spec/xbasepp/` only.
-  - Track B/C: `plugin-core` parsing subpackages; enforce file-level ownership by feature (e.g., `lexer/`, `parser/`, `ast/`).
-  - Track D: PSI, stubs, indexing classes under `plugin-core` (separate package namespace).
-  - Track E: `plugin-ide` module only.
-  - Track F: `plugin-ui` module only.
-  - Track G: `test-framework` and CI configuration.
+### Scope & Shared-Reference Map
+| Track | Primary Scope | Shared References (Read-Only) | Cross-Track Inputs |
+| --- | --- | --- | --- |
+| A — Specification & Fixtures | `spec/xbasepp/` | `operations.yaml`, `operations.schema.json` | Fixtures drive Track B/C/D tests. |
+| B — Lexer & Preprocessor | `plugin-core/src/main/kotlin/.../lexer/` + preprocessor packages | `XbContracts.kt`, `GoldenTestHarness.kt`, `OperationsCoverageGate.kt` | Consumes Track A fixtures and operations. |
+| C — Parser | `plugin-core/src/main/kotlin/.../parser/`, `.../ast/` | `XbContracts.kt`, `AstDumpFormat.kt`, `GoldenTestHarness.kt` | Consumes Track A fixtures and operations. |
+| D — PSI & Indexing | `plugin-core/src/main/kotlin/.../psi/`, `.../stubs/`, `.../index/` | `XbPsiElementContract`, `XbStubElementContract` | Consumes parser AST contracts and Track A fixtures. |
+| E — IDE Features | `plugin-ide/` | `XbLanguageService` | Depends on PSI contracts from Track D. |
+| F — UI (Swing) | `plugin-ui/` | `XbLanguageService` | Depends on core services and settings contracts. |
+| G — Quality/CI/Test Framework | `test-framework/`, CI configs | `OperationsRegistry.kt`, `OperationsCoverageGate.kt` | Feeds harnesses to all tracks. |
+
+### Execution Rules
+- After **DP-0001** to **DP-0005** are completed, work splits cleanly by track with minimal overlap.
 - Each track must update tests in its own module to prevent cross-track merge conflicts.
 - Shared interfaces in **DP-0002** are frozen before parallel work begins. Any changes require a coordination note and explicit review.
-
+- If a track must change a shared contract, document the change request in the coordination note (issue/PR) and wait for approval before implementation.
