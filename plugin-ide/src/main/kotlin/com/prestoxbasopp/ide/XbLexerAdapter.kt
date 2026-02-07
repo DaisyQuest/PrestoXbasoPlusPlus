@@ -3,8 +3,8 @@ package com.prestoxbasopp.ide
 import com.intellij.lexer.LexerBase
 import com.intellij.psi.TokenType
 import com.intellij.psi.tree.IElementType
-import com.prestoxbasopp.core.parser.TokenType
-import com.prestoxbasopp.core.parser.XbLexer
+import com.prestoxbasopp.core.lexer.XbLexer
+import com.prestoxbasopp.core.lexer.XbTokenType as XbLexerTokenType
 
 class XbLexerAdapter : LexerBase() {
     private data class LexerToken(val type: IElementType, val start: Int, val end: Int)
@@ -51,7 +51,7 @@ class XbLexerAdapter : LexerBase() {
     override fun getBufferEnd(): Int = endOffset
 
     private fun buildLexerTokens(source: String): List<LexerToken> {
-        val coreTokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+        val coreTokens = XbLexer().lex(source).tokens.filter { it.type != XbLexerTokenType.EOF }
         if (coreTokens.isEmpty()) {
             return if (source.isEmpty()) {
                 emptyList()
@@ -63,11 +63,15 @@ class XbLexerAdapter : LexerBase() {
         val expanded = mutableListOf<LexerToken>()
         var cursor = 0
         for (token in coreTokens) {
-            if (token.startOffset > cursor) {
-                expanded += LexerToken(TokenType.WHITE_SPACE, cursor, token.startOffset)
+            if (token.range.startOffset > cursor) {
+                expanded += LexerToken(TokenType.WHITE_SPACE, cursor, token.range.startOffset)
             }
-            expanded += LexerToken(XbHighlighterTokenSet.forToken(token.type), token.startOffset, token.endOffset)
-            cursor = token.endOffset
+            expanded += LexerToken(
+                XbHighlighterTokenSet.forToken(token.type),
+                token.range.startOffset,
+                token.range.endOffset,
+            )
+            cursor = token.range.endOffset
         }
         if (cursor < source.length) {
             expanded += LexerToken(TokenType.WHITE_SPACE, cursor, source.length)

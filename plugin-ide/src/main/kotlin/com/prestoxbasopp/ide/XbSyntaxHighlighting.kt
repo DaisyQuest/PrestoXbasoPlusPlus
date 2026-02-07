@@ -1,16 +1,20 @@
 package com.prestoxbasopp.ide
 
 import com.prestoxbasopp.core.api.XbTextRange
-import com.prestoxbasopp.core.parser.TokenType
-import com.prestoxbasopp.core.parser.XbLexer
+import com.prestoxbasopp.core.lexer.XbLexer
+import com.prestoxbasopp.core.lexer.XbTokenType
 
 enum class XbHighlightStyle {
     KEYWORD,
     IDENTIFIER,
     NUMBER,
     STRING,
+    DATE,
+    SYMBOL,
+    CODEBLOCK,
     OPERATOR,
     PUNCTUATION,
+    COMMENT,
     ERROR,
 }
 
@@ -21,55 +25,34 @@ data class XbHighlightSpan(
 
 class XbSyntaxHighlighter {
     fun highlight(source: String): List<XbHighlightSpan> {
-        val lexer = XbLexer(source)
-        return lexer.lex()
+        val lexer = XbLexer()
+        return lexer.lex(source).tokens
             .asSequence()
-            .filter { it.type != TokenType.EOF }
+            .filter { it.type != XbTokenType.EOF }
             .mapNotNull { token ->
                 val style = styleFor(token.type) ?: return@mapNotNull null
                 XbHighlightSpan(
-                    textRange = XbTextRange(token.startOffset, token.endOffset),
+                    textRange = token.range,
                     style = style,
                 )
             }
             .toList()
     }
 
-    private fun styleFor(type: TokenType): XbHighlightStyle? {
+    private fun styleFor(type: XbTokenType): XbHighlightStyle? {
         return when (type) {
-            TokenType.IF,
-            TokenType.THEN,
-            TokenType.ELSE,
-            TokenType.ENDIF,
-            TokenType.WHILE,
-            TokenType.DO,
-            TokenType.ENDDO,
-            TokenType.RETURN,
-            TokenType.AND,
-            TokenType.OR,
-            TokenType.NOT,
-            -> XbHighlightStyle.KEYWORD
-            TokenType.IDENTIFIER -> XbHighlightStyle.IDENTIFIER
-            TokenType.NUMBER -> XbHighlightStyle.NUMBER
-            TokenType.STRING -> XbHighlightStyle.STRING
-            TokenType.PLUS,
-            TokenType.MINUS,
-            TokenType.STAR,
-            TokenType.SLASH,
-            TokenType.EQ,
-            TokenType.NEQ,
-            TokenType.LT,
-            TokenType.LTE,
-            TokenType.GT,
-            TokenType.GTE,
-            -> XbHighlightStyle.OPERATOR
-            TokenType.LPAREN,
-            TokenType.RPAREN,
-            TokenType.SEMICOLON,
-            TokenType.COMMA,
-            -> XbHighlightStyle.PUNCTUATION
-            TokenType.ERROR -> XbHighlightStyle.ERROR
-            TokenType.EOF -> null
+            XbTokenType.KEYWORD -> XbHighlightStyle.KEYWORD
+            XbTokenType.IDENTIFIER -> XbHighlightStyle.IDENTIFIER
+            XbTokenType.NUMBER -> XbHighlightStyle.NUMBER
+            XbTokenType.STRING -> XbHighlightStyle.STRING
+            XbTokenType.DATE -> XbHighlightStyle.DATE
+            XbTokenType.SYMBOL -> XbHighlightStyle.SYMBOL
+            XbTokenType.CODEBLOCK -> XbHighlightStyle.CODEBLOCK
+            XbTokenType.OPERATOR -> XbHighlightStyle.OPERATOR
+            XbTokenType.PUNCTUATION -> XbHighlightStyle.PUNCTUATION
+            XbTokenType.COMMENT -> XbHighlightStyle.COMMENT
+            XbTokenType.UNKNOWN -> XbHighlightStyle.ERROR
+            XbTokenType.EOF -> null
         }
     }
 }

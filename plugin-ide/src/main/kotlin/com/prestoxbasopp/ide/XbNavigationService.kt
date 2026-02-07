@@ -25,6 +25,23 @@ class XbNavigationService {
         return index.findUsages(name)
     }
 
+    fun findFunctionTargets(name: String, index: XbSymbolIndex): XbNavigationTargets {
+        val declarations = index.findDeclarations(name, XbStubType.FUNCTION)
+        val usages = if (declarations.isEmpty()) emptyList() else index.findUsages(name)
+        return XbNavigationTargets(
+            declarations = declarations,
+            usages = usages,
+        )
+    }
+
+    fun jumpToFunctionDeclaration(name: String, index: XbSymbolIndex): XbStub? {
+        return findFunctionTargets(name, index).declarations.firstOrNull()
+    }
+
+    fun findFunctionUsages(name: String, index: XbSymbolIndex): List<XbPsiSymbol> {
+        return findFunctionTargets(name, index).usages
+    }
+
     fun findAll(name: String, type: XbStubType, index: XbSymbolIndex): XbNavigationTargets {
         val result: XbSymbolSearchResult = index.findAll(name, type)
         return XbNavigationTargets(

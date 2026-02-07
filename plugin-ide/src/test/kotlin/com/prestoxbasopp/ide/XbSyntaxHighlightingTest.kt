@@ -6,7 +6,17 @@ import org.junit.jupiter.api.Test
 class XbSyntaxHighlightingTest {
     @Test
     fun `highlights tokens with expected styles`() {
-        val source = "if foo == 10 return \"bar\"; !"
+        val source = """
+            function foo()
+                local d := {^2024-01-02}
+                local s := "bar"
+                local sym := #name
+                local cb := {|a| a + 1|}
+                return foo + 1
+                // comment
+                @
+            end
+        """.trimIndent()
         val spans = XbSyntaxHighlighter().highlight(source)
 
         val styles = spans.map { it.style }
@@ -17,6 +27,10 @@ class XbSyntaxHighlightingTest {
             XbHighlightStyle.NUMBER,
             XbHighlightStyle.STRING,
             XbHighlightStyle.PUNCTUATION,
+            XbHighlightStyle.DATE,
+            XbHighlightStyle.SYMBOL,
+            XbHighlightStyle.CODEBLOCK,
+            XbHighlightStyle.COMMENT,
             XbHighlightStyle.ERROR,
         )
         assertThat(spans).allSatisfy { span ->

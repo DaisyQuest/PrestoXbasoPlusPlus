@@ -2,7 +2,7 @@ package com.prestoxbasopp.ide
 
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.psi.TokenType
-import com.prestoxbasopp.core.parser.TokenType as CoreTokenType
+import com.prestoxbasopp.core.lexer.XbTokenType as CoreTokenType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.net.URL
@@ -32,9 +32,9 @@ class XbIdeRegistrationTest {
     fun `syntax highlighter maps known tokens to attributes`() {
         val highlighter = XbSyntaxHighlighterAdapter()
 
-        val keyword = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.IF))
+        val keyword = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.KEYWORD))
         val identifier = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.IDENTIFIER))
-        val error = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.ERROR))
+        val error = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.UNKNOWN))
 
         assertThat(keyword).containsExactly(DefaultLanguageHighlighterColors.KEYWORD)
         assertThat(identifier).containsExactly(DefaultLanguageHighlighterColors.IDENTIFIER)
@@ -44,7 +44,7 @@ class XbIdeRegistrationTest {
     @Test
     fun `syntax highlighter ignores unknown token types`() {
         val highlighter = XbSyntaxHighlighterAdapter()
-        val unknown = highlighter.getTokenHighlights(XbTokenType("UNKNOWN"))
+        val unknown = highlighter.getTokenHighlights(XbTokenType("NOT_A_TOKEN"))
         assertThat(unknown).isEmpty()
     }
 
@@ -54,7 +54,7 @@ class XbIdeRegistrationTest {
         val buffer = "xx if"
         lexer.start(buffer, 3, buffer.length, 0)
 
-        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.IF))
+        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.KEYWORD))
         assertThat(lexer.tokenStart).isEqualTo(3)
         assertThat(lexer.tokenEnd).isEqualTo(5)
 
@@ -70,7 +70,7 @@ class XbIdeRegistrationTest {
         val buffer = "if  return  "
         lexer.start(buffer, 0, buffer.length, 0)
 
-        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.IF))
+        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.KEYWORD))
         assertThat(lexer.tokenStart).isEqualTo(0)
         assertThat(lexer.tokenEnd).isEqualTo(2)
 
@@ -80,7 +80,7 @@ class XbIdeRegistrationTest {
         assertThat(lexer.tokenEnd).isEqualTo(4)
 
         lexer.advance()
-        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.RETURN))
+        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.KEYWORD))
         assertThat(lexer.tokenStart).isEqualTo(4)
         assertThat(lexer.tokenEnd).isEqualTo(10)
 
