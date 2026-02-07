@@ -16,8 +16,8 @@
 - [ ] Fuzz/property tests executed and validated (no crashes, no hangs).
 
 ## PSI & Indexing
-- [ ] PSI integrity tests validate tree relationships and text ranges.
-- [ ] Stub/index round-trip tests pass (declaration ↔ usage).
+- [x] PSI integrity tests validate tree relationships and text ranges.
+- [x] Stub/index round-trip tests pass (declaration ↔ usage).
 - [ ] Find-usage tests cover shadowing, scope, and nested blocks.
 
 ## Semantic & Interpreter Paths
@@ -33,5 +33,4 @@
 ## CI and Tooling
 - [ ] Coverage threshold check fails the build if any threshold is missed.
 - [ ] Mutation testing runs for expression/precedence logic.
-- [ ] IntelliJ SDK compatibility tests are executed and passing.
-
+- [x] IntelliJ SDK compatibility tests are executed and passing.
