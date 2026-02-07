@@ -49,6 +49,13 @@ class XbIdeRegistrationTest {
     }
 
     @Test
+    fun `inspection tool provides a display name`() {
+        val inspectionTool = XbInspectionTool()
+
+        assertThat(inspectionTool.displayName).isEqualTo("Xbase++ Inspection")
+    }
+
+    @Test
     fun `plugin xml registers settings configurable`() {
         val pluginXmlUrl: URL? = javaClass.classLoader.getResource("META-INF/plugin.xml")
         assertThat(pluginXmlUrl).withFailMessage("Expected plugin.xml to be on the test classpath.").isNotNull()
