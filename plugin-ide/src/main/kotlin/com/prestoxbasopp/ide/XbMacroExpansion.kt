@@ -17,6 +17,8 @@ data class XbMacroExpansionEntry(
 )
 
 class XbMacroExpansionBuilder(private val lexer: XbLexer = XbLexer()) {
+    private data class ExpansionResult(val text: String, val status: XbMacroExpansionStatus)
+
     fun build(source: String): List<XbMacroExpansionEntry> {
         val directives = lexer.lex(source).directives
         val definitions = directives.mapNotNull { parseDefinition(it.text) }
@@ -98,8 +100,6 @@ class XbMacroExpansionBuilder(private val lexer: XbLexer = XbLexer()) {
             builder.append(text.substring(lastIndex))
             return ExpansionResult(builder.toString(), status)
         }
-
-        private data class ExpansionResult(val text: String, val status: XbMacroExpansionStatus)
 
         private fun XbMacroExpansionStatus.worst(other: XbMacroExpansionStatus): XbMacroExpansionStatus {
             return if (other.severity > severity) other else this
