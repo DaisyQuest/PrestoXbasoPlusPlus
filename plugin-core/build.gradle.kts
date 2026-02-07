@@ -4,4 +4,5 @@ plugins {
 
 dependencies {
     api(kotlin("stdlib"))
+    testImplementation(project(":test-framework"))
 }
