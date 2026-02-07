@@ -54,7 +54,12 @@ class XbIdeRegistrationTest {
 
         val pluginXml = pluginXmlUrl!!.readText()
         val configurableClass =
-            Regex("""<applicationConfigurable\s+[^>]*implementationClass="([^"]+)"""")
+            Regex("""<applicationConfigurable\s+[^>]*instance="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
+        val configurableId =
+            Regex("""<applicationConfigurable\s+[^>]*id="([^"]+)"""")
                 .find(pluginXml)
                 ?.groupValues
                 ?.get(1)
@@ -65,6 +70,7 @@ class XbIdeRegistrationTest {
                 ?.get(1)
 
         assertThat(configurableClass).isEqualTo("com.prestoxbasopp.ide.XbSettingsConfigurable")
+        assertThat(configurableId).isEqualTo("com.prestoxbasopp.settings")
         assertThat(configurableName).isEqualTo("xbase++ Settings")
     }
 
