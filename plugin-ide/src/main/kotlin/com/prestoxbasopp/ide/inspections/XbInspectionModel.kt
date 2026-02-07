@@ -110,6 +110,7 @@ class XbInspectionContext private constructor(
             is XbWhileStatement -> yieldAll(walkStatements(node.body))
             is XbExpressionStatement -> Unit
             is XbReturnStatement -> Unit
+            is XbExpression -> Unit
         }
     }
 
@@ -136,20 +137,15 @@ class XbInspectionContext private constructor(
                 yieldAll(walkExpressions(node.condition))
                 yieldAll(walkExpressions(node.body))
             }
-        }
-    }
-
-    private fun walkExpressions(expression: XbExpression): Sequence<XbExpression> = sequence {
-        when (expression) {
             is com.prestoxbasopp.core.ast.XbUnaryExpression -> {
-                yield(expression.expression)
-                yieldAll(walkExpressions(expression.expression))
+                yield(node.expression)
+                yieldAll(walkExpressions(node.expression))
             }
             is com.prestoxbasopp.core.ast.XbBinaryExpression -> {
-                yield(expression.left)
-                yieldAll(walkExpressions(expression.left))
-                yield(expression.right)
-                yieldAll(walkExpressions(expression.right))
+                yield(node.left)
+                yieldAll(walkExpressions(node.left))
+                yield(node.right)
+                yieldAll(walkExpressions(node.right))
             }
             is com.prestoxbasopp.core.ast.XbIdentifierExpression -> Unit
             is com.prestoxbasopp.core.ast.XbLiteralExpression -> Unit
@@ -174,7 +170,7 @@ class XbInspectionContext private constructor(
         fun fromSource(
             source: String,
             lexer: XbLexer = XbLexer(),
-            parser: (String) -> XbParseResult = XbParser::parse,
+            parser: (String) -> XbParseResult = { text -> XbParser.parse(text) },
             psiBuilder: XbPsiTextBuilder = XbPsiTextBuilder(),
         ): XbInspectionContext {
             val lexResult = lexer.lex(source)
