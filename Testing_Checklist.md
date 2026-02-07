@@ -20,6 +20,13 @@
 - [x] Stub/index round-trip tests pass (declaration ↔ usage).
 - [ ] Find-usage tests cover shadowing, scope, and nested blocks.
 
+## IDE Features
+- [x] Syntax highlighting and annotator tests cover keyword, error, and empty-input branches.
+- [x] Structure view and breadcrumbs tests cover fallback labels and offset matching.
+- [x] Navigation/usages tests validate declaration and missing-symbol paths.
+- [x] Completion and rename tests cover case sensitivity and error paths.
+- [x] Formatter and folding tests cover indentation, blank lines, and fold filtering.
+
 ## Semantic & Interpreter Paths
 - [ ] Resolution tests validate locals, statics, publics, memvars, and class members.
 - [ ] Negative semantic tests assert expected diagnostics.
