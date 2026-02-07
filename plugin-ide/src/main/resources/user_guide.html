@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Presto Xbase++ Plugin User Guide</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      line-height: 1.6;
+      margin: 2rem;
+      color: #1f2933;
+    }
+    h1, h2, h3 {
+      color: #102a43;
+    }
+    code {
+      background: #f0f4f8;
+      padding: 0.1rem 0.3rem;
+      border-radius: 4px;
+    }
+    .note {
+      padding: 0.75rem 1rem;
+      background: #fff7ed;
+      border-left: 4px solid #f59f00;
+      margin: 1rem 0;
+    }
+    ul {
+      margin-top: 0.3rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Presto Xbase++ Plugin User Guide</h1>
+  <p>
+    Welcome to the Presto Xbase++ plugin for IntelliJ IDEA. This guide highlights the
+    language features supported by the plugin, explains how to use core IDE tools, and
+    describes the available settings.
+  </p>
+
+  <h2>Getting Started</h2>
+  <ol>
+    <li>Install the plugin from the IntelliJ IDEA plugin settings.</li>
+    <li>Open or create a file with the <code>.xb</code> extension.</li>
+    <li>Start typing xbase++ code to activate syntax highlighting, inspections, and completion.</li>
+  </ol>
+
+  <h2>Language Features</h2>
+  <h3>Syntax Highlighting</h3>
+  <ul>
+    <li>Keywords for control flow and logic (<code>IF</code>, <code>ELSE</code>, <code>WHILE</code>, <code>RETURN</code>).</li>
+    <li>Operators, punctuation, string literals, and numeric literals.</li>
+    <li>Explicit error highlighting for invalid or unterminated tokens.</li>
+  </ul>
+
+  <h3>Diagnostics and Error Annotations</h3>
+  <ul>
+    <li>Unexpected characters and malformed tokens are annotated with descriptive messages.</li>
+    <li>Unterminated string literals are reported with clear recovery diagnostics.</li>
+  </ul>
+
+  <h3>Code Completion</h3>
+  <ul>
+    <li>Completion suggestions for function and variable declarations in scope.</li>
+    <li>Optional case-insensitive matching for rapid navigation.</li>
+  </ul>
+
+  <h3>Navigation and Usages</h3>
+  <ul>
+    <li>Build a symbol index from a file to resolve declarations.</li>
+    <li>Find usages of symbols by name across the parsed PSI snapshot.</li>
+    <li>Jump directly to function or variable declarations.</li>
+  </ul>
+
+  <h3>Structure View and Breadcrumbs</h3>
+  <ul>
+    <li>Structured outline of files, blocks, functions, and variables.</li>
+    <li>Breadcrumbs to understand nesting and scope at a glance.</li>
+  </ul>
+
+  <h3>Formatting and Folding</h3>
+  <ul>
+    <li>Indentation-aware formatter for <code>IF</code>/<code>ELSE</code>/<code>ENDIF</code> and loop blocks.</li>
+    <li>Foldable regions for control flow blocks to reduce visual noise.</li>
+  </ul>
+
+  <h3>Rename Refactoring</h3>
+  <ul>
+    <li>Rename symbol declarations and update connected references.</li>
+    <li>Preview renamed symbols before applying changes.</li>
+  </ul>
+
+  <h2>Settings</h2>
+  <p>
+    The plugin exposes a settings panel for formatting and inspection preferences. Settings are
+    persisted per IDE configuration and can be reset at any time.
+  </p>
+
+  <div class="note">
+    <strong>Tip:</strong> If you are evaluating the plugin in a test project, keep sample
+    files small to explore completions, navigation, and structure view results quickly.
+  </div>
+
+  <h2>Troubleshooting</h2>
+  <ul>
+    <li>If highlighting or completion seems unavailable, ensure the file extension is <code>.xb</code>.</li>
+    <li>Use the IDE logs to report any unexpected parsing errors.</li>
+  </ul>
+</body>
+</html>
