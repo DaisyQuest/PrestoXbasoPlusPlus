@@ -41,9 +41,9 @@
 - [ ] **DP-0505**: Formatter and folding.
 
 ## Parallel Track F — UI (Swing)
-- [ ] **DP-0601**: Settings model and persistence.
-- [ ] **DP-0602**: UI panels and presenters with headless-testable logic.
-- [ ] **DP-0603**: Snapshot/presenter tests for UI logic.
+- [x] **DP-0601**: Settings model and persistence.
+- [x] **DP-0602**: UI panels and presenters with headless-testable logic.
+- [x] **DP-0603**: Snapshot/presenter tests for UI logic.
 
 ## Parallel Track G — Quality, Coverage, and CI
 - [ ] **DP-0701**: Coverage threshold enforcement (95%+ lexer/parser/interpreter branches).
