@@ -48,6 +48,15 @@ class XbLexerLiteralErrorTest {
     }
 
     @Test
+    fun `reports missing exponent digits`() {
+        val source = "1e"
+        val result = XbLexer().lex(source)
+
+        assertThat(result.errors.map { it.message }).contains("Invalid exponent")
+        assertThat(result.tokens).anyMatch { it.type == XbTokenType.UNKNOWN && it.text == "1e" }
+    }
+
+    @Test
     fun `reports empty symbol literal`() {
         val source = "a #"
         val result = XbLexer().lex(source)
