@@ -11,8 +11,8 @@
 ## Parser & AST
 - [ ] Golden parse tests exist for **every operation** (min + edge examples).
 - [ ] AST shapes match normalized expected output for **every operation**.
-- [ ] Precedence and associativity are validated with explicit tests.
-- [ ] Error recovery tests exist for malformed inputs (sync tokens confirmed).
+- [x] Precedence and associativity are validated with explicit tests.
+- [x] Error recovery tests exist for malformed inputs (sync tokens confirmed).
 - [ ] Fuzz/property tests executed and validated (no crashes, no hangs).
 
 ## PSI & Indexing
