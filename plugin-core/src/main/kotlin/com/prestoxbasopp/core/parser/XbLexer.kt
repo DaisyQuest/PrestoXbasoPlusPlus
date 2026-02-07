@@ -1,6 +1,12 @@
 package com.prestoxbasopp.core.parser
 
-class XbLexer(private val source: String) {
+import com.prestoxbasopp.core.api.XbTextRange
+import com.prestoxbasopp.core.lexer.XbSourceOffsetMapping
+
+class XbLexer(
+    private val source: String,
+    private val sourceMap: XbSourceOffsetMapping = XbSourceOffsetMapping.identity(source.length),
+) {
     private var index = 0
 
     fun lex(): List<Token> {
@@ -17,7 +23,8 @@ class XbLexer(private val source: String) {
     private fun nextToken(): Token {
         skipWhitespace()
         if (isAtEnd()) {
-            return Token(TokenType.EOF, "", index, index)
+            val mapped = mapRange(index, index)
+            return Token(TokenType.EOF, "", mapped.startOffset, mapped.endOffset)
         }
         val start = index
         val current = advance()
@@ -25,43 +32,43 @@ class XbLexer(private val source: String) {
             current.isLetter() || current == '_' -> readIdentifier(start)
             current.isDigit() -> readNumber(start)
             current == '"' -> readString(start)
-            current == '+' -> Token(TokenType.PLUS, "+", start, index)
-            current == '-' -> Token(TokenType.MINUS, "-", start, index)
-            current == '*' -> Token(TokenType.STAR, "*", start, index)
-            current == '/' -> Token(TokenType.SLASH, "/", start, index)
-            current == '(' -> Token(TokenType.LPAREN, "(", start, index)
-            current == ')' -> Token(TokenType.RPAREN, ")", start, index)
-            current == ';' -> Token(TokenType.SEMICOLON, ";", start, index)
-            current == ',' -> Token(TokenType.COMMA, ",", start, index)
+            current == '+' -> token(TokenType.PLUS, "+", start, index)
+            current == '-' -> token(TokenType.MINUS, "-", start, index)
+            current == '*' -> token(TokenType.STAR, "*", start, index)
+            current == '/' -> token(TokenType.SLASH, "/", start, index)
+            current == '(' -> token(TokenType.LPAREN, "(", start, index)
+            current == ')' -> token(TokenType.RPAREN, ")", start, index)
+            current == ';' -> token(TokenType.SEMICOLON, ";", start, index)
+            current == ',' -> token(TokenType.COMMA, ",", start, index)
             current == '=' -> {
                 if (match('=')) {
-                    Token(TokenType.EQ, "==", start, index)
+                    token(TokenType.EQ, "==", start, index)
                 } else {
-                    Token(TokenType.EQ, "=", start, index)
+                    token(TokenType.EQ, "=", start, index)
                 }
             }
             current == '!' -> {
                 if (match('=')) {
-                    Token(TokenType.NEQ, "!=", start, index)
+                    token(TokenType.NEQ, "!=", start, index)
                 } else {
-                    Token(TokenType.ERROR, "!", start, index)
+                    token(TokenType.ERROR, "!", start, index)
                 }
             }
             current == '<' -> {
                 if (match('=')) {
-                    Token(TokenType.LTE, "<=", start, index)
+                    token(TokenType.LTE, "<=", start, index)
                 } else {
-                    Token(TokenType.LT, "<", start, index)
+                    token(TokenType.LT, "<", start, index)
                 }
             }
             current == '>' -> {
                 if (match('=')) {
-                    Token(TokenType.GTE, ">=", start, index)
+                    token(TokenType.GTE, ">=", start, index)
                 } else {
-                    Token(TokenType.GT, ">", start, index)
+                    token(TokenType.GT, ">", start, index)
                 }
             }
-            else -> Token(TokenType.ERROR, current.toString(), start, index)
+            else -> token(TokenType.ERROR, current.toString(), start, index)
         }
     }
 
@@ -71,7 +78,7 @@ class XbLexer(private val source: String) {
         }
         val lexeme = source.substring(start, index)
         val type = keywordType(lexeme)
-        return Token(type, lexeme, start, index)
+        return token(type, lexeme, start, index)
     }
 
     private fun readNumber(start: Int): Token {
@@ -85,7 +92,7 @@ class XbLexer(private val source: String) {
             }
         }
         val lexeme = source.substring(start, index)
-        return Token(TokenType.NUMBER, lexeme, start, index)
+        return token(TokenType.NUMBER, lexeme, start, index)
     }
 
     private fun readString(start: Int): Token {
@@ -97,11 +104,11 @@ class XbLexer(private val source: String) {
         }
         if (isAtEnd() || peek() != '"') {
             val lexeme = source.substring(start, index)
-            return Token(TokenType.ERROR, lexeme, start, index)
+            return token(TokenType.ERROR, lexeme, start, index)
         }
         advance()
         val lexeme = source.substring(start + 1, index - 1)
-        return Token(TokenType.STRING, lexeme, start, index)
+        return token(TokenType.STRING, lexeme, start, index)
     }
 
     private fun keywordType(text: String): TokenType {
@@ -146,4 +153,14 @@ class XbLexer(private val source: String) {
     private fun advance(): Char = source[index++]
 
     private fun isAtEnd(): Boolean = index >= source.length
+
+    private fun mapRange(start: Int, end: Int): XbTextRange {
+        val mapped = sourceMap.toSourceRange(XbTextRange(start, end))
+        return mapped ?: XbTextRange(start, end)
+    }
+
+    private fun token(type: TokenType, lexeme: String, start: Int, end: Int): Token {
+        val mapped = mapRange(start, end)
+        return Token(type, lexeme, mapped.startOffset, mapped.endOffset)
+    }
 }

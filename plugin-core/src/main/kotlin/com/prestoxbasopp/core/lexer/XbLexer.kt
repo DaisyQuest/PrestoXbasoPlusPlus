@@ -6,103 +6,32 @@ class XbLexer(
     private val keywordSet: Set<String> = XbKeywords.all,
 ) {
     fun lex(source: String): XbLexResult {
-        val preprocess = preprocess(source)
+        val preprocess = XbPreprocessor.preprocess(source)
         val lexer = LexerState(preprocess.filteredSource, preprocess.sourceMap, keywordSet)
-        return lexer.lex(preprocess.directives)
+        val lexResult = lexer.lex(preprocess.directives)
+        val tokens = mergeDirectiveTokens(lexResult.tokens, preprocess.directives, source.length)
+        return lexResult.copy(tokens = tokens)
     }
 
-    private fun preprocess(source: String): PreprocessResult {
-        if (source.isEmpty()) {
-            return PreprocessResult(
-                filteredSource = "",
-                directives = emptyList(),
-                sourceMap = XbSourceOffsetMapping.identity(0),
-            )
+    private fun mergeDirectiveTokens(
+        tokens: List<XbToken>,
+        directives: List<XbPreprocessorDirective>,
+        sourceLength: Int,
+    ): List<XbToken> {
+        val eofToken = tokens.firstOrNull { it.type == XbTokenType.EOF }
+            ?: XbToken(XbTokenType.EOF, "", XbTextRange(sourceLength, sourceLength))
+        val normalizedEof = eofToken.copy(range = XbTextRange(sourceLength, sourceLength))
+        val nonEofTokens = tokens.filterNot { it.type == XbTokenType.EOF }
+        if (directives.isEmpty()) {
+            return nonEofTokens + normalizedEof
         }
-        val directives = mutableListOf<XbPreprocessorDirective>()
-        val builder = StringBuilder()
-        val segments = mutableListOf<XbSourceOffsetMapping.Segment>()
-        var logicalIndex = 0
-        var index = 0
-        var lineStart = 0
-        while (index < source.length) {
-            val lineEnd = source.indexOf('\n', index).let { if (it == -1) source.length else it }
-            val lineSlice = source.substring(lineStart, lineEnd)
-            val firstNonWhitespace = lineSlice.indexOfFirst { !it.isWhitespace() }
-            val directiveOffset = if (firstNonWhitespace >= 0) lineStart + firstNonWhitespace else -1
-            val isDirective = directiveOffset >= 0 && source[directiveOffset] == '#'
-            if (isDirective) {
-                var nameStart = directiveOffset + 1
-                while (nameStart < lineEnd && source[nameStart].isWhitespace()) {
-                    nameStart++
-                }
-                val nameEnd = nameStart + source.substring(nameStart, lineEnd)
-                    .takeWhile { it.isLetter() }
-                    .length
-                val name = if (nameStart < nameEnd) source.substring(nameStart, nameEnd) else ""
-                directives += XbPreprocessorDirective(
-                    name = name,
-                    text = source.substring(directiveOffset, lineEnd),
-                    range = XbTextRange(directiveOffset, lineEnd),
-                )
-                if (lineEnd < source.length) {
-                    copySegment(source, lineEnd, lineEnd + 1, builder, segments, logicalIndex).also {
-                        logicalIndex = it
-                    }
-                }
-            } else {
-                if (lineEnd > index) {
-                    copySegment(source, index, lineEnd, builder, segments, logicalIndex).also {
-                        logicalIndex = it
-                    }
-                }
-                if (lineEnd < source.length) {
-                    copySegment(source, lineEnd, lineEnd + 1, builder, segments, logicalIndex).also {
-                        logicalIndex = it
-                    }
-                }
-            }
-            index = lineEnd + 1
-            lineStart = index
+        val directiveTokens = directives.map { directive ->
+            XbToken(XbTokenType.PREPROCESSOR, directive.text, directive.range)
         }
-        val sourceMap = if (segments.isEmpty()) {
-            XbSourceOffsetMapping.identity(0)
-        } else {
-            XbSourceOffsetMapping(segments)
-        }
-        return PreprocessResult(
-            filteredSource = builder.toString(),
-            directives = directives,
-            sourceMap = sourceMap,
-        )
+        val sorted = (nonEofTokens + directiveTokens).sortedWith(compareBy<XbToken> { it.range.startOffset }
+            .thenBy { it.range.endOffset })
+        return sorted + normalizedEof
     }
-
-    private fun copySegment(
-        source: String,
-        start: Int,
-        end: Int,
-        builder: StringBuilder,
-        segments: MutableList<XbSourceOffsetMapping.Segment>,
-        logicalIndex: Int,
-    ): Int {
-        if (start >= end) {
-            return logicalIndex
-        }
-        builder.append(source, start, end)
-        val length = end - start
-        segments += XbSourceOffsetMapping.Segment(
-            logicalStart = logicalIndex,
-            length = length,
-            sourceStart = start,
-        )
-        return logicalIndex + length
-    }
-
-    private data class PreprocessResult(
-        val filteredSource: String,
-        val directives: List<XbPreprocessorDirective>,
-        val sourceMap: XbSourceOffsetMapping,
-    )
 
     private class LexerState(
         private val source: String,

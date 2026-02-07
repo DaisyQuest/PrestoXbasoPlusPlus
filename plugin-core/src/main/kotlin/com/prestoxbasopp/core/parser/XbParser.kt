@@ -298,7 +298,8 @@ class XbParser(private val tokens: List<Token>) {
         )
 
         fun parse(source: String): XbParseResult {
-            val lexer = XbLexer(source)
+            val preprocess = com.prestoxbasopp.core.lexer.XbPreprocessor.preprocess(source)
+            val lexer = XbLexer(preprocess.filteredSource, preprocess.sourceMap)
             val tokens = lexer.lex()
             val parser = XbParser(tokens)
             return parser.parseProgram()
