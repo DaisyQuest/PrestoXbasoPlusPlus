@@ -1,0 +1,169 @@
+package com.prestoxbasopp.ide
+
+import com.prestoxbasopp.core.api.XbTextRange
+import com.prestoxbasopp.core.lexer.XbLexer
+import com.prestoxbasopp.core.lexer.XbToken
+import com.prestoxbasopp.core.lexer.XbTokenType
+import com.prestoxbasopp.core.psi.XbPsiElement
+import com.prestoxbasopp.core.psi.XbPsiFile
+import com.prestoxbasopp.core.psi.XbPsiFunctionDeclaration
+import com.prestoxbasopp.core.psi.XbPsiSnapshot
+import com.prestoxbasopp.core.psi.XbPsiSymbol
+import com.prestoxbasopp.core.psi.XbPsiSymbolReference
+import com.prestoxbasopp.core.psi.XbPsiVariableDeclaration
+import kotlin.math.max
+import kotlin.math.min
+
+class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
+    private val functionKeywords = setOf("function", "procedure", "method")
+    private val variableKeywords = setOf("local", "static", "public", "private", "global")
+
+    fun build(source: String, fileName: String = "file"): XbPsiFile {
+        val tokens = lexer.lex(source).tokens.filter { it.type != XbTokenType.EOF }
+        val declaredOffsets = mutableSetOf<Int>()
+        val elements = mutableListOf<XbPsiElement>()
+
+        collectDeclarations(tokens, source, declaredOffsets, elements)
+        collectReferences(tokens, source, declaredOffsets, elements)
+
+        val sorted = elements.sortedBy { it.textRange.startOffset }
+        val textRange = XbTextRange(0, max(source.length, 0))
+        return XbPsiFile(
+            name = fileName,
+            textRange = textRange,
+            text = source,
+            children = sorted,
+        )
+    }
+
+    fun buildSnapshot(source: String, fileName: String = "file"): XbPsiSnapshot {
+        return XbPsiSnapshot.fromElement(build(source, fileName))
+    }
+
+    private fun collectDeclarations(
+        tokens: List<XbToken>,
+        source: String,
+        declaredOffsets: MutableSet<Int>,
+        elements: MutableList<XbPsiElement>,
+    ) {
+        var index = 0
+        while (index < tokens.size) {
+            val token = tokens[index]
+            if (token.type == XbTokenType.KEYWORD) {
+                val keyword = token.text.lowercase()
+                if (keyword in functionKeywords) {
+                    val nameToken = tokens.getOrNull(index + 1)?.takeIf { it.type == XbTokenType.IDENTIFIER }
+                    if (nameToken != null) {
+                        declaredOffsets += nameToken.range.startOffset
+                        val (parameters, endIndex) = parseParameters(tokens, index + 2)
+                        val endOffset = tokens.getOrNull(endIndex)?.range?.endOffset ?: nameToken.range.endOffset
+                        elements += XbPsiFunctionDeclaration(
+                            symbolName = nameToken.text,
+                            parameters = parameters,
+                            textRange = XbTextRange(token.range.startOffset, endOffset),
+                            text = slice(source, token.range.startOffset, endOffset),
+                        )
+                    }
+                }
+                if (keyword in variableKeywords) {
+                    index = collectVariableDeclarations(tokens, source, index, keyword, declaredOffsets, elements)
+                }
+            }
+            index++
+        }
+    }
+
+    private fun collectVariableDeclarations(
+        tokens: List<XbToken>,
+        source: String,
+        startIndex: Int,
+        keyword: String,
+        declaredOffsets: MutableSet<Int>,
+        elements: MutableList<XbPsiElement>,
+    ): Int {
+        var index = startIndex + 1
+        val isMutable = keyword != "static"
+        while (index < tokens.size) {
+            val token = tokens[index]
+            when (token.type) {
+                XbTokenType.IDENTIFIER -> {
+                    declaredOffsets += token.range.startOffset
+                    elements += XbPsiVariableDeclaration(
+                        symbolName = token.text,
+                        isMutable = isMutable,
+                        textRange = token.range,
+                        text = slice(source, token.range.startOffset, token.range.endOffset),
+                    )
+                    val next = tokens.getOrNull(index + 1)
+                    if (next != null && next.text == ",") {
+                        index += 2
+                        continue
+                    }
+                    return index
+                }
+                XbTokenType.PUNCTUATION -> {
+                    if (token.text == ",") {
+                        index++
+                        continue
+                    }
+                    return index
+                }
+                else -> return index
+            }
+        }
+        return index
+    }
+
+    private fun collectReferences(
+        tokens: List<XbToken>,
+        source: String,
+        declaredOffsets: Set<Int>,
+        elements: MutableList<XbPsiElement>,
+    ) {
+        tokens.forEach { token ->
+            if (token.type == XbTokenType.IDENTIFIER && token.range.startOffset !in declaredOffsets) {
+                elements += XbPsiSymbolReference(
+                    symbolName = token.text,
+                    textRange = token.range,
+                    text = slice(source, token.range.startOffset, token.range.endOffset),
+                )
+            }
+        }
+    }
+
+    private fun parseParameters(tokens: List<XbToken>, startIndex: Int): Pair<List<String>, Int> {
+        val parameters = mutableListOf<String>()
+        val openParen = tokens.getOrNull(startIndex) ?: return parameters to (startIndex - 1)
+        if (openParen.text != "(") {
+            return parameters to (startIndex - 1)
+        }
+        var index = startIndex + 1
+        while (index < tokens.size) {
+            val token = tokens[index]
+            when (token.type) {
+                XbTokenType.IDENTIFIER -> parameters += token.text
+                XbTokenType.PUNCTUATION -> if (token.text == ")") {
+                    return parameters to index
+                }
+                else -> Unit
+            }
+            index++
+        }
+        return parameters to (tokens.lastIndex)
+    }
+
+    private fun slice(source: String, start: Int, end: Int): String {
+        val safeStart = min(max(start, 0), source.length)
+        val safeEnd = min(max(end, safeStart), source.length)
+        return source.substring(safeStart, safeEnd)
+    }
+}
+
+object XbPsiSymbolLocator {
+    fun findSymbol(root: XbPsiElement, offset: Int): XbPsiSymbol? {
+        return root.walk()
+            .filterIsInstance<XbPsiSymbol>()
+            .filter { offset >= it.textRange.startOffset && offset <= it.textRange.endOffset }
+            .minByOrNull { it.textRange.endOffset - it.textRange.startOffset }
+    }
+}

@@ -89,6 +89,28 @@ class XbStructureViewTest {
     }
 
     @Test
+    fun `includes variable declarations in the structure tree`() {
+        val snapshot = XbPsiSnapshot(
+            elementType = XbPsiElementType.FILE,
+            name = "root",
+            textRange = XbTextRange(0, 50),
+            text = "file",
+            children = listOf(
+                XbPsiSnapshot(
+                    elementType = XbPsiElementType.VARIABLE_DECLARATION,
+                    name = "count",
+                    textRange = XbTextRange(10, 15),
+                    text = "count",
+                ),
+            ),
+        )
+
+        val structure = XbStructureViewBuilder().build(snapshot)
+
+        assertThat(structure.children.map { it.name }).containsExactly("count")
+    }
+
+    @Test
     fun `returns empty breadcrumbs when offset is outside`() {
         val snapshot = XbPsiSnapshot(
             elementType = XbPsiElementType.FILE,

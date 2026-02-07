@@ -1,0 +1,18 @@
+// UI workflow sample: helper routines and string handling.
+
+function BuildWindowTitle(appName, version)
+   return appName + " v" + version
+endfunction
+
+function FormatStatusMessage(userName, action)
+   local message := userName + " " + action
+   return message
+endfunction
+
+procedure RenderStatusBar(userName)
+   local title := BuildWindowTitle("Presto", "1.0")
+   local status := FormatStatusMessage(userName, "signed in")
+
+   ? title
+   ? status
+return

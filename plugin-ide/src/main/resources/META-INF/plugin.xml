@@ -12,9 +12,14 @@
     <extensions defaultExtensionNs="com.intellij">
         <fileType name="Xbase++ File"
                   language="Xbase++"
-                  extensions="xb"
+                  extensions="xb;prg"
                   implementationClass="com.prestoxbasopp.ide.XbFileType" />
+        <lang.parserDefinition language="Xbase++"
+                               implementationClass="com.prestoxbasopp.ide.XbParserDefinition" />
         <lang.syntaxHighlighterFactory language="Xbase++"
                                        implementationClass="com.prestoxbasopp.ide.XbSyntaxHighlighterFactory" />
+        <lang.structureViewBuilder language="Xbase++"
+                                   implementationClass="com.prestoxbasopp.ide.XbStructureViewBuilderFactory" />
+        <gotoDeclarationHandler implementation="com.prestoxbasopp.ide.XbGotoDeclarationHandler" />
     </extensions>
 </idea-plugin>

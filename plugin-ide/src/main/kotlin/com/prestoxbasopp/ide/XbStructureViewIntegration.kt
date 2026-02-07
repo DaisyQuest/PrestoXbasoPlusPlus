@@ -1,0 +1,78 @@
+package com.prestoxbasopp.ide
+
+import com.intellij.ide.structureView.StructureViewBuilder
+import com.intellij.ide.structureView.StructureViewModel
+import com.intellij.ide.structureView.StructureViewTreeElement
+import com.intellij.ide.structureView.TreeBasedStructureViewBuilder
+import com.intellij.ide.structureView.impl.common.StructureViewModelBase
+import com.intellij.ide.util.treeView.smartTree.SortableTreeElement
+import com.intellij.ide.util.treeView.smartTree.TreeElement
+import com.intellij.lang.LanguageStructureViewBuilder
+import com.intellij.navigation.ItemPresentation
+import com.intellij.openapi.editor.Editor
+import com.intellij.psi.NavigatablePsiElement
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
+import com.intellij.psi.util.PsiTreeUtil
+
+class XbStructureViewBuilderFactory(
+    private val snapshotBuilder: XbPsiTextBuilder = XbPsiTextBuilder(),
+    private val structureViewBuilder: XbStructureViewBuilder = XbStructureViewBuilder(),
+) : LanguageStructureViewBuilder {
+    override fun getStructureViewBuilder(psiFile: PsiFile): StructureViewBuilder? {
+        if (psiFile !is XbPsiFile) {
+            return null
+        }
+        val snapshot = snapshotBuilder.buildSnapshot(psiFile.text, psiFile.name)
+        val rootItem = structureViewBuilder.build(snapshot)
+        return object : TreeBasedStructureViewBuilder() {
+            override fun createStructureViewModel(editor: Editor?): StructureViewModel {
+                return XbStructureViewModel(psiFile, rootItem)
+            }
+        }
+    }
+}
+
+private class XbStructureViewModel(
+    psiFile: PsiFile,
+    rootItem: XbStructureItem,
+) : StructureViewModelBase(psiFile, XbStructureViewElement(psiFile, rootItem)),
+    StructureViewModel.ElementInfoProvider {
+    override fun isAlwaysShowsPlus(element: StructureViewTreeElement): Boolean = false
+
+    override fun isAlwaysLeaf(element: StructureViewTreeElement): Boolean = false
+}
+
+private class XbStructureViewElement(
+    private val psiFile: PsiFile,
+    private val item: XbStructureItem,
+) : StructureViewTreeElement, SortableTreeElement, ItemPresentation {
+    override fun getValue(): Any = item
+
+    override fun getChildren(): Array<TreeElement> = item.children
+        .map { XbStructureViewElement(psiFile, it) }
+        .toTypedArray()
+
+    override fun getPresentation(): ItemPresentation = this
+
+    override fun getPresentableText(): String = item.name
+
+    override fun getAlphaSortKey(): String = item.name
+
+    override fun getIcon(unused: Boolean) = null
+
+    override fun navigate(requestFocus: Boolean) {
+        val target = findPsiElement() as? NavigatablePsiElement ?: return
+        target.navigate(requestFocus)
+    }
+
+    override fun canNavigate(): Boolean = findPsiElement() is NavigatablePsiElement
+
+    override fun canNavigateToSource(): Boolean = canNavigate()
+
+    private fun findPsiElement(): PsiElement? {
+        val startOffset = item.textRange.startOffset
+        val element = psiFile.findElementAt(startOffset)
+        return PsiTreeUtil.getParentOfType(element, PsiElement::class.java, false) ?: element
+    }
+}
