@@ -22,9 +22,16 @@
                    implementationClass="com.prestoxbasopp.ide.XbDiagnosticsAnnotator" />
         <lang.psiStructureViewFactory language="Xbase++"
                                       implementationClass="com.prestoxbasopp.ide.XbStructureViewBuilderFactory" />
+        <annotator language="Xbase++"
+                   implementationClass="com.prestoxbasopp.ide.XbIdeAnnotator" />
         <toolWindow id="Xbase++ Macros"
                     anchor="left"
                     factoryClass="com.prestoxbasopp.ide.XbMacroExpansionToolWindowFactory" />
         <gotoDeclarationHandler implementation="com.prestoxbasopp.ide.XbGotoDeclarationHandler" />
+        <localInspection language="Xbase++"
+                         implementationClass="com.prestoxbasopp.ide.XbInspectionTool" />
+        <applicationConfigurable id="com.prestoxbasopp.settings"
+                                 displayName="xbase++ Settings"
+                                 implementationClass="com.prestoxbasopp.ide.XbSettingsConfigurable" />
     </extensions>
 </idea-plugin>
