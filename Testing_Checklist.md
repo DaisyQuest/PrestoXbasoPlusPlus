@@ -49,3 +49,6 @@
 - [ ] Coverage threshold check fails the build if any threshold is missed.
 - [ ] Mutation testing runs for expression/precedence logic.
 - [x] IntelliJ SDK compatibility tests are executed and passing.
+
+## Recent Test Additions
+- Operations registry loader/schema validation edge cases (non-map entries, duplicate IDs, expected_errors handling).
