@@ -42,10 +42,17 @@ class XbNavigationServiceTest {
 
         val declarations = service.findDeclarations("main", XbStubType.FUNCTION, index)
         val usages = service.findUsages("main", index)
+        val functionTargets = service.findFunctionTargets("main", index)
+        val jumpTarget = service.jumpToFunctionDeclaration("main", index)
+        val functionUsages = service.findFunctionUsages("main", index)
 
         assertThat(declarations).hasSize(1)
         assertThat(usages).hasSize(1)
         assertThat(usages.first().symbolName).isEqualTo("main")
+        assertThat(functionTargets.declarations).hasSize(1)
+        assertThat(functionTargets.usages).hasSize(1)
+        assertThat(jumpTarget?.name).isEqualTo("main")
+        assertThat(functionUsages).hasSize(1)
     }
 
     @Test
@@ -62,5 +69,37 @@ class XbNavigationServiceTest {
         val targets = service.findAll("missing", XbStubType.FUNCTION, index)
         assertThat(targets.declarations).isEmpty()
         assertThat(targets.usages).isEmpty()
+    }
+
+    @Test
+    fun `function navigation ignores non-function-only symbols`() {
+        val root = XbPsiFile(
+            name = "sample",
+            textRange = XbTextRange(0, 20),
+            text = "file",
+            children = listOf(
+                XbPsiVariableDeclaration(
+                    symbolName = "onlyVar",
+                    isMutable = false,
+                    textRange = XbTextRange(0, 10),
+                    text = "var onlyVar",
+                ),
+                XbPsiSymbolReference(
+                    symbolName = "onlyVar",
+                    textRange = XbTextRange(11, 18),
+                    text = "onlyVar",
+                ),
+            ),
+        )
+
+        val service = XbNavigationService()
+        val index = service.buildIndex(root)
+
+        val targets = service.findFunctionTargets("onlyVar", index)
+        val jumpTarget = service.jumpToFunctionDeclaration("onlyVar", index)
+
+        assertThat(targets.declarations).isEmpty()
+        assertThat(targets.usages).isEmpty()
+        assertThat(jumpTarget).isNull()
     }
 }

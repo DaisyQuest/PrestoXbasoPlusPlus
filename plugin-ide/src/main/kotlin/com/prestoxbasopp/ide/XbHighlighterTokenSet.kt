@@ -1,12 +1,12 @@
 package com.prestoxbasopp.ide
 
 import com.intellij.psi.tree.IElementType
-import com.prestoxbasopp.core.parser.TokenType
+import com.prestoxbasopp.core.lexer.XbTokenType as XbLexerTokenType
 
 object XbHighlighterTokenSet {
-    private val tokenMap: Map<TokenType, IElementType> = TokenType.entries.associateWith { type ->
+    private val tokenMap: Map<XbLexerTokenType, IElementType> = XbLexerTokenType.entries.associateWith { type ->
         XbTokenType(type.name)
     }
 
-    fun forToken(type: TokenType): IElementType = tokenMap.getValue(type)
+    fun forToken(type: XbLexerTokenType): IElementType = tokenMap.getValue(type)
 }
