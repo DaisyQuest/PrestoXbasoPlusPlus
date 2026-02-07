@@ -81,4 +81,25 @@ class XbInspectionEngineTest {
         assertThat(findings).hasSize(1)
         assertThat(findings.first().severity).isEqualTo(XbInspectionSeverity.INFO)
     }
+
+    @Test
+    fun `suggests keywords for likely misspellings`() {
+        val findings = engine.inspect("loal count\nfuncion Demo()\nprcedure Sample()")
+
+        val suggestions = findings.filter { it.id == "XB250" }
+
+        assertThat(suggestions).hasSize(3)
+        assertThat(suggestions.map { it.message }).containsExactlyInAnyOrder(
+            "Did you mean \"LOCAL\"?",
+            "Did you mean \"FUNCTION\"?",
+            "Did you mean \"PROCEDURE\"?",
+        )
+    }
+
+    @Test
+    fun `does not suggest keywords for short or distant identifiers`() {
+        val findings = engine.inspect("lo count\nlocation value")
+
+        assertThat(findings.none { it.id == "XB250" }).isTrue()
+    }
 }

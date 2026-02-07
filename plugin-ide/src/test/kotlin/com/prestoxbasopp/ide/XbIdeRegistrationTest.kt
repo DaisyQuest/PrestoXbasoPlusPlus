@@ -162,8 +162,9 @@ class XbIdeRegistrationTest {
 
         val significantTokens = mutableListOf<IElementType>()
         while (lexer.tokenType != null) {
-            if (lexer.tokenType != TokenType.WHITE_SPACE) {
-                significantTokens += lexer.tokenType
+            val tokenType = lexer.tokenType
+            if (tokenType != null && tokenType != TokenType.WHITE_SPACE) {
+                significantTokens += tokenType
             }
             lexer.advance()
         }
