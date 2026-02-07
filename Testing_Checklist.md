@@ -34,3 +34,7 @@
 - [ ] Coverage threshold check fails the build if any threshold is missed.
 - [ ] Mutation testing runs for expression/precedence logic.
 - [ ] IntelliJ SDK compatibility tests are executed and passing.
+
+
+## Recent Additions
+- Lexer coverage: added tokenization, preprocessor mapping, literal error, and fuzzing tests in `plugin-core` Track B suite.

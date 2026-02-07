@@ -1,0 +1,5 @@
+File
+  Stmt.If
+    Expr.Identifier[name=x]
+    Block[branch=then]
+    Block[branch=else]
