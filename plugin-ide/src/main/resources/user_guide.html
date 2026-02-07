@@ -41,7 +41,7 @@
   <h2>Getting Started</h2>
   <ol>
     <li>Install the plugin from the IntelliJ IDEA plugin settings.</li>
-    <li>Open or create a file with the <code>.xb</code> extension.</li>
+    <li>Open or create a file with the <code>.xb</code> extension (the plugin registers the file type automatically).</li>
     <li>Start typing xbase++ code to activate syntax highlighting, inspections, and completion.</li>
   </ol>
 
@@ -51,6 +51,7 @@
     <li>Keywords for control flow and logic (<code>IF</code>, <code>ELSE</code>, <code>WHILE</code>, <code>RETURN</code>).</li>
     <li>Operators, punctuation, string literals, and numeric literals.</li>
     <li>Explicit error highlighting for invalid or unterminated tokens.</li>
+    <li>Highlighting is provided by the IntelliJ syntax highlighter factory wired to the <code>.xb</code> file type.</li>
   </ul>
 
   <h3>Diagnostics and Error Annotations</h3>
@@ -103,8 +104,9 @@
 
   <h2>Troubleshooting</h2>
   <ul>
-    <li>If highlighting or completion seems unavailable, ensure the file extension is <code>.xb</code>.</li>
+    <li>If highlighting or completion seems unavailable, ensure the file extension is <code>.xb</code> and the file is not treated as plain text.</li>
     <li>Use the IDE logs to report any unexpected parsing errors.</li>
+    <li>Restart the IDE after installing the plugin so the file type registration is refreshed.</li>
   </ul>
 </body>
 </html>

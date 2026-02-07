@@ -8,4 +8,13 @@
         A bundled <code>user_guide.html</code> is included for onboarding and feature details.
     ]]></description>
     <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType name="Xbase++"
+                  language="Xbase++"
+                  extensions="xb"
+                  implementationClass="com.prestoxbasopp.ide.XbFileType" />
+        <lang.syntaxHighlighterFactory language="Xbase++"
+                                       implementationClass="com.prestoxbasopp.ide.XbSyntaxHighlighterFactory" />
+    </extensions>
 </idea-plugin>
