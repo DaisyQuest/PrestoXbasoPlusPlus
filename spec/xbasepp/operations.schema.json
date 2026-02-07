@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "xbase++ operations registry",
+  "type": "object",
+  "required": ["version", "operations"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "category",
+          "example_min",
+          "example_edge",
+          "expected_ast_shape",
+          "expected_errors"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "category": { "type": "string", "minLength": 1 },
+          "example_min": { "type": "string", "minLength": 1 },
+          "example_edge": { "type": "string", "minLength": 1 },
+          "expected_ast_shape": { "type": "string", "minLength": 1 },
+          "expected_errors": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "precedence_group": { "type": "string" }
+        }
+      }
+    }
+  }
+}

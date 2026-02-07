@@ -1,0 +1,7 @@
+version: 2
+operations:
+  - id: ""
+    category: ""
+    example_min: ""
+    example_edge: ""
+    expected_ast_shape: ""
