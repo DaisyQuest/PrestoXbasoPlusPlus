@@ -56,4 +56,78 @@ class XbFoldingServiceTest {
         val ranges = XbFoldingService().foldingRanges(snapshot)
         assertThat(ranges).isEmpty()
     }
+
+    @Test
+    fun `collects folding ranges for control and loop statements from source`() {
+        val source = """
+            FUNCTION main()
+                IF x == 1
+                    ? x
+                ENDIF
+                WHILE x < 10
+                    x := x + 1
+                ENDDO
+                FOR i := 1 TO 3
+                    ? i
+                NEXT
+            ENDFUNCTION
+            PROCEDURE helper()
+                ? 0
+            ENDPROC
+        """.trimIndent()
+
+        val snapshot = XbPsiSnapshot(
+            elementType = XbPsiElementType.FILE,
+            name = "sample",
+            textRange = XbTextRange(0, source.length),
+            text = source,
+        )
+
+        val ranges = XbFoldingService().foldingRanges(snapshot)
+
+        val expectedRanges = listOf(
+            XbTextRange(source.indexOf("FUNCTION"), source.indexOf("ENDFUNCTION") + "ENDFUNCTION".length),
+            XbTextRange(source.indexOf("IF"), source.indexOf("ENDIF") + "ENDIF".length),
+            XbTextRange(source.indexOf("WHILE"), source.indexOf("ENDDO") + "ENDDO".length),
+            XbTextRange(source.indexOf("FOR"), source.indexOf("NEXT") + "NEXT".length),
+            XbTextRange(source.indexOf("PROCEDURE"), source.indexOf("ENDPROC") + "ENDPROC".length),
+        )
+
+        assertThat(ranges.map { it.textRange }).containsAll(expectedRanges)
+        assertThat(ranges.map { it.placeholder }).contains(
+            "main(...)",
+            "helper(...)",
+            "if (...)",
+            "while (...)",
+            "for i ...",
+        )
+    }
+
+    @Test
+    fun `deduplicates folding ranges when snapshots overlap parsed blocks`() {
+        val source = """
+            FUNCTION main()
+                ? 1
+            ENDFUNCTION
+        """.trimIndent()
+
+        val snapshot = XbPsiSnapshot(
+            elementType = XbPsiElementType.FILE,
+            name = "sample",
+            textRange = XbTextRange(0, source.length),
+            text = source,
+            children = listOf(
+                XbPsiSnapshot(
+                    elementType = XbPsiElementType.FUNCTION_DECLARATION,
+                    name = "main",
+                    textRange = XbTextRange(0, source.length),
+                    text = source,
+                ),
+            ),
+        )
+
+        val ranges = XbFoldingService().foldingRanges(snapshot)
+        val mainRanges = ranges.filter { it.placeholder == "main(...)" }
+        assertThat(mainRanges).hasSize(1)
+    }
 }
