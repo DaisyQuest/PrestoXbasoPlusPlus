@@ -16,17 +16,21 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 
 class XbStructureViewBuilderFactory(
-    private val snapshotBuilder: XbPsiTextBuilder = XbPsiTextBuilder(),
-    private val structureViewBuilder: XbStructureViewBuilder = XbStructureViewBuilder(),
+    private val fileContentResolver: XbStructureViewFileContentResolver = XbStructureViewFileContentResolver(),
+    private val rootBuilder: XbStructureViewRootBuilder = XbStructureViewRootBuilder(),
 ) : PsiStructureViewFactory {
     override fun getStructureViewBuilder(psiFile: PsiFile): StructureViewBuilder? {
         if (psiFile !is XbPsiFile) {
             return null
         }
-        val snapshot = snapshotBuilder.buildSnapshot(psiFile.text, psiFile.name)
-        val rootItem = structureViewBuilder.build(snapshot)
         return object : TreeBasedStructureViewBuilder() {
             override fun createStructureViewModel(editor: Editor?): StructureViewModel {
+                val content = fileContentResolver.resolve(
+                    fileName = psiFile.name,
+                    psiText = psiFile.text,
+                    editorText = editor?.document?.text,
+                )
+                val rootItem = rootBuilder.buildRoot(content)
                 return XbStructureViewModel(psiFile, rootItem)
             }
         }
