@@ -31,4 +31,26 @@ class XbLexerPreprocessorTest {
         val mappedRange = result.sourceMap.toSourceRange(logicalRange)
         assertThat(mappedRange).isEqualTo(XbTextRange(source.indexOf('x'), source.indexOf('x') + 1))
     }
+
+    @Test
+    fun `preserves monotonic source ranges across directives`() {
+        val source = """
+            #include "mydefs.ch"
+
+            FUNCTION parse_input2( cSource )
+
+               RETURN parse_input( cSource )
+
+            END FUNCTION
+        """.trimIndent()
+
+        val result = XbLexer().lex(source)
+
+        val ranges = result.tokens.map { it.range }
+        val starts = ranges.map { it.startOffset }
+        val ends = ranges.map { it.endOffset }
+
+        assertThat(starts).isSorted
+        assertThat(ends).isSorted
+    }
 }

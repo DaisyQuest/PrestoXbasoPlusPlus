@@ -26,8 +26,20 @@ class XbSourceOffsetMapping(
 
     fun toSourceRange(range: XbTextRange): XbTextRange? {
         val start = toSourceOffset(range.startOffset) ?: return null
-        val end = toSourceOffset(range.endOffset) ?: return null
+        val end = toSourceOffsetForRangeEnd(range.endOffset) ?: return null
         return XbTextRange(start, end)
+    }
+
+    private fun toSourceOffsetForRangeEnd(logicalOffset: Int): Int? {
+        if (logicalOffset < 0) {
+            return null
+        }
+        if (logicalOffset == 0) {
+            return segments.firstOrNull()?.sourceStart
+        }
+        val segment = segments.lastOrNull { logicalOffset > it.logicalStart && logicalOffset <= it.logicalEnd }
+            ?: return null
+        return segment.sourceStart + (logicalOffset - segment.logicalStart)
     }
 
     companion object {
