@@ -23,9 +23,4 @@ class XbGotoDeclarationHandler(
         val elements = targets.mapNotNull { range -> file.findElementAt(range.startOffset) }
         return elements.takeIf { it.isNotEmpty() }?.toTypedArray()
     }
-
-    override fun getActionText(
-        context: PsiElement?,
-        target: PsiElement?,
-    ): String? = null
 }
