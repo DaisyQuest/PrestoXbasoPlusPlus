@@ -13,27 +13,63 @@ data class XbStructureItem(
 
 class XbStructureViewBuilder {
     fun build(snapshot: XbPsiSnapshot): XbStructureItem {
+        val children = buildChildren(snapshot)
         return XbStructureItem(
             name = displayName(snapshot),
             elementType = snapshot.elementType,
             textRange = snapshot.textRange,
-            children = snapshot.children.map { build(it) },
+            children = children,
         )
+    }
+
+    private fun buildChildren(snapshot: XbPsiSnapshot): List<XbStructureItem> {
+        return snapshot.children.flatMap { child ->
+            val childItems = buildChildren(child)
+            if (shouldInclude(child)) {
+                listOf(
+                    XbStructureItem(
+                        name = displayName(child),
+                        elementType = child.elementType,
+                        textRange = child.textRange,
+                        children = childItems,
+                    ),
+                )
+            } else {
+                childItems
+            }
+        }
+    }
+
+    private fun shouldInclude(snapshot: XbPsiSnapshot): Boolean {
+        return when (snapshot.elementType) {
+            XbPsiElementType.FILE,
+            XbPsiElementType.FUNCTION_DECLARATION,
+            -> true
+            else -> false
+        }
     }
 
     private fun displayName(snapshot: XbPsiSnapshot): String {
         val explicitName = snapshot.name?.takeIf { it.isNotBlank() }
         if (explicitName != null) {
+            if (snapshot.elementType == XbPsiElementType.FUNCTION_DECLARATION) {
+                return formatFunctionName(explicitName, snapshot.parameters)
+            }
             return explicitName
         }
         return when (snapshot.elementType) {
             XbPsiElementType.FILE -> "file"
             XbPsiElementType.BLOCK -> "block"
-            XbPsiElementType.FUNCTION_DECLARATION -> "function"
+            XbPsiElementType.FUNCTION_DECLARATION -> formatFunctionName("function", snapshot.parameters)
             XbPsiElementType.VARIABLE_DECLARATION -> "variable"
             XbPsiElementType.SYMBOL_REFERENCE -> "reference"
             XbPsiElementType.LITERAL -> "literal"
         }
+    }
+
+    private fun formatFunctionName(name: String, parameters: List<String>): String {
+        val suffix = if (parameters.isEmpty()) "" else parameters.joinToString(prefix = "(", postfix = ")")
+        return "$name$suffix"
     }
 }
 
