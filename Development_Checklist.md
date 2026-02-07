@@ -28,10 +28,10 @@
 - [x] **DP-0304**: Build AST dumper and golden AST comparison tooling.
 
 ## Parallel Track D — PSI & Indexing
-- [ ] **DP-0401**: Define PSI elements for core syntax nodes.
-- [ ] **DP-0402**: Implement stub generation for indexed PSI elements.
-- [ ] **DP-0403**: Build index keys and queries (find usages, declarations).
-- [ ] **DP-0404**: Add PSI integrity validators and round-trip tests.
+- [x] **DP-0401**: Define PSI elements for core syntax nodes.
+- [x] **DP-0402**: Implement stub generation for indexed PSI elements.
+- [x] **DP-0403**: Build index keys and queries (find usages, declarations).
+- [x] **DP-0404**: Add PSI integrity validators and round-trip tests.
 
 ## Parallel Track E — IDE Features
 - [ ] **DP-0501**: Syntax highlighting and annotators.
@@ -50,4 +50,4 @@
 - [ ] **DP-0702**: Operation coverage enforcement (100% required).
 - [ ] **DP-0703**: Property-based and fuzz testing integration.
 - [ ] **DP-0704**: Mutation testing pipeline for precedence/expressions.
-- [ ] **DP-0705**: IntelliJ SDK compatibility checks and CI validation.
+- [x] **DP-0705**: IntelliJ SDK compatibility checks and CI validation.
