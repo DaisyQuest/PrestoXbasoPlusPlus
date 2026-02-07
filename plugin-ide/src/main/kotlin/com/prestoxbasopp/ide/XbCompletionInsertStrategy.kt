@@ -1,7 +1,5 @@
 package com.prestoxbasopp.ide
 
-import com.prestoxbasopp.core.stubs.XbStubType
-
 data class XbCompletionInsertPlan(
     val text: String,
     val caretOffsetDelta: Int? = null,
@@ -10,7 +8,7 @@ data class XbCompletionInsertPlan(
 object XbCompletionInsertStrategy {
     fun plan(item: XbCompletionItem): XbCompletionInsertPlan {
         return when (item.type) {
-            XbStubType.FUNCTION -> XbCompletionInsertPlan(
+            XbCompletionType.FUNCTION -> XbCompletionInsertPlan(
                 text = "${item.name}()",
                 caretOffsetDelta = -1,
             )

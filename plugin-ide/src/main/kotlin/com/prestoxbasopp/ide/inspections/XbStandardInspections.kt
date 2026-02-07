@@ -10,7 +10,9 @@ import com.prestoxbasopp.core.ast.XbLiteralExpression
 import com.prestoxbasopp.core.ast.XbReturnStatement
 import com.prestoxbasopp.core.ast.XbUnaryExpression
 import com.prestoxbasopp.core.ast.XbWhileStatement
+import com.prestoxbasopp.core.lexer.XbKeywords
 import com.prestoxbasopp.core.lexer.XbTokenType
+import kotlin.math.abs
 
 object XbStandardInspections {
     val all: List<XbInspectionRule> = listOf(
@@ -186,6 +188,23 @@ object XbStandardInspections {
                 checkSequence(program.statements)
             }
         },
+        xbInspection(
+            id = "XB250",
+            title = "Possible keyword misspelling",
+        ) {
+            description = "Suggests the closest keyword when an identifier appears to be misspelled."
+            severity = XbInspectionSeverity.WARNING
+            onTokens { tokens, emitter, _ ->
+                tokens
+                    .filter { it.type == XbTokenType.IDENTIFIER }
+                    .forEach { token ->
+                        val suggestion = suggestKeyword(token.text)
+                        if (suggestion != null) {
+                            emitter.report(token.range, "Did you mean \"$suggestion\"?")
+                        }
+                    }
+            }
+        },
     )
 }
 
@@ -210,4 +229,61 @@ private fun XbExpression.isConstantExpression(): Boolean {
         is com.prestoxbasopp.core.ast.XbArrayLiteralExpression ->
             elements.all { it.isConstantExpression() }
     }
+}
+
+private val KEYWORD_SUGGESTIONS: Set<String> = XbKeywords.all
+private const val KEYWORD_SUGGESTION_MAX_DISTANCE = 1
+private const val KEYWORD_SUGGESTION_MIN_LENGTH = 4
+
+private fun suggestKeyword(text: String): String? {
+    val normalized = text.lowercase()
+    if (normalized.length < KEYWORD_SUGGESTION_MIN_LENGTH) {
+        return null
+    }
+    var bestMatch: String? = null
+    var bestDistance = KEYWORD_SUGGESTION_MAX_DISTANCE + 1
+    KEYWORD_SUGGESTIONS.forEach { keyword ->
+        val distance = levenshteinDistanceWithin(normalized, keyword, KEYWORD_SUGGESTION_MAX_DISTANCE)
+        if (distance != null) {
+            if (distance < bestDistance || (distance == bestDistance && keyword < (bestMatch ?: keyword))) {
+                bestMatch = keyword
+                bestDistance = distance
+            }
+        }
+    }
+    return bestMatch?.uppercase()
+}
+
+private fun levenshteinDistanceWithin(source: String, target: String, maxDistance: Int): Int? {
+    if (source == target) {
+        return 0
+    }
+    if (abs(source.length - target.length) > maxDistance) {
+        return null
+    }
+    val previous = IntArray(target.length + 1) { it }
+    val current = IntArray(target.length + 1)
+    for (i in 1..source.length) {
+        current[0] = i
+        var minInRow = current[0]
+        val sourceChar = source[i - 1]
+        for (j in 1..target.length) {
+            val cost = if (sourceChar == target[j - 1]) 0 else 1
+            val deletion = previous[j] + 1
+            val insertion = current[j - 1] + 1
+            val substitution = previous[j - 1] + cost
+            val value = minOf(deletion, insertion, substitution)
+            current[j] = value
+            if (value < minInRow) {
+                minInRow = value
+            }
+        }
+        if (minInRow > maxDistance) {
+            return null
+        }
+        for (j in previous.indices) {
+            previous[j] = current[j]
+        }
+    }
+    return previous[target.length].takeIf { it <= maxDistance }
 }
