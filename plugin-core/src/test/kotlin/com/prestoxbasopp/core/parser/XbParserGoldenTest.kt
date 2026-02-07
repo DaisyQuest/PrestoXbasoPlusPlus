@@ -194,6 +194,78 @@ class XbParserGoldenTest {
         GoldenTestHarness.assertCases(cases, ::parseSource, ::dumpProgram)
     }
 
+    @Test
+    fun `handles parser edge cases and recovery paths`() {
+        val cases = listOf<GoldenTestCase<XbProgram>>(
+            GoldenTestCase(
+                id = "return-without-expression",
+                source = "return;",
+                expectedAst = """
+                    Program
+                      ReturnStmt
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "unary-missing-operand",
+                source = "-;",
+                expectedAst = """
+                    Program
+                      ExprStmt
+                        Unary[op=-]
+                          Identifier[name="<error>"]
+                """.trimIndent(),
+                expectedErrors = listOf(
+                    "Unexpected token SEMICOLON at 1",
+                    "Expected expression after unary '-' at 2",
+                ),
+            ),
+            GoldenTestCase(
+                id = "binary-missing-right-hand-side",
+                source = "1 + ;",
+                expectedAst = """
+                    Program
+                      ExprStmt
+                        Binary[op="+"]
+                          Literal[kind=number, value=1]
+                          Identifier[name="<error>"]
+                """.trimIndent(),
+                expectedErrors = listOf(
+                    "Unexpected token SEMICOLON at 4",
+                    "Expected expression after '+' at 5",
+                ),
+            ),
+            GoldenTestCase(
+                id = "if-missing-condition",
+                source = "if then return 1; endif",
+                expectedAst = """
+                    Program
+                      IfStmt
+                        Condition
+                          Identifier[name="<error>"]
+                        Then
+                          Block
+                """.trimIndent(),
+                expectedErrors = listOf(
+                    "Unexpected token THEN at 3",
+                    "Expected condition after IF at 8",
+                    "Expected THEN after IF condition at 18",
+                ),
+            ),
+            GoldenTestCase(
+                id = "unexpected-terminator",
+                source = "endif return 1;",
+                expectedAst = """
+                    Program
+                      ReturnStmt
+                        Literal[kind=number, value=1]
+                """.trimIndent(),
+                expectedErrors = listOf("Unexpected ENDIF at 0"),
+            ),
+        )
+
+        GoldenTestHarness.assertCases(cases, ::parseSource, ::dumpProgram)
+    }
+
     private fun parseSource(source: String): ParseResult<XbProgram> {
         val result = XbParser.parse(source)
         return ParseResult(result.program, result.errors)
