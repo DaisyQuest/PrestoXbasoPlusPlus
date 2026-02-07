@@ -32,4 +32,10 @@ class XbAnnotatorTest {
         assertThat(diagnostics.first().severity).isEqualTo(XbSeverity.WARNING)
         assertThat(diagnostics.first().message).isEqualTo("IF condition is always constant.")
     }
+
+    @Test
+    fun `ignores preprocessor directives`() {
+        val diagnostics = XbAnnotator().annotate("#define FOO 1\nreturn FOO;")
+        assertThat(diagnostics).isEmpty()
+    }
 }

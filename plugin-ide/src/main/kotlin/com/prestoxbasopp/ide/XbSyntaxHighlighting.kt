@@ -12,6 +12,7 @@ enum class XbHighlightStyle {
     DATE,
     SYMBOL,
     CODEBLOCK,
+    PREPROCESSOR,
     OPERATOR,
     PUNCTUATION,
     COMMENT,
@@ -48,6 +49,7 @@ class XbSyntaxHighlighter {
             XbTokenType.DATE -> XbHighlightStyle.DATE
             XbTokenType.SYMBOL -> XbHighlightStyle.SYMBOL
             XbTokenType.CODEBLOCK -> XbHighlightStyle.CODEBLOCK
+            XbTokenType.PREPROCESSOR -> XbHighlightStyle.PREPROCESSOR
             XbTokenType.OPERATOR -> XbHighlightStyle.OPERATOR
             XbTokenType.PUNCTUATION -> XbHighlightStyle.PUNCTUATION
             XbTokenType.COMMENT -> XbHighlightStyle.COMMENT

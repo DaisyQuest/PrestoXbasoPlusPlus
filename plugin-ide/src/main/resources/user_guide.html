@@ -41,7 +41,7 @@
   <h2>Getting Started</h2>
   <ol>
     <li>Install the plugin from the IntelliJ IDEA plugin settings.</li>
-    <li>Open or create a file with the <code>.xb</code> or <code>.prg</code> extension (the plugin registers both file types automatically).</li>
+    <li>Open or create a file with the <code>.xb</code>, <code>.prg</code>, or <code>.ch</code> extension (the plugin registers all three file types automatically).</li>
     <li>Start typing xbase++ code to activate syntax highlighting, inspections, completion, navigation, and structure view.</li>
     <li>Explore the <code>/samples</code> folder in this repository for rich, working examples.</li>
   </ol>
@@ -52,7 +52,7 @@
     <li>Keywords for control flow and logic (<code>IF</code>, <code>ELSE</code>, <code>WHILE</code>, <code>RETURN</code>).</li>
     <li>Operators, punctuation, string literals, and numeric literals.</li>
     <li>Explicit error highlighting for invalid or unterminated tokens.</li>
-    <li>Highlighting is provided by the IntelliJ syntax highlighter factory wired to the <code>.xb</code> and <code>.prg</code> file types.</li>
+    <li>Highlighting is provided by the IntelliJ syntax highlighter factory wired to the <code>.xb</code>, <code>.prg</code>, and <code>.ch</code> file types.</li>
   </ul>
 
   <h3>Diagnostics and Error Annotations</h3>
@@ -71,7 +71,7 @@
 
   <h3>Navigation and Usages</h3>
   <ul>
-    <li><strong>Go to Definition</strong> works from any identifier under the caret in <code>.xb</code> or <code>.prg</code> files.</li>
+    <li><strong>Go to Definition</strong> works from any identifier under the caret in <code>.xb</code>, <code>.prg</code>, or <code>.ch</code> files.</li>
     <li><strong>Find Usages</strong> is supported from function and variable declarations.</li>
     <li>Navigation targets are resolved from the lexed PSI snapshot so symbols inside a file are immediately discoverable.</li>
     <li>Function, procedure, and method declarations participate in the same navigation index.</li>
@@ -120,7 +120,7 @@
 
   <h2>Troubleshooting</h2>
   <ul>
-    <li>If highlighting or completion seems unavailable, ensure the file extension is <code>.xb</code> or <code>.prg</code> and the file is not treated as plain text.</li>
+    <li>If highlighting or completion seems unavailable, ensure the file extension is <code>.xb</code>, <code>.prg</code>, or <code>.ch</code> and the file is not treated as plain text.</li>
     <li>Use the IDE logs to report any unexpected parsing errors.</li>
     <li>Restart the IDE after installing the plugin so the file type registration is refreshed.</li>
   </ul>

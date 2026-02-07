@@ -19,6 +19,9 @@ class XbLexerPreprocessorTest {
         assertThat(result.directives).hasSize(2)
         assertThat(result.directives[0].name).isEqualTo("define")
         assertThat(result.directives[1].name).isEqualTo("include")
+        assertThat(result.tokens).anyMatch { token ->
+            token.type == XbTokenType.PREPROCESSOR && token.text == "#define FOO 1"
+        }
 
         val expectedFiltered = "\nx := 1\n\ny := 2"
         assertThat(result.filteredSource).isEqualTo(expectedFiltered)

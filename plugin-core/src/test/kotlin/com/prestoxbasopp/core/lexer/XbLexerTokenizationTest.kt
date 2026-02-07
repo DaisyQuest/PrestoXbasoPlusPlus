@@ -29,6 +29,7 @@ class XbLexerTokenizationTest {
         assertThat(result.directives.first().name).isEqualTo("define")
 
         val tokens = result.tokens.filter { it.type != XbTokenType.EOF }
+        assertThat(tokens).anyMatch { it.type == XbTokenType.PREPROCESSOR && it.text == "#define FOO 1" }
         assertThat(tokens.first().type).isEqualTo(XbTokenType.KEYWORD)
         assertThat(tokens.first().text).isEqualTo("function")
         assertThat(tokens).anyMatch { it.type == XbTokenType.IDENTIFIER && it.text == "Test" }

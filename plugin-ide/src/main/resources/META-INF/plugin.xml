@@ -12,12 +12,14 @@
     <extensions defaultExtensionNs="com.intellij">
         <fileType name="Xbase++ File"
                   language="Xbase++"
-                  extensions="xb;prg"
+                  extensions="xb;prg;ch"
                   implementationClass="com.prestoxbasopp.ide.XbFileType" />
         <lang.parserDefinition language="Xbase++"
                                implementationClass="com.prestoxbasopp.ide.XbParserDefinition" />
         <lang.syntaxHighlighterFactory language="Xbase++"
                                        implementationClass="com.prestoxbasopp.ide.XbSyntaxHighlighterFactory" />
+        <annotator language="Xbase++"
+                   implementationClass="com.prestoxbasopp.ide.XbDiagnosticsAnnotator" />
         <lang.psiStructureViewFactory language="Xbase++"
                                       implementationClass="com.prestoxbasopp.ide.XbStructureViewBuilderFactory" />
         <gotoDeclarationHandler implementation="com.prestoxbasopp.ide.XbGotoDeclarationHandler" />

@@ -20,6 +20,7 @@ class XbSyntaxHighlighterAdapter : SyntaxHighlighterBase() {
             XbLexerTokenType.DATE -> DefaultLanguageHighlighterColors.CONSTANT
             XbLexerTokenType.SYMBOL -> DefaultLanguageHighlighterColors.METADATA
             XbLexerTokenType.CODEBLOCK -> DefaultLanguageHighlighterColors.STRING
+            XbLexerTokenType.PREPROCESSOR -> DefaultLanguageHighlighterColors.PREDEFINED_SYMBOL
             XbLexerTokenType.OPERATOR -> DefaultLanguageHighlighterColors.OPERATION_SIGN
             XbLexerTokenType.PUNCTUATION -> DefaultLanguageHighlighterColors.PARENTHESES
             XbLexerTokenType.COMMENT -> DefaultLanguageHighlighterColors.LINE_COMMENT
