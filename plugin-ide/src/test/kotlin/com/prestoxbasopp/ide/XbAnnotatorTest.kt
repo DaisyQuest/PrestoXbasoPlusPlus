@@ -21,7 +21,15 @@ class XbAnnotatorTest {
 
     @Test
     fun `returns no diagnostics for valid input`() {
-        val diagnostics = XbAnnotator().annotate("if foo == 10 return 1")
+        val diagnostics = XbAnnotator().annotate("if foo == 10 then return 1 endif")
         assertThat(diagnostics).isEmpty()
+    }
+
+    @Test
+    fun `reports warnings from inspections`() {
+        val diagnostics = XbAnnotator().annotate("if 1 then return 1 endif")
+        assertThat(diagnostics).hasSize(1)
+        assertThat(diagnostics.first().severity).isEqualTo(XbSeverity.WARNING)
+        assertThat(diagnostics.first().message).isEqualTo("IF condition is always constant.")
     }
 }

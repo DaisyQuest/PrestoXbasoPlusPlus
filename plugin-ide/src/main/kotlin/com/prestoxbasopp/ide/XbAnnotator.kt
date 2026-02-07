@@ -1,11 +1,12 @@
 package com.prestoxbasopp.ide
 
 import com.prestoxbasopp.core.api.XbTextRange
-import com.prestoxbasopp.core.lexer.XbLexer
+import com.prestoxbasopp.ide.inspections.XbInspectionSeverity
 
 enum class XbSeverity {
     ERROR,
     WARNING,
+    INFO,
 }
 
 data class XbDiagnostic(
@@ -14,26 +15,22 @@ data class XbDiagnostic(
     val severity: XbSeverity,
 )
 
-class XbAnnotator {
+class XbAnnotator(
+    private val inspectionService: XbInspectionService = XbInspectionService(),
+) {
     fun annotate(source: String): List<XbDiagnostic> {
-        val result = XbLexer().lex(source)
-        return result.errors.map { error ->
+        return inspectionService.inspect(source).map { finding ->
             XbDiagnostic(
-                textRange = error.range,
-                message = formatMessage(error.message),
-                severity = XbSeverity.ERROR,
+                textRange = finding.range,
+                message = finding.message,
+                severity = finding.severity.toXbSeverity(),
             )
         }
     }
+}
 
-    private fun formatMessage(message: String): String {
-        return when {
-            message.startsWith("Unexpected character ") -> {
-                val suffix = message.removePrefix("Unexpected character ").trim()
-                "Unexpected character: $suffix."
-            }
-            message.endsWith(".") -> message
-            else -> "$message."
-        }
-    }
+private fun XbInspectionSeverity.toXbSeverity(): XbSeverity = when (this) {
+    XbInspectionSeverity.ERROR -> XbSeverity.ERROR
+    XbInspectionSeverity.WARNING -> XbSeverity.WARNING
+    XbInspectionSeverity.INFO -> XbSeverity.INFO
 }

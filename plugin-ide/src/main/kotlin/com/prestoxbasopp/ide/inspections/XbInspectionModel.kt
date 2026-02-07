@@ -1,0 +1,195 @@
+package com.prestoxbasopp.ide.inspections
+
+import com.prestoxbasopp.core.api.XbTextRange
+import com.prestoxbasopp.core.ast.XbAstNode
+import com.prestoxbasopp.core.ast.XbBlock
+import com.prestoxbasopp.core.ast.XbExpression
+import com.prestoxbasopp.core.ast.XbExpressionStatement
+import com.prestoxbasopp.core.ast.XbIfStatement
+import com.prestoxbasopp.core.ast.XbProgram
+import com.prestoxbasopp.core.ast.XbReturnStatement
+import com.prestoxbasopp.core.ast.XbStatement
+import com.prestoxbasopp.core.ast.XbWhileStatement
+import com.prestoxbasopp.core.lexer.XbLexResult
+import com.prestoxbasopp.core.lexer.XbLexer
+import com.prestoxbasopp.core.lexer.XbLexerError
+import com.prestoxbasopp.core.lexer.XbToken
+import com.prestoxbasopp.core.parser.XbParseResult
+import com.prestoxbasopp.core.parser.XbParser
+import com.prestoxbasopp.core.psi.XbPsiFile
+import com.prestoxbasopp.ide.XbPsiTextBuilder
+import kotlin.math.min
+
+enum class XbInspectionSeverity {
+    ERROR,
+    WARNING,
+    INFO,
+}
+
+data class XbInspectionFinding(
+    val id: String,
+    val title: String,
+    val message: String,
+    val severity: XbInspectionSeverity,
+    val range: XbTextRange,
+)
+
+data class XbParserIssue(
+    val message: String,
+    val range: XbTextRange,
+)
+
+data class XbInspectionProfile(
+    val enabledInspections: Set<String> = emptySet(),
+    val disabledInspections: Set<String> = emptySet(),
+    val severityOverrides: Map<String, XbInspectionSeverity> = emptyMap(),
+) {
+    fun isEnabled(id: String): Boolean {
+        return if (enabledInspections.isNotEmpty()) {
+            id in enabledInspections
+        } else {
+            id !in disabledInspections
+        }
+    }
+
+    fun severityFor(id: String, default: XbInspectionSeverity): XbInspectionSeverity {
+        return severityOverrides[id] ?: default
+    }
+}
+
+class XbInspectionContext private constructor(
+    val source: String,
+    val lexResult: XbLexResult,
+    val parseResult: XbParseResult,
+    val psiFile: XbPsiFile,
+) {
+    val tokens: List<XbToken> = lexResult.tokens
+    val lexerErrors: List<XbLexerError> = lexResult.errors
+    val parserIssues: List<XbParserIssue> = buildParserIssues(parseResult.errors, source.length)
+    val program: XbProgram? = parseResult.program
+
+    fun formatMessage(message: String): String {
+        return when {
+            message.startsWith("Unexpected character ") -> {
+                val suffix = message.removePrefix("Unexpected character ").trim()
+                "Unexpected character: $suffix."
+            }
+            message.endsWith(".") -> message
+            else -> "$message."
+        }
+    }
+
+    fun walkStatements(): Sequence<XbStatement> {
+        val programRoot = program ?: return emptySequence()
+        return sequence {
+            yieldAll(walkStatements(programRoot))
+        }
+    }
+
+    fun walkExpressions(): Sequence<XbExpression> {
+        val programRoot = program ?: return emptySequence()
+        return sequence {
+            yieldAll(walkExpressions(programRoot))
+        }
+    }
+
+    private fun walkStatements(node: XbAstNode): Sequence<XbStatement> = sequence {
+        when (node) {
+            is XbProgram -> node.statements.forEach { statement ->
+                yield(statement)
+                yieldAll(walkStatements(statement))
+            }
+            is XbBlock -> node.statements.forEach { statement ->
+                yield(statement)
+                yieldAll(walkStatements(statement))
+            }
+            is XbIfStatement -> {
+                yieldAll(walkStatements(node.thenBlock))
+                node.elseBlock?.let { yieldAll(walkStatements(it)) }
+            }
+            is XbWhileStatement -> yieldAll(walkStatements(node.body))
+            is XbExpressionStatement -> Unit
+            is XbReturnStatement -> Unit
+        }
+    }
+
+    private fun walkExpressions(node: XbAstNode): Sequence<XbExpression> = sequence {
+        when (node) {
+            is XbProgram -> node.statements.forEach { yieldAll(walkExpressions(it)) }
+            is XbBlock -> node.statements.forEach { yieldAll(walkExpressions(it)) }
+            is XbExpressionStatement -> {
+                yield(node.expression)
+                yieldAll(walkExpressions(node.expression))
+            }
+            is XbReturnStatement -> node.expression?.let { expression ->
+                yield(expression)
+                yieldAll(walkExpressions(expression))
+            }
+            is XbIfStatement -> {
+                yield(node.condition)
+                yieldAll(walkExpressions(node.condition))
+                yieldAll(walkExpressions(node.thenBlock))
+                node.elseBlock?.let { yieldAll(walkExpressions(it)) }
+            }
+            is XbWhileStatement -> {
+                yield(node.condition)
+                yieldAll(walkExpressions(node.condition))
+                yieldAll(walkExpressions(node.body))
+            }
+        }
+    }
+
+    private fun walkExpressions(expression: XbExpression): Sequence<XbExpression> = sequence {
+        when (expression) {
+            is com.prestoxbasopp.core.ast.XbUnaryExpression -> {
+                yield(expression.expression)
+                yieldAll(walkExpressions(expression.expression))
+            }
+            is com.prestoxbasopp.core.ast.XbBinaryExpression -> {
+                yield(expression.left)
+                yieldAll(walkExpressions(expression.left))
+                yield(expression.right)
+                yieldAll(walkExpressions(expression.right))
+            }
+            is com.prestoxbasopp.core.ast.XbIdentifierExpression -> Unit
+            is com.prestoxbasopp.core.ast.XbLiteralExpression -> Unit
+        }
+    }
+
+    private fun buildParserIssues(errors: List<String>, length: Int): List<XbParserIssue> {
+        if (errors.isEmpty()) return emptyList()
+        return errors.map { message ->
+            val offset = parserOffsetRegex.findAll(message)
+                .mapNotNull { it.groups[1]?.value?.toIntOrNull() }
+                .lastOrNull()
+            val safeOffset = offset?.coerceIn(0, length) ?: 0
+            val endOffset = min(safeOffset + 1, length)
+            XbParserIssue(message = formatMessage(message), range = XbTextRange(safeOffset, endOffset))
+        }
+    }
+
+    companion object {
+        private val parserOffsetRegex = Regex("\\b at (\\d+)\\b")
+
+        fun fromSource(
+            source: String,
+            lexer: XbLexer = XbLexer(),
+            parser: (String) -> XbParseResult = XbParser::parse,
+            psiBuilder: XbPsiTextBuilder = XbPsiTextBuilder(),
+        ): XbInspectionContext {
+            val lexResult = lexer.lex(source)
+            val parseResult = parser(source)
+            val psiFile = psiBuilder.build(source)
+            return XbInspectionContext(source, lexResult, parseResult, psiFile)
+        }
+    }
+}
+
+interface XbInspectionRule {
+    val id: String
+    val title: String
+    val description: String
+    val defaultSeverity: XbInspectionSeverity
+
+    fun inspect(context: XbInspectionContext): List<XbInspectionFinding>
+}
