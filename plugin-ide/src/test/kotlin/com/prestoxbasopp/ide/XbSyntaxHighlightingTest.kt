@@ -7,6 +7,8 @@ class XbSyntaxHighlightingTest {
     @Test
     fun `highlights tokens with expected styles`() {
         val source = """
+            #define ANSWER 42
+            #include "defs.ch"
             function foo()
                 local d := {^2024-01-02}
                 local s := "bar"
@@ -31,6 +33,8 @@ class XbSyntaxHighlightingTest {
             XbHighlightStyle.SYMBOL,
             XbHighlightStyle.CODEBLOCK,
             XbHighlightStyle.COMMENT,
+            XbHighlightStyle.PREPROCESSOR,
+            XbHighlightStyle.MACRO_DEFINITION,
             XbHighlightStyle.ERROR,
         )
         assertThat(spans).allSatisfy { span ->
