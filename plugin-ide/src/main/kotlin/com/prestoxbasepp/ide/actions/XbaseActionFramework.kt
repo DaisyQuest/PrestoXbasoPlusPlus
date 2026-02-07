@@ -29,7 +29,7 @@ value class ActionKey<T : Any> private constructor(val name: String) {
     }
 }
 
-data class ActionContext private constructor(
+data class ActionContext internal constructor(
     private val values: Map<ActionKey<*>, Any>
 ) {
     @Suppress("UNCHECKED_CAST")

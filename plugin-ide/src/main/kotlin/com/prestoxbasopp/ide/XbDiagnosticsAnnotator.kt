@@ -18,7 +18,7 @@ class XbDiagnosticsAnnotator(
         val source = file.text
         val diagnostics = inspectionService.inspect(source)
         diagnostics.forEach { finding ->
-            val range = toTextRange(finding.range, source.length) ?: return@forEach
+            val range = toNullableTextRange(finding.range, source.length) ?: return@forEach
             val severity = finding.severity.toHighlightSeverity()
             val builder = holder.newAnnotation(severity, finding.message).range(range)
             if (finding.severity == XbInspectionSeverity.ERROR) {
@@ -35,7 +35,7 @@ internal fun XbInspectionSeverity.toHighlightSeverity(): HighlightSeverity = whe
     XbInspectionSeverity.INFO -> HighlightSeverity.INFORMATION
 }
 
-internal fun toTextRange(range: XbTextRange, documentLength: Int): TextRange? {
+internal fun toNullableTextRange(range: XbTextRange, documentLength: Int): TextRange? {
     if (documentLength < 0) return null
     val safeStart = range.startOffset.coerceIn(0, documentLength)
     val safeEnd = range.endOffset.coerceIn(safeStart, documentLength)

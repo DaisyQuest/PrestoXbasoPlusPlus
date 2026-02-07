@@ -66,8 +66,8 @@ class XbUiSettingsPanel : JPanel(GridBagLayout()), XbUiSettingsView {
     }
 
     companion object {
-        private const val DEFAULT_TAB_SIZE = XbUiSettingsState().tabSize
-        private const val DEFAULT_COMPLETION_LIMIT = XbUiSettingsState().completionLimit
+        private val DEFAULT_TAB_SIZE = XbUiSettingsState().tabSize
+        private val DEFAULT_COMPLETION_LIMIT = XbUiSettingsState().completionLimit
         private const val MIN_TAB_SIZE = XbUiSettingsStore.MIN_TAB_SIZE
         private const val MAX_TAB_SIZE = XbUiSettingsStore.MAX_TAB_SIZE
         private const val MIN_COMPLETION_LIMIT = XbUiSettingsStore.MIN_COMPLETION_LIMIT
