@@ -27,6 +27,13 @@
 - [x] Text-based PSI builder and navigation adapter tests cover function and variable resolution.
 - [x] Completion and rename tests cover case sensitivity and error paths.
 - [x] Formatter and folding tests cover indentation, blank lines, and fold filtering.
+- [x] Completion fixture loader tests validate schema requirements and caret handling.
+- [x] Completion coverage gate tests validate missing/invalid fixture detection.
+- [x] Completion snapshot harness tests validate ordered comparisons and mismatch reporting.
+- [x] Completion test harness validates operation-level execution and mismatch surfacing.
+- [x] Completion mapping/insertion strategy tests validate lookup metadata and insert plans.
+- [x] Completion prefix extraction tests validate caret-based filtering.
+- [x] Completion case policy tests validate case-sensitivity rules.
 
 ## Semantic & Interpreter Paths
 - [ ] Resolution tests validate locals, statics, publics, memvars, and class members.

@@ -43,9 +43,15 @@ class XbIdeRegistrationTest {
             Regex("""<annotator\s+[^>]*implementationClass="([^"]+)"""").find(pluginXml)?.groupValues?.get(1)
         val inspectionClass =
             Regex("""<localInspection\s+[^>]*implementationClass="([^"]+)"""").find(pluginXml)?.groupValues?.get(1)
+        val completionClass =
+            Regex("""<completion\.contributor\s+[^>]*implementationClass="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
 
         assertThat(annotatorClass).isEqualTo("com.prestoxbasopp.ide.XbIdeAnnotator")
         assertThat(inspectionClass).isEqualTo("com.prestoxbasopp.ide.XbInspectionTool")
+        assertThat(completionClass).isEqualTo("com.prestoxbasopp.ide.XbCompletionContributor")
     }
 
     @Test
