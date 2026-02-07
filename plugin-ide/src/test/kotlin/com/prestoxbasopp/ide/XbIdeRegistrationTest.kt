@@ -24,8 +24,12 @@ class XbIdeRegistrationTest {
         val pluginXml = pluginXmlUrl!!.readText()
         val fileTypeName =
             Regex("""<fileType\s+[^>]*name="([^"]+)"""").find(pluginXml)?.groupValues?.get(1)
+        val extensions =
+            Regex("""<fileType\s+[^>]*extensions="([^"]+)"""").find(pluginXml)?.groupValues?.get(1)
 
         assertThat(fileTypeName).isEqualTo(XbFileType.name)
+        assertThat(extensions).isNotNull
+        assertThat(extensions!!.split(';')).contains("ch")
     }
 
     @Test
@@ -70,10 +74,12 @@ class XbIdeRegistrationTest {
 
         val keyword = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.KEYWORD))
         val identifier = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.IDENTIFIER))
+        val preprocessor = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.PREPROCESSOR))
         val error = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.UNKNOWN))
 
         assertThat(keyword).containsExactly(DefaultLanguageHighlighterColors.KEYWORD)
         assertThat(identifier).containsExactly(DefaultLanguageHighlighterColors.IDENTIFIER)
+        assertThat(preprocessor).containsExactly(DefaultLanguageHighlighterColors.PREDEFINED_SYMBOL)
         assertThat(error).containsExactly(DefaultLanguageHighlighterColors.INVALID_STRING_ESCAPE)
     }
 

@@ -266,6 +266,37 @@ class XbParserGoldenTest {
         GoldenTestHarness.assertCases(cases, ::parseSource, ::dumpProgram)
     }
 
+    @Test
+    fun `ignores preprocessor directives when parsing`() {
+        val cases = listOf<GoldenTestCase<XbProgram>>(
+            GoldenTestCase(
+                id = "define-directive",
+                source = "#define FOO 1\nreturn FOO;",
+                expectedAst = """
+                    Program
+                      ReturnStmt
+                        Identifier[name=FOO]
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "include-directive",
+                source = "#include \"defs.ch\"\nif 1 then return 2; endif",
+                expectedAst = """
+                    Program
+                      IfStmt
+                        Condition
+                          Literal[kind=number, value=1]
+                        Then
+                          Block
+                            ReturnStmt
+                              Literal[kind=number, value=2]
+                """.trimIndent(),
+            ),
+        )
+
+        GoldenTestHarness.assertCases(cases, ::parseSource, ::dumpProgram)
+    }
+
     private fun parseSource(source: String): ParseResult<XbProgram> {
         val result = XbParser.parse(source)
         return ParseResult(result.program, result.errors)

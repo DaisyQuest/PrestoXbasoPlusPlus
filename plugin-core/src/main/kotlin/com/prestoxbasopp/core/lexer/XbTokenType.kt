@@ -8,6 +8,7 @@ enum class XbTokenType {
     DATE,
     SYMBOL,
     CODEBLOCK,
+    PREPROCESSOR,
     OPERATOR,
     PUNCTUATION,
     COMMENT,
