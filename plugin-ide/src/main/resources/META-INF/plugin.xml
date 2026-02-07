@@ -3,7 +3,9 @@
     <name>Presto Xbase++</name>
     <vendor email="support@prestoxbasopp.com" url="https://example.com">PrestoXbasoPlusPlus</vendor>
     <description><![CDATA[
-        IntelliJ IDEA support for the xbase++ language.
+        IntelliJ IDEA support for the xbase++ language with syntax highlighting, diagnostics,
+        completion, navigation, structure view, formatting, folding, and rename refactoring.
+        A bundled <code>user_guide.html</code> is included for onboarding and feature details.
     ]]></description>
     <depends>com.intellij.modules.platform</depends>
 </idea-plugin>
