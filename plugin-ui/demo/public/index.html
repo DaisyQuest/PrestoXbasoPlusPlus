@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PrestoXbase++ Parser Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div>
+          <p class="badge">Parser Demo</p>
+          <h1>PrestoXbase++ Formatting Playground</h1>
+          <p class="subtitle">
+            A lightweight formatter panel for exploring parse-ready Xbase++ snippets, paired
+            with a live output preview and diagnostics stream.
+          </p>
+        </div>
+        <div class="hero-card">
+          <p class="hero-label">Demo Status</p>
+          <p class="hero-value">Offline · Zero Dependencies</p>
+          <p class="hero-caption">Runs on a tiny Node server with in-browser formatting.</p>
+        </div>
+      </header>
+
+      <main class="panels">
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Formatter Panel</h2>
+              <p>Adjust how the parser-ready output should be formatted.</p>
+            </div>
+            <div class="button-row">
+              <button id="apply" class="primary">Format</button>
+              <button id="reset" class="ghost">Reset</button>
+            </div>
+          </div>
+
+          <label class="field">
+            <span>Source input</span>
+            <textarea id="source" rows="14" spellcheck="false"></textarea>
+          </label>
+
+          <div class="controls">
+            <label class="control">
+              <span>Indent</span>
+              <input id="indent" type="number" min="0" max="8" value="2" />
+              <small>Spaces per level</small>
+            </label>
+            <label class="control">
+              <span>Wrap</span>
+              <input id="wrap" type="number" min="40" max="140" value="80" />
+              <small>Max line width</small>
+            </label>
+            <label class="control toggle">
+              <span>Uppercase keywords</span>
+              <input id="uppercase" type="checkbox" checked />
+              <small>Normalize language tokens</small>
+            </label>
+            <label class="control toggle">
+              <span>Preserve empty lines</span>
+              <input id="preserve" type="checkbox" checked />
+              <small>Keep vertical spacing</small>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel output">
+          <div class="panel-header">
+            <div>
+              <h2>Output Panel</h2>
+              <p>Formatted output plus diagnostics from the formatter logic.</p>
+            </div>
+            <span class="pill">Live preview</span>
+          </div>
+
+          <div class="output-grid">
+            <div>
+              <h3>Formatted result</h3>
+              <pre id="formatted" aria-live="polite"></pre>
+            </div>
+            <div>
+              <h3>Diagnostics</h3>
+              <ul id="diagnostics" class="diagnostics"></ul>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
