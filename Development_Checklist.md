@@ -22,10 +22,10 @@
 - [ ] **DP-0204**: Add lexer fuzzing utilities and negative tests.
 
 ## Parallel Track C — Parser (Statements & Expressions)
-- [ ] **DP-0301**: Implement Pratt expression parser with precedence table.
-- [ ] **DP-0302**: Implement statement parsing for control-flow blocks.
-- [ ] **DP-0303**: Add error recovery strategy with sync tokens.
-- [ ] **DP-0304**: Build AST dumper and golden AST comparison tooling.
+- [x] **DP-0301**: Implement Pratt expression parser with precedence table.
+- [x] **DP-0302**: Implement statement parsing for control-flow blocks.
+- [x] **DP-0303**: Add error recovery strategy with sync tokens.
+- [x] **DP-0304**: Build AST dumper and golden AST comparison tooling.
 
 ## Parallel Track D — PSI & Indexing
 - [ ] **DP-0401**: Define PSI elements for core syntax nodes.
