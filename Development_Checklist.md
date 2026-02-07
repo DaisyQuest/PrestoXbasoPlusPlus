@@ -34,11 +34,11 @@
 - [x] **DP-0404**: Add PSI integrity validators and round-trip tests.
 
 ## Parallel Track E — IDE Features
-- [ ] **DP-0501**: Syntax highlighting and annotators.
-- [ ] **DP-0502**: Structure view and breadcrumbs.
-- [ ] **DP-0503**: Navigation and usages.
-- [ ] **DP-0504**: Completion and rename refactoring.
-- [ ] **DP-0505**: Formatter and folding.
+- [x] **DP-0501**: Syntax highlighting and annotators.
+- [x] **DP-0502**: Structure view and breadcrumbs.
+- [x] **DP-0503**: Navigation and usages.
+- [x] **DP-0504**: Completion and rename refactoring.
+- [x] **DP-0505**: Formatter and folding.
 
 ## Parallel Track F — UI (Swing)
 - [ ] **DP-0601**: Settings model and persistence.
