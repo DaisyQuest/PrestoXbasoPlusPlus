@@ -10,7 +10,7 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <fileType name="Xbase++"
+        <fileType name="Xbase++ File"
                   language="Xbase++"
                   extensions="xb"
                   implementationClass="com.prestoxbasopp.ide.XbFileType" />

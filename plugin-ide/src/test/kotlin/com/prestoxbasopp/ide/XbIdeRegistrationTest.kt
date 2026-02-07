@@ -5,6 +5,7 @@ import com.intellij.psi.TokenType
 import com.prestoxbasopp.core.parser.TokenType as CoreTokenType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.net.URL
 
 class XbIdeRegistrationTest {
     @Test
@@ -13,6 +14,18 @@ class XbIdeRegistrationTest {
         assertThat(XbFileType.description).isEqualTo("Xbase++ source file")
         assertThat(XbFileType.defaultExtension).isEqualTo("xb")
         assertThat(XbFileType.icon).isNull()
+    }
+
+    @Test
+    fun `plugin xml registers file type name consistently`() {
+        val pluginXmlUrl: URL? = javaClass.classLoader.getResource("META-INF/plugin.xml")
+        assertThat(pluginXmlUrl).withFailMessage("Expected plugin.xml to be on the test classpath.").isNotNull()
+
+        val pluginXml = pluginXmlUrl!!.readText()
+        val fileTypeName =
+            Regex("""<fileType\s+[^>]*name="([^"]+)"""").find(pluginXml)?.groupValues?.get(1)
+
+        assertThat(fileTypeName).isEqualTo(XbFileType.name)
     }
 
     @Test
