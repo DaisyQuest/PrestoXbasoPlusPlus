@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Presto Xbase++ IntelliSense Guide</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; margin: 24px; color: #1e1e1e; }
+    h1, h2, h3 { color: #0f3d91; }
+    code { background: #f2f2f2; padding: 2px 4px; border-radius: 4px; }
+    .callout { border-left: 4px solid #0f3d91; padding: 8px 12px; background: #f7f9ff; }
+    ul { margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h1>IntelliSense Guide</h1>
+  <p>
+    Presto Xbase++ IntelliSense delivers fast, deterministic code completion based on the PSI tree
+    and stub-indexed symbols. This guide explains how completion works, how to trigger it, and how
+    the system is tested for reliability.
+  </p>
+
+  <h2>Completion Features</h2>
+  <ul>
+    <li>Suggestions for function and variable declarations discovered in PSI.</li>
+    <li>Deterministic ordering and stable ranking to avoid flickering results.</li>
+    <li>Insert handlers that add <code>()</code> for functions and position the caret.</li>
+    <li>Automatic case sensitivity: lowercase prefixes are matched case-insensitively.</li>
+  </ul>
+
+  <h2>How Completion Works</h2>
+  <ol>
+    <li><strong>CompletionContributor</strong> activates for Xbase++ files.</li>
+    <li><strong>XbCompletionService</strong> walks the PSI tree and filters by prefix.</li>
+    <li><strong>Lookup mapping</strong> enriches items with insert text and type labels.</li>
+    <li><strong>Insert strategy</strong> handles function call insertion and caret placement.</li>
+    <li><strong>Case policy</strong> switches to case-sensitive matching when uppercase letters are used.</li>
+  </ol>
+
+  <h2>Usage</h2>
+  <div class="callout">
+    <p>
+      Trigger completion with <strong>Ctrl+Space</strong> while editing <code>.xb</code>, <code>.prg</code>,
+      or <code>.ch</code> files. Type a prefix to filter results.
+    </p>
+  </div>
+
+  <h2>Testing &amp; Quality Gates</h2>
+  <ul>
+    <li>Completion fixtures are validated for every <code>operations.yaml</code> entry.</li>
+    <li>Completion snapshots compare expected and actual ordered results.</li>
+    <li>Coverage gates ensure missing or invalid fixtures are detected early.</li>
+    <li>Insert strategies and lookup mapping are unit-tested for all branches.</li>
+    <li>Prefix extraction and case policy logic are validated with unit tests.</li>
+  </ul>
+
+  <h2>Extending Completion</h2>
+  <ul>
+    <li>Add new symbol kinds in <code>XbCompletionService</code> and update tests.</li>
+    <li>Extend fixture coverage under <code>spec/xbasepp/fixtures/completion/</code>.</li>
+    <li>Keep completion output deterministic (stable ordering and explicit ranking rules).</li>
+  </ul>
+
+  <h2>Troubleshooting</h2>
+  <ul>
+    <li>Ensure the file type is recognized as Xbase++.</li>
+    <li>Check that fixtures include a <code>/*caret*/</code> marker.</li>
+    <li>Use uppercase prefixes when you want strict case-sensitive matches.</li>
+    <li>If completion seems empty, confirm PSI is generated and symbols exist.</li>
+  </ul>
+</body>
+</html>

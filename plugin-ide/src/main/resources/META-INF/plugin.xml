@@ -24,6 +24,8 @@
                                       implementationClass="com.prestoxbasopp.ide.XbStructureViewBuilderFactory" />
         <annotator language="Xbase++"
                    implementationClass="com.prestoxbasopp.ide.XbIdeAnnotator" />
+        <completion.contributor language="Xbase++"
+                                implementationClass="com.prestoxbasopp.ide.XbCompletionContributor" />
         <toolWindow id="Xbase++ Macros"
                     anchor="left"
                     factoryClass="com.prestoxbasopp.ide.XbMacroExpansionToolWindowFactory" />

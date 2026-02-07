@@ -14,6 +14,7 @@
 - [x] **DP-0102**: Define canonical fixtures and edge fixtures under `spec/xbasepp/fixtures/operations/`.
 - [x] **DP-0103**: Document normalized AST shapes and expected diagnostic rules.
 - [x] **DP-0104**: Maintain compat matrix for dialect and version nuances.
+- [x] **DP-0105**: Define completion fixture specification and base layout under `spec/xbasepp/fixtures/completion/`.
 
 ## Parallel Track B — Lexer & Preprocessor
 - [x] **DP-0201**: Implement token definitions and keyword groups.
@@ -39,6 +40,7 @@
 - [x] **DP-0503**: Navigation and usages.
 - [x] **DP-0504**: Completion and rename refactoring.
 - [x] **DP-0505**: Formatter and folding.
+- [x] **DP-0506**: IntelliSense integration plan + completion architecture (`IntelliSense_Plan.MD`).
 
 ## Parallel Track F — UI (Swing)
 - [x] **DP-0601**: Settings model and persistence.
@@ -51,3 +53,4 @@
 - [ ] **DP-0703**: Property-based and fuzz testing integration.
 - [ ] **DP-0704**: Mutation testing pipeline for precedence/expressions.
 - [x] **DP-0705**: IntelliJ SDK compatibility checks and CI validation.
+- [x] **DP-0706**: Completion golden test harness and snapshot comparison utilities.
