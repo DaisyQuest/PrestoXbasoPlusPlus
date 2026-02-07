@@ -240,6 +240,131 @@ pre {
   text-transform: uppercase;
 }
 
+.pill.subtle {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5f5;
+}
+
+.panel-header.compact {
+  margin-bottom: 12px;
+}
+
+.ast-panel {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.ast-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ast-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.ast-tree {
+  background: #0b1120;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 16px;
+  min-height: 240px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.ast-list,
+.ast-children {
+  list-style: none;
+  margin: 0;
+  padding-left: 18px;
+  position: relative;
+}
+
+.ast-node {
+  margin: 6px 0;
+  position: relative;
+}
+
+.ast-node::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 12px;
+  width: 8px;
+  height: 1px;
+  background: rgba(148, 163, 184, 0.4);
+}
+
+.ast-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+
+.ast-title {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.ast-label-meta {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ast-node summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.ast-node summary::-webkit-details-marker {
+  display: none;
+}
+
+.ast-node details {
+  position: relative;
+}
+
+.ast-node details[open] > summary .ast-label {
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.1);
+}
+
+.ast-node.ast-block > .ast-label,
+.ast-node.ast-block summary .ast-label {
+  background: rgba(30, 64, 175, 0.2);
+}
+
+.ast-node.ast-statement > .ast-label {
+  background: rgba(15, 118, 110, 0.2);
+}
+
+.ast-node.ast-unexpectedcloser > .ast-label {
+  background: rgba(220, 38, 38, 0.2);
+  border-color: rgba(248, 113, 113, 0.5);
+}
+
+.ast-node.ast-closer > .ast-label {
+  background: rgba(107, 114, 128, 0.25);
+}
+
+.ast-warning {
+  margin-left: 18px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #fca5a5;
+}
+
 @media (max-width: 768px) {
   .hero {
     flex-direction: column;
