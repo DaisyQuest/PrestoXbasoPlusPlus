@@ -17,13 +17,19 @@ class XbDiagnosticsAnnotatorTest {
 
     @Test
     fun `clamps diagnostic ranges to document length`() {
-        val textRange = toTextRange(XbTextRange(-4, 2), 4)
-        assertThat(textRange).isEqualTo(TextRange(0, 2))
+        val textRange = toNullableTextRange(XbTextRange(2, 10), 4)
+        assertThat(textRange).isEqualTo(TextRange(2, 4))
     }
 
     @Test
     fun `skips empty diagnostic ranges`() {
-        val textRange = toTextRange(XbTextRange(3, 3), 10)
+        val textRange = toNullableTextRange(XbTextRange(3, 3), 10)
+        assertThat(textRange).isNull()
+    }
+
+    @Test
+    fun `returns null when document length is negative`() {
+        val textRange = toNullableTextRange(XbTextRange(1, 2), -1)
         assertThat(textRange).isNull()
     }
 }

@@ -49,7 +49,7 @@ class XbIdeRegistrationTest {
                 ?.groupValues
                 ?.get(1)
 
-        assertThat(annotatorClass).isEqualTo("com.prestoxbasopp.ide.XbIdeAnnotator")
+        assertThat(annotatorClass).isEqualTo("com.prestoxbasopp.ide.XbDiagnosticsAnnotator")
         assertThat(inspectionClass).isEqualTo("com.prestoxbasopp.ide.XbInspectionTool")
         assertThat(completionClass).isEqualTo("com.prestoxbasopp.ide.XbCompletionContributor")
     }

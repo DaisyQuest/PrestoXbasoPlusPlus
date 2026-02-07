@@ -22,7 +22,7 @@ class XbInspectionContextTest {
 
     @Test
     fun `walkExpressions descends into unary and binary expressions`() {
-        val context = XbInspectionContext.fromSource("if -1 + foo * 2 then return !bar; endif")
+        val context = XbInspectionContext.fromSource("if -1 + foo * 2 then return not bar; endif")
 
         val expressions = context.walkExpressions().toList()
 
@@ -30,5 +30,17 @@ class XbInspectionContextTest {
         assertThat(expressions.filterIsInstance<XbUnaryExpression>()).hasSize(2)
         assertThat(expressions.filterIsInstance<XbIdentifierExpression>()).hasSize(2)
         assertThat(expressions.filterIsInstance<XbLiteralExpression>()).hasSize(2)
+    }
+
+    @Test
+    fun `formatMessage normalizes parser and lexer messages`() {
+        val context = XbInspectionContext.fromSource("return 1")
+
+        assertThat(context.formatMessage("Unexpected character '!'"))
+            .isEqualTo("Unexpected character: '!'.")
+        assertThat(context.formatMessage("Already punctuated."))
+            .isEqualTo("Already punctuated.")
+        assertThat(context.formatMessage("Missing endif"))
+            .isEqualTo("Missing endif.")
     }
 }
