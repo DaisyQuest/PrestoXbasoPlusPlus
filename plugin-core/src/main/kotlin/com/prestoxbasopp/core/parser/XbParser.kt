@@ -50,7 +50,12 @@ class XbParser(private val tokens: List<Token>) {
                 advance()
                 null
             }
-            TokenType.ENDIF, TokenType.ELSE, TokenType.ENDDO, TokenType.EOF -> null
+            TokenType.ENDIF, TokenType.ELSE, TokenType.ENDDO -> {
+                val token = advance()
+                recordError("Unexpected ${token.type.name} at ${token.startOffset}")
+                null
+            }
+            TokenType.EOF -> null
             else -> parseExpressionStatement()
         }
     }
@@ -125,6 +130,7 @@ class XbParser(private val tokens: List<Token>) {
 
     private fun parseBlock(terminators: Set<TokenType>): XbBlock {
         val start = peek()
+        val startIndex = current
         val statements = mutableListOf<XbStatement>()
         while (!isAtEnd() && peek().type !in terminators) {
             val before = current
@@ -135,7 +141,7 @@ class XbParser(private val tokens: List<Token>) {
                 advance()
             }
         }
-        val end = previousOr(start)
+        val end = if (current == startIndex) start else previousOr(start)
         return XbBlock(statements, rangeFrom(start, end))
     }
 
