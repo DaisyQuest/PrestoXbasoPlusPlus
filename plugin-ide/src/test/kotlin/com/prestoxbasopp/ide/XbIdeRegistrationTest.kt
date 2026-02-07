@@ -1,7 +1,8 @@
 package com.prestoxbasopp.ide
 
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
-import com.prestoxbasopp.core.parser.TokenType
+import com.intellij.psi.TokenType
+import com.prestoxbasopp.core.parser.TokenType as CoreTokenType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -18,9 +19,9 @@ class XbIdeRegistrationTest {
     fun `syntax highlighter maps known tokens to attributes`() {
         val highlighter = XbSyntaxHighlighterAdapter()
 
-        val keyword = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(TokenType.IF))
-        val identifier = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(TokenType.IDENTIFIER))
-        val error = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(TokenType.ERROR))
+        val keyword = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.IF))
+        val identifier = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.IDENTIFIER))
+        val error = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.ERROR))
 
         assertThat(keyword).containsExactly(DefaultLanguageHighlighterColors.KEYWORD)
         assertThat(identifier).containsExactly(DefaultLanguageHighlighterColors.IDENTIFIER)
@@ -40,7 +41,7 @@ class XbIdeRegistrationTest {
         val buffer = "xx if"
         lexer.start(buffer, 3, buffer.length, 0)
 
-        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(TokenType.IF))
+        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.IF))
         assertThat(lexer.tokenStart).isEqualTo(3)
         assertThat(lexer.tokenEnd).isEqualTo(5)
 
@@ -48,5 +49,45 @@ class XbIdeRegistrationTest {
         assertThat(lexer.tokenType).isNull()
         assertThat(lexer.tokenStart).isEqualTo(buffer.length)
         assertThat(lexer.tokenEnd).isEqualTo(buffer.length)
+    }
+
+    @Test
+    fun `lexer adapter fills whitespace gaps between tokens`() {
+        val lexer = XbLexerAdapter()
+        val buffer = "if  return  "
+        lexer.start(buffer, 0, buffer.length, 0)
+
+        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.IF))
+        assertThat(lexer.tokenStart).isEqualTo(0)
+        assertThat(lexer.tokenEnd).isEqualTo(2)
+
+        lexer.advance()
+        assertThat(lexer.tokenType).isEqualTo(TokenType.WHITE_SPACE)
+        assertThat(lexer.tokenStart).isEqualTo(2)
+        assertThat(lexer.tokenEnd).isEqualTo(4)
+
+        lexer.advance()
+        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.RETURN))
+        assertThat(lexer.tokenStart).isEqualTo(4)
+        assertThat(lexer.tokenEnd).isEqualTo(10)
+
+        lexer.advance()
+        assertThat(lexer.tokenType).isEqualTo(TokenType.WHITE_SPACE)
+        assertThat(lexer.tokenStart).isEqualTo(10)
+        assertThat(lexer.tokenEnd).isEqualTo(buffer.length)
+    }
+
+    @Test
+    fun `lexer adapter emits whitespace token when only spaces are present`() {
+        val lexer = XbLexerAdapter()
+        val buffer = "   "
+        lexer.start(buffer, 0, buffer.length, 0)
+
+        assertThat(lexer.tokenType).isEqualTo(TokenType.WHITE_SPACE)
+        assertThat(lexer.tokenStart).isEqualTo(0)
+        assertThat(lexer.tokenEnd).isEqualTo(buffer.length)
+
+        lexer.advance()
+        assertThat(lexer.tokenType).isNull()
     }
 }
