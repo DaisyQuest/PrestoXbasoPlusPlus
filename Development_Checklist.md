@@ -16,10 +16,10 @@
 - [x] **DP-0104**: Maintain compat matrix for dialect and version nuances.
 
 ## Parallel Track B — Lexer & Preprocessor
-- [ ] **DP-0201**: Implement token definitions and keyword groups.
-- [ ] **DP-0202**: Add literal parsing (strings, numerics, dates, symbol literals, codeblocks).
-- [ ] **DP-0203**: Implement preprocessor directive tokenization and source-offset mapping.
-- [ ] **DP-0204**: Add lexer fuzzing utilities and negative tests.
+- [x] **DP-0201**: Implement token definitions and keyword groups.
+- [x] **DP-0202**: Add literal parsing (strings, numerics, dates, symbol literals, codeblocks).
+- [x] **DP-0203**: Implement preprocessor directive tokenization and source-offset mapping.
+- [x] **DP-0204**: Add lexer fuzzing utilities and negative tests.
 
 ## Parallel Track C — Parser (Statements & Expressions)
 - [ ] **DP-0301**: Implement Pratt expression parser with precedence table.
