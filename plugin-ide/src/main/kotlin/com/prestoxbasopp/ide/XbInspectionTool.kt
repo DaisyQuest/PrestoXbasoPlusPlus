@@ -8,6 +8,8 @@ import com.intellij.psi.PsiFile
 class XbInspectionTool(
     private val inspectionService: XbInspectionService = XbInspectionService(),
 ) : LocalInspectionTool() {
+    override fun getDisplayName(): String = "Xbase++ Inspection"
+
     override fun checkFile(
         file: PsiFile,
         manager: InspectionManager,
