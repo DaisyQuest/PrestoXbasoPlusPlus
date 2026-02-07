@@ -122,4 +122,45 @@ class XbStructureViewTest {
         val breadcrumbs = XbBreadcrumbsService().breadcrumbs(snapshot, 99)
         assertThat(breadcrumbs).isEmpty()
     }
+
+    @Test
+    fun `prefers editor text when resolving structure view content`() {
+        val resolver = XbStructureViewFileContentResolver()
+
+        val content = resolver.resolve(
+            fileName = "current.prg",
+            psiText = "function fromPsi()",
+            editorText = "function fromEditor()",
+        )
+
+        assertThat(content.fileName).isEqualTo("current.prg")
+        assertThat(content.text).isEqualTo("function fromEditor()")
+    }
+
+    @Test
+    fun `falls back to psi text when editor text is unavailable`() {
+        val resolver = XbStructureViewFileContentResolver()
+
+        val content = resolver.resolve(
+            fileName = "current.prg",
+            psiText = "function fromPsi()",
+            editorText = null,
+        )
+
+        assertThat(content.fileName).isEqualTo("current.prg")
+        assertThat(content.text).isEqualTo("function fromPsi()")
+    }
+
+    @Test
+    fun `builds structure view root from resolved content`() {
+        val content = XbStructureViewFileContent(
+            fileName = "focused.prg",
+            text = "function main()\nreturn",
+        )
+
+        val root = XbStructureViewRootBuilder().buildRoot(content)
+
+        assertThat(root.name).isEqualTo("focused.prg")
+        assertThat(root.children.map { it.name }).containsExactly("main")
+    }
 }
