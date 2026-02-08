@@ -8,6 +8,7 @@ data class XbStructureItem(
     val name: String,
     val elementType: XbPsiElementType,
     val textRange: XbTextRange,
+    val isMutable: Boolean? = null,
     val children: List<XbStructureItem>,
 )
 
@@ -18,6 +19,7 @@ class XbStructureViewBuilder {
             name = displayName(snapshot),
             elementType = snapshot.elementType,
             textRange = snapshot.textRange,
+            isMutable = snapshot.isMutable,
             children = children,
         )
     }
@@ -63,6 +65,7 @@ class XbStructureViewBuilder {
             name = displayName(node.snapshot),
             elementType = node.snapshot.elementType,
             textRange = node.snapshot.textRange,
+            isMutable = node.snapshot.isMutable,
             children = node.children.map { toStructureItem(it) },
         )
     }
@@ -91,13 +94,16 @@ class XbStructureViewBuilder {
             if (snapshot.elementType == XbPsiElementType.FUNCTION_DECLARATION) {
                 return formatFunctionName(explicitName, snapshot.parameters)
             }
+            if (snapshot.elementType == XbPsiElementType.VARIABLE_DECLARATION && snapshot.isMutable == false) {
+                return "static $explicitName"
+            }
             return explicitName
         }
         return when (snapshot.elementType) {
             XbPsiElementType.FILE -> "file"
             XbPsiElementType.BLOCK -> "block"
             XbPsiElementType.FUNCTION_DECLARATION -> formatFunctionName("function", snapshot.parameters)
-            XbPsiElementType.VARIABLE_DECLARATION -> "variable"
+            XbPsiElementType.VARIABLE_DECLARATION -> if (snapshot.isMutable == false) "static variable" else "variable"
             XbPsiElementType.SYMBOL_REFERENCE -> "reference"
             XbPsiElementType.LITERAL -> "literal"
         }
