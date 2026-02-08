@@ -52,3 +52,4 @@
 
 ## Recent Test Additions
 - Operations registry loader/schema validation edge cases (non-map entries, duplicate IDs, expected_errors handling).
+- Module detection strategy tests for marker naming, source root discovery, and error handling.

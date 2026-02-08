@@ -12,14 +12,19 @@ class XbModuleSourceFinder(private val extensions: Set<String>) {
 
     fun findSourceRoots(baseDir: Path): List<Path> {
         return try {
-            Files.walk(baseDir)
-                .filter { path ->
-                    Files.isRegularFile(path) &&
-                        extensions.contains(path.extension.lowercase()) &&
-                        !isExcluded(path)
-                }
-                .mapNotNull { path -> path.parent }
-                .toList()
+            Files.walk(baseDir).use { stream ->
+                stream
+                    .filter { path ->
+                        Files.isRegularFile(path) &&
+                            extensions.contains(path.extension.lowercase()) &&
+                            !isExcluded(path)
+                    }
+                    .map { path -> path.parent }
+                    .filter { parent -> parent != null }
+                    .map { parent -> parent!! }
+                    .distinct()
+                    .toList()
+            }
         } catch (ex: IOException) {
             emptyList()
         }
