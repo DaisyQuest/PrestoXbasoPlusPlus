@@ -54,3 +54,4 @@
 - Operations registry loader/schema validation edge cases (non-map entries, duplicate IDs, expected_errors handling).
 - Module detection strategy tests for marker naming, source root discovery, and error handling.
 - Language code style settings provider tests for indent options and sample exposure.
+- Structure view nesting and extract refactoring service tests for variable/function extraction behavior.

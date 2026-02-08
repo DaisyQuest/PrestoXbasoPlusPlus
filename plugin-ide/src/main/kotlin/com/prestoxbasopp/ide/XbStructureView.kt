@@ -23,21 +23,48 @@ class XbStructureViewBuilder {
     }
 
     private fun buildChildren(snapshot: XbPsiSnapshot): List<XbStructureItem> {
-        return snapshot.children.flatMap { child ->
-            val childItems = buildChildren(child)
-            if (shouldInclude(child)) {
-                listOf(
-                    XbStructureItem(
-                        name = displayName(child),
-                        elementType = child.elementType,
-                        textRange = child.textRange,
-                        children = childItems,
-                    ),
-                )
-            } else {
-                childItems
+        val includedSnapshots = collectIncludedSnapshots(snapshot)
+            .sortedWith(
+                compareBy<XbPsiSnapshot> { it.textRange.startOffset }
+                    .thenByDescending { it.textRange.endOffset - it.textRange.startOffset },
+            )
+        val rootNode = StructureNode(snapshot)
+        val stack = ArrayDeque<StructureNode>()
+        stack.add(rootNode)
+
+        includedSnapshots.forEach { child ->
+            while (stack.isNotEmpty() && !containsRange(stack.last().snapshot.textRange, child.textRange)) {
+                stack.removeLast()
+            }
+            val parent = stack.lastOrNull() ?: rootNode
+            val childNode = StructureNode(child)
+            parent.children += childNode
+            if (canContainChildren(child)) {
+                stack.add(childNode)
             }
         }
+
+        return rootNode.children.map { toStructureItem(it) }
+    }
+
+    private fun collectIncludedSnapshots(snapshot: XbPsiSnapshot): List<XbPsiSnapshot> {
+        val collected = mutableListOf<XbPsiSnapshot>()
+        snapshot.children.forEach { child ->
+            if (shouldInclude(child)) {
+                collected += child
+            }
+            collected += collectIncludedSnapshots(child)
+        }
+        return collected
+    }
+
+    private fun toStructureItem(node: StructureNode): XbStructureItem {
+        return XbStructureItem(
+            name = displayName(node.snapshot),
+            elementType = node.snapshot.elementType,
+            textRange = node.snapshot.textRange,
+            children = node.children.map { toStructureItem(it) },
+        )
     }
 
     private fun shouldInclude(snapshot: XbPsiSnapshot): Boolean {
@@ -48,6 +75,14 @@ class XbStructureViewBuilder {
             -> true
             else -> false
         }
+    }
+
+    private fun canContainChildren(snapshot: XbPsiSnapshot): Boolean {
+        return snapshot.elementType == XbPsiElementType.FUNCTION_DECLARATION
+    }
+
+    private fun containsRange(parent: XbTextRange, child: XbTextRange): Boolean {
+        return parent.startOffset <= child.startOffset && parent.endOffset >= child.endOffset
     }
 
     private fun displayName(snapshot: XbPsiSnapshot): String {
@@ -73,6 +108,11 @@ class XbStructureViewBuilder {
         return "$name$suffix"
     }
 }
+
+private data class StructureNode(
+    val snapshot: XbPsiSnapshot,
+    val children: MutableList<StructureNode> = mutableListOf(),
+)
 
 class XbBreadcrumbsService(private val structureViewBuilder: XbStructureViewBuilder = XbStructureViewBuilder()) {
     fun breadcrumbs(snapshot: XbPsiSnapshot, offset: Int): List<XbStructureItem> {

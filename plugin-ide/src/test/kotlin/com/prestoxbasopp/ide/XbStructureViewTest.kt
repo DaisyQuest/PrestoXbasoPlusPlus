@@ -111,6 +111,25 @@ class XbStructureViewTest {
     }
 
     @Test
+    fun `nests variables inside their function scope`() {
+        val content = XbStructureViewFileContent(
+            fileName = "sample.prg",
+            text = """
+                function Main()
+                   local count
+                endfunction
+                local after
+            """.trimIndent(),
+        )
+
+        val root = XbStructureViewRootBuilder().buildRoot(content)
+
+        assertThat(root.children.map { it.name }).containsExactly("Main", "after")
+        val functionItem = root.children.first()
+        assertThat(functionItem.children.map { it.name }).containsExactly("count")
+    }
+
+    @Test
     fun `returns empty breadcrumbs when offset is outside`() {
         val snapshot = XbPsiSnapshot(
             elementType = XbPsiElementType.FILE,

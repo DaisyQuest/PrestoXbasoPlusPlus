@@ -43,4 +43,21 @@ class XbPsiTextBuilderTest {
         assertThat(functions).hasSize(1)
         assertThat(functions.first().symbolName).isEqualTo("LogStatus")
     }
+
+    @Test
+    fun `function ranges include end markers for nesting`() {
+        val source = """
+            function Main()
+               local count
+               return count
+            endfunction
+            local after
+        """.trimIndent()
+
+        val root = XbPsiTextBuilder().build(source)
+        val function = root.children.filterIsInstance<XbPsiFunctionDeclaration>().first()
+
+        val expectedEnd = source.indexOf("endfunction") + "endfunction".length
+        assertThat(function.textRange.endOffset).isEqualTo(expectedEnd)
+    }
 }

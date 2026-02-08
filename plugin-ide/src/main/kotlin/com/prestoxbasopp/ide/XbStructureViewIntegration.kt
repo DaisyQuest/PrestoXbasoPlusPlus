@@ -55,7 +55,7 @@ private class XbStructureViewElement(
     private val psiFile: PsiFile,
     private val item: XbStructureItem,
 ) : StructureViewTreeElement, SortableTreeElement, ItemPresentation {
-    override fun getValue(): Any = item
+    override fun getValue(): Any = findPsiElement() ?: item
 
     override fun getChildren(): Array<TreeElement> = item.children
         .map { XbStructureViewElement(psiFile, it) }
@@ -79,6 +79,9 @@ private class XbStructureViewElement(
     override fun canNavigateToSource(): Boolean = canNavigate()
 
     private fun findPsiElement(): PsiElement? {
+        if (item.elementType == com.prestoxbasopp.core.psi.XbPsiElementType.FILE) {
+            return psiFile
+        }
         val startOffset = item.textRange.startOffset
         val element = psiFile.findElementAt(startOffset)
         return PsiTreeUtil.getParentOfType(element, PsiElement::class.java, false) ?: element

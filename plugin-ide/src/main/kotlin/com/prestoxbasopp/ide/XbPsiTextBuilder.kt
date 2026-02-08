@@ -16,6 +16,7 @@ import kotlin.math.min
 
 class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
     private val functionKeywords = setOf("function", "procedure", "method")
+    private val functionEndKeywords = setOf("endfunction", "endprocedure", "endproc", "endmethod")
     private val variableKeywords = setOf("local", "static", "public", "private", "global")
 
     fun build(source: String, fileName: String = "file"): XbPsiFile {
@@ -56,7 +57,9 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
                     if (nameToken != null) {
                         declaredOffsets += nameToken.range.startOffset
                         val (parameters, endIndex) = parseParameters(tokens, index + 2)
-                        val endOffset = tokens.getOrNull(endIndex)?.range?.endOffset ?: nameToken.range.endOffset
+                        val declaredEndOffset = tokens.getOrNull(endIndex)?.range?.endOffset
+                            ?: nameToken.range.endOffset
+                        val endOffset = findFunctionEndOffset(tokens, endIndex + 1, declaredEndOffset)
                         elements += XbPsiFunctionDeclaration(
                             symbolName = nameToken.text,
                             parameters = parameters,
@@ -150,6 +153,19 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
             index++
         }
         return parameters to (tokens.lastIndex)
+    }
+
+    private fun findFunctionEndOffset(tokens: List<XbToken>, startIndex: Int, fallbackEndOffset: Int): Int {
+        if (startIndex < 0) {
+            return fallbackEndOffset
+        }
+        for (index in startIndex until tokens.size) {
+            val token = tokens[index]
+            if (token.type == XbTokenType.KEYWORD && token.text.lowercase() in functionEndKeywords) {
+                return token.range.endOffset
+            }
+        }
+        return fallbackEndOffset
     }
 
     private fun slice(source: String, start: Int, end: Int): String {
