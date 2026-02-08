@@ -41,6 +41,8 @@
                     factoryClass="com.prestoxbasopp.ide.XbAstToolWindowFactory" />
         <gotoDeclarationHandler implementation="com.prestoxbasopp.ide.XbGotoDeclarationHandler" />
         <renameHandler implementation="com.prestoxbasopp.ide.XbRenameHandler" />
+        <refactoringSupportProvider language="Xbase++"
+                                    implementationClass="com.prestoxbasopp.ide.XbRefactoringSupportProvider" />
         <localInspection language="Xbase++"
                          implementationClass="com.prestoxbasopp.ide.XbInspectionTool" />
         <applicationConfigurable id="com.prestoxbasopp.settings"
