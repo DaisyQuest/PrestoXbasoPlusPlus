@@ -55,6 +55,33 @@ class XbIdeRegistrationTest {
     }
 
     @Test
+    fun `plugin xml registers folding, formatting, and rename handlers`() {
+        val pluginXmlUrl: URL? = javaClass.classLoader.getResource("META-INF/plugin.xml")
+        assertThat(pluginXmlUrl).withFailMessage("Expected plugin.xml to be on the test classpath.").isNotNull()
+
+        val pluginXml = pluginXmlUrl!!.readText()
+        val foldingBuilderClass =
+            Regex("""<lang\.foldingBuilder\s+[^>]*implementationClass="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
+        val formattingServiceClass =
+            Regex("""<formattingService\s+[^>]*implementation="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
+        val renameHandlerClass =
+            Regex("""<renameHandler\s+[^>]*implementation="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
+
+        assertThat(foldingBuilderClass).isEqualTo("com.prestoxbasopp.ide.XbFoldingBuilder")
+        assertThat(formattingServiceClass).isEqualTo("com.prestoxbasopp.ide.XbFormattingService")
+        assertThat(renameHandlerClass).isEqualTo("com.prestoxbasopp.ide.XbRenameHandler")
+    }
+
+    @Test
     fun `inspection tool provides a display name`() {
         val inspectionTool = XbInspectionTool()
 
