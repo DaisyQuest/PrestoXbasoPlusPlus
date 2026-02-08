@@ -116,6 +116,21 @@ class XbIdeRegistrationTest {
     }
 
     @Test
+    fun `plugin xml registers code style settings provider`() {
+        val pluginXmlUrl: URL? = javaClass.classLoader.getResource("META-INF/plugin.xml")
+        assertThat(pluginXmlUrl).withFailMessage("Expected plugin.xml to be on the test classpath.").isNotNull()
+
+        val pluginXml = pluginXmlUrl!!.readText()
+        val providerClass =
+            Regex("""<langCodeStyleSettingsProvider\s+[^>]*implementation="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
+
+        assertThat(providerClass).isEqualTo("com.prestoxbasopp.ide.XbLanguageCodeStyleSettingsProvider")
+    }
+
+    @Test
     fun `plugin xml registers module type and startup activity`() {
         val pluginXmlUrl: URL? = javaClass.classLoader.getResource("META-INF/plugin.xml")
         assertThat(pluginXmlUrl).withFailMessage("Expected plugin.xml to be on the test classpath.").isNotNull()
