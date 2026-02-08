@@ -10,10 +10,10 @@ import com.intellij.ide.util.treeView.smartTree.TreeElement
 import com.intellij.lang.PsiStructureViewFactory
 import com.intellij.navigation.ItemPresentation
 import com.intellij.openapi.editor.Editor
-import com.intellij.psi.NavigatablePsiElement
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
-import com.intellij.psi.util.PsiTreeUtil
 
 class XbStructureViewBuilderFactory(
     private val fileContentResolver: XbStructureViewFileContentResolver = XbStructureViewFileContentResolver(),
@@ -46,9 +46,15 @@ private class XbStructureViewModel(
     ),
 ) : StructureViewModel by delegate,
     StructureViewModel.ElementInfoProvider {
-    override fun isAlwaysShowsPlus(element: StructureViewTreeElement): Boolean = false
+    override fun isAlwaysShowsPlus(element: StructureViewTreeElement): Boolean = when (element) {
+        is XbStructureViewElement -> element.hasChildren()
+        else -> false
+    }
 
-    override fun isAlwaysLeaf(element: StructureViewTreeElement): Boolean = false
+    override fun isAlwaysLeaf(element: StructureViewTreeElement): Boolean = when (element) {
+        is XbStructureViewElement -> !element.hasChildren()
+        else -> false
+    }
 }
 
 private class XbStructureViewElement(
@@ -67,23 +73,38 @@ private class XbStructureViewElement(
 
     override fun getAlphaSortKey(): String = item.name
 
-    override fun getIcon(unused: Boolean) = null
+    override fun getIcon(unused: Boolean) = XbStructureViewPresentation.iconFor(item)
 
     override fun navigate(requestFocus: Boolean) {
-        val target = findPsiElement() as? NavigatablePsiElement ?: return
-        target.navigate(requestFocus)
+        val virtualFile = psiFile.virtualFile ?: return
+        OpenFileDescriptor(psiFile.project, virtualFile, item.textRange.startOffset).navigate(requestFocus)
     }
 
-    override fun canNavigate(): Boolean = findPsiElement() is NavigatablePsiElement
+    override fun canNavigate(): Boolean = psiFile.virtualFile != null
 
     override fun canNavigateToSource(): Boolean = canNavigate()
+
+    fun hasChildren(): Boolean = item.children.isNotEmpty()
 
     private fun findPsiElement(): PsiElement? {
         if (item.elementType == com.prestoxbasopp.core.psi.XbPsiElementType.FILE) {
             return psiFile
         }
         val startOffset = item.textRange.startOffset
-        val element = psiFile.findElementAt(startOffset)
-        return PsiTreeUtil.getParentOfType(element, PsiElement::class.java, false) ?: element
+        val element = psiFile.findElementAt(startOffset) ?: return null
+        val targetRange = TextRange(item.textRange.startOffset, item.textRange.endOffset)
+        var current: PsiElement? = element
+        var bestMatch: PsiElement? = null
+        while (current != null && current != psiFile) {
+            val range = current.textRange
+            if (range == targetRange) {
+                return current
+            }
+            if (range.contains(targetRange)) {
+                bestMatch = current
+            }
+            current = current.parent
+        }
+        return bestMatch ?: element
     }
 }

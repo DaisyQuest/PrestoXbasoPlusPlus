@@ -3,6 +3,7 @@ package com.prestoxbasopp.ide
 import com.prestoxbasopp.core.api.XbTextRange
 import com.prestoxbasopp.core.psi.XbPsiElementType
 import com.prestoxbasopp.core.psi.XbPsiSnapshot
+import com.intellij.icons.AllIcons
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -111,6 +112,30 @@ class XbStructureViewTest {
     }
 
     @Test
+    fun `labels static variables distinctly in the structure tree`() {
+        val snapshot = XbPsiSnapshot(
+            elementType = XbPsiElementType.FILE,
+            name = "root",
+            textRange = XbTextRange(0, 50),
+            text = "file",
+            children = listOf(
+                XbPsiSnapshot(
+                    elementType = XbPsiElementType.VARIABLE_DECLARATION,
+                    name = "flag",
+                    textRange = XbTextRange(10, 15),
+                    text = "flag",
+                    isMutable = false,
+                ),
+            ),
+        )
+
+        val structure = XbStructureViewBuilder().build(snapshot)
+
+        assertThat(structure.children.map { it.name }).containsExactly("static flag")
+        assertThat(structure.children.first().isMutable).isFalse
+    }
+
+    @Test
     fun `nests variables inside their function scope`() {
         val content = XbStructureViewFileContent(
             fileName = "sample.prg",
@@ -181,5 +206,34 @@ class XbStructureViewTest {
 
         assertThat(root.name).isEqualTo("focused.prg")
         assertThat(root.children.map { it.name }).containsExactly("main")
+    }
+
+    @Test
+    fun `maps structure view icons by element type`() {
+        val functionItem = XbStructureItem(
+            name = "main",
+            elementType = XbPsiElementType.FUNCTION_DECLARATION,
+            textRange = XbTextRange(0, 10),
+            isMutable = null,
+            children = emptyList(),
+        )
+        val mutableVariableItem = XbStructureItem(
+            name = "count",
+            elementType = XbPsiElementType.VARIABLE_DECLARATION,
+            textRange = XbTextRange(11, 15),
+            isMutable = true,
+            children = emptyList(),
+        )
+        val staticVariableItem = XbStructureItem(
+            name = "total",
+            elementType = XbPsiElementType.VARIABLE_DECLARATION,
+            textRange = XbTextRange(16, 20),
+            isMutable = false,
+            children = emptyList(),
+        )
+
+        assertThat(XbStructureViewPresentation.iconFor(functionItem)).isEqualTo(AllIcons.Nodes.Function)
+        assertThat(XbStructureViewPresentation.iconFor(mutableVariableItem)).isEqualTo(AllIcons.Nodes.Variable)
+        assertThat(XbStructureViewPresentation.iconFor(staticVariableItem)).isEqualTo(AllIcons.Nodes.Constant)
     }
 }
