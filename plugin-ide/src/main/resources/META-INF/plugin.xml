@@ -24,10 +24,13 @@
                    implementationClass="com.prestoxbasopp.ide.XbDiagnosticsAnnotator" />
         <lang.psiStructureViewFactory language="Xbase++"
                                       implementationClass="com.prestoxbasopp.ide.XbStructureViewBuilderFactory" />
+        <lang.foldingBuilder language="Xbase++"
+                             implementationClass="com.prestoxbasopp.ide.XbFoldingBuilder" />
         <annotator language="Xbase++"
                    implementationClass="com.prestoxbasopp.ide.XbIdeAnnotator" />
         <completion.contributor language="Xbase++"
                                 implementationClass="com.prestoxbasopp.ide.XbCompletionContributor" />
+        <formattingService implementation="com.prestoxbasopp.ide.XbFormattingService" />
         <toolWindow id="Xbase++ Macros"
                     anchor="left"
                     factoryClass="com.prestoxbasopp.ide.XbMacroExpansionToolWindowFactory" />
@@ -35,6 +38,7 @@
                     anchor="left"
                     factoryClass="com.prestoxbasopp.ide.XbAstToolWindowFactory" />
         <gotoDeclarationHandler implementation="com.prestoxbasopp.ide.XbGotoDeclarationHandler" />
+        <renameHandler implementation="com.prestoxbasopp.ide.XbRenameHandler" />
         <localInspection language="Xbase++"
                          implementationClass="com.prestoxbasopp.ide.XbInspectionTool" />
         <applicationConfigurable id="com.prestoxbasopp.settings"
