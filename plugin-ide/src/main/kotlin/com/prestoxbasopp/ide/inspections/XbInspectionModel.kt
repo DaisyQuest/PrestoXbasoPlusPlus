@@ -77,14 +77,35 @@ class XbInspectionContext private constructor(
     val program: XbProgram? = parseResult.program
 
     fun formatMessage(message: String): String {
-        return when {
-            message.startsWith("Unexpected character ") -> {
-                val suffix = message.removePrefix("Unexpected character ").trim()
-                "Unexpected character: $suffix."
-            }
-            message.endsWith(".") -> message
-            else -> "$message."
+        val trimmed = message.trim()
+        if (trimmed.isEmpty()) {
+            return "Unknown issue."
         }
+        val normalized = when {
+            trimmed.startsWith("Unexpected character ") -> {
+                formatUnexpectedCharacter(trimmed)
+            }
+            else -> trimmed
+        }
+        return if (normalized.endsWith(".") || normalized.endsWith("!") || normalized.endsWith("?")) {
+            normalized
+        } else {
+            "$normalized."
+        }
+    }
+
+    private fun formatUnexpectedCharacter(message: String): String {
+        val suffix = message.removePrefix("Unexpected character").trim()
+        if (suffix.isEmpty()) {
+            return "Unexpected character"
+        }
+        val unquoted = suffix.removeSurrounding("'", "'").removeSurrounding("\"", "\"")
+        val formatted = if (unquoted != suffix && unquoted.isNotBlank()) {
+            "`$unquoted`"
+        } else {
+            suffix
+        }
+        return "Unexpected character: $formatted"
     }
 
     fun walkStatements(): Sequence<XbStatement> {

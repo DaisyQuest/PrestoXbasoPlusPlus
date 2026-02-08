@@ -37,4 +37,23 @@ class XbAstPresenterTest {
         assertThat(bodyNode?.label).isEqualTo("Body")
         assertThat(bodyNode?.children?.map { it.label }).containsExactly("Local", "Return")
     }
+
+    @Test
+    fun `formats message for unsaved file with no parser errors`() {
+        val presenter = XbAstPresenter()
+
+        val presentation = presenter.present(fileName = null, text = "return 1")
+
+        assertThat(presentation.message).isEqualTo("File: (unsaved) — Parser errors: none")
+    }
+
+    @Test
+    fun `formats message with parser error count`() {
+        val presenter = XbAstPresenter()
+        val source = "if 1 then"
+
+        val presentation = presenter.present(fileName = "sample.prg", text = source)
+
+        assertThat(presentation.message).isEqualTo("File: sample.prg — Parser error: 1")
+    }
 }

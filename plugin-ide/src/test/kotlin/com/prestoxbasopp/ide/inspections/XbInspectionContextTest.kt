@@ -36,10 +36,16 @@ class XbInspectionContextTest {
     fun `formatMessage normalizes parser and lexer messages`() {
         val context = XbInspectionContext.fromSource("return 1")
 
+        assertThat(context.formatMessage("   "))
+            .isEqualTo("Unknown issue.")
         assertThat(context.formatMessage("Unexpected character '!'"))
-            .isEqualTo("Unexpected character: '!'.")
+            .isEqualTo("Unexpected character: `!`.")
+        assertThat(context.formatMessage("Unexpected character $"))
+            .isEqualTo("Unexpected character: $.")
         assertThat(context.formatMessage("Already punctuated."))
             .isEqualTo("Already punctuated.")
+        assertThat(context.formatMessage("Ends with exclamation!"))
+            .isEqualTo("Ends with exclamation!")
         assertThat(context.formatMessage("Missing endif"))
             .isEqualTo("Missing endif.")
     }
