@@ -35,9 +35,18 @@ class XbModuleInitializationTest {
 
         val message = builder.buildMessage(listOf(candidate))
 
-        assertThat(message).contains("XBase++ sources were detected")
+        assertThat(message).contains("Xbase++ sources detected")
         assertThat(message).contains("src")
         assertThat(message).contains("Contains Xbase++ sources")
+    }
+
+    @Test
+    fun `prompt message handles empty candidates`() {
+        val builder = XbModulePromptMessageBuilder()
+
+        val message = builder.buildMessage(emptyList())
+
+        assertThat(message).isEqualTo("No Xbase++ modules detected.")
     }
 
     @Test

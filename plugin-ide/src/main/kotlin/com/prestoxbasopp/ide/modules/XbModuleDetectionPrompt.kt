@@ -15,7 +15,7 @@ class XbIdeaModuleDetectionPrompt(
         val result = Messages.showYesNoDialog(
             project,
             message,
-            "XBase++ project detected, run initializer?",
+            "Xbase++ project detected — run initializer?",
             Messages.getQuestionIcon(),
         )
         return result == Messages.YES

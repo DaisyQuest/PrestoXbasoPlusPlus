@@ -81,11 +81,15 @@ class XbAstPresenter {
     }
 
     private fun buildMessage(fileName: String?, errorCount: Int): String {
-        val label = fileName?.let { "File: $it" } ?: "File: <unsaved>"
-        return if (errorCount == 0) {
-            label
-        } else {
-            "$label — Parser errors: $errorCount"
+        val label = fileName?.let { "File: $it" } ?: "File: (unsaved)"
+        return "$label — ${formatErrorSummary(errorCount)}"
+    }
+
+    private fun formatErrorSummary(errorCount: Int): String {
+        return when (errorCount) {
+            0 -> "Parser errors: none"
+            1 -> "Parser error: 1"
+            else -> "Parser errors: $errorCount"
         }
     }
 
