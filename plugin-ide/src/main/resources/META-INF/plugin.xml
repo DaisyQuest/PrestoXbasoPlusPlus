@@ -26,6 +26,8 @@
                                       implementationClass="com.prestoxbasopp.ide.XbStructureViewBuilderFactory" />
         <lang.foldingBuilder language="Xbase++"
                              implementationClass="com.prestoxbasopp.ide.XbFoldingBuilder" />
+        <langCodeStyleSettingsProvider
+                implementation="com.prestoxbasopp.ide.XbLanguageCodeStyleSettingsProvider" />
         <annotator language="Xbase++"
                    implementationClass="com.prestoxbasopp.ide.XbIdeAnnotator" />
         <completion.contributor language="Xbase++"
