@@ -11,5 +11,5 @@ class XbRefactoringSupportProvider : RefactoringSupportProvider() {
 
     override fun getIntroduceVariableHandler(): RefactoringActionHandler = XbExtractVariableHandler()
 
-    override fun getIntroduceMethodHandler(): RefactoringActionHandler = XbExtractFunctionHandler()
+    override fun getExtractMethodHandler(): RefactoringActionHandler = XbExtractFunctionHandler()
 }
