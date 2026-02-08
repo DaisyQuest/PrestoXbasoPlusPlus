@@ -22,7 +22,7 @@ class XbIdeaModuleCreator(
         val created = mutableListOf<Module>()
 
         runWriteAction {
-            val model = moduleManager.modifiableModel
+            val model = moduleManager.getModifiableModel()
             candidates.forEach { candidate ->
                 val resolvedName = nameResolver.resolve(candidate.suggestedName, existingNames)
                 existingNames.add(resolvedName)

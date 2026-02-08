@@ -13,7 +13,7 @@ class XbModuleMarkerDetectionStrategy(
             XbModuleCandidate(
                 rootPath = moduleRoot,
                 suggestedName = namingPolicy.suggestName(moduleRoot),
-                reason = "Detected ${marker.name}",
+                reason = "Detected ${marker.fileName}",
             )
         }
     }
