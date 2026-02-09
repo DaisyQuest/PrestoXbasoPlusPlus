@@ -296,6 +296,40 @@ class XbParserGoldenTest {
     }
 
     @Test
+    fun `parses comments and print continuations`() {
+        val cases = listOf<GoldenTestCase<XbProgram>>(
+            GoldenTestCase(
+                id = "comments-and-print-continuation",
+                source = """
+                    /*
+                    * File: Example.prg
+                    */
+                    PROCEDURE Main()
+                       // Start
+                       ? "A", ;
+                         "B", ;
+                         "C"
+                       RETURN
+                    ENDPROC
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Decl.Procedure[name=Main]
+                        Params
+                        Block
+                          Stmt.Print
+                            Expr.Literal.String[value=A]
+                            Expr.Literal.String[value=B]
+                            Expr.Literal.String[value=C]
+                          Stmt.Return
+                """.trimIndent(),
+            ),
+        )
+
+        GoldenTestHarness.assertCases(cases, ::parseSource, ::dumpProgram)
+    }
+
+    @Test
     fun `recovers from invalid tokens and missing terminators`() {
         val cases = listOf<GoldenTestCase<XbProgram>>(
             GoldenTestCase(
