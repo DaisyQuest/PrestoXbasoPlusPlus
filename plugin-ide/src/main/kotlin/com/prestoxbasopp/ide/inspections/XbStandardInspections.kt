@@ -46,18 +46,32 @@ object XbStandardInspections {
                 val significant = tokens.filterNot { it.type == XbTokenType.COMMENT }
                 significant.forEachIndexed { index, token ->
                     if (token.type == XbTokenType.PUNCTUATION && token.text == ";") {
-                        val previous = significant.getOrNull(index - 1)
-                        val next = significant.getOrNull(index + 1)
-                        val previousKeyword = previous?.text?.lowercase()
-                        val nextKeyword = next?.text?.lowercase()
-                        val isEmptyStatement = previous == null ||
-                            (previous.type == XbTokenType.PUNCTUATION && previous.text == ";") ||
-                            previousKeyword in setOf("then", "do", "else") ||
-                            next == null ||
-                            (next.type == XbTokenType.PUNCTUATION && next.text == ";") ||
-                            nextKeyword in setOf("endif", "enddo", "else")
-                        if (isEmptyStatement) {
+                        if (isEmptyStatement(significant, index)) {
                             emitter.report(token.range, "Empty statement is unnecessary.")
+                        }
+                    }
+                }
+            }
+        },
+        xbInspection(
+            id = "XB205",
+            title = "Line continuation",
+        ) {
+            description = "Highlights semicolons that explicitly continue a statement onto the next line."
+            severity = XbInspectionSeverity.INFO
+            onTokens { tokens, emitter, context ->
+                val significant = tokens.filterNot { it.type == XbTokenType.COMMENT }
+                val lineIndex = XbLineIndex(context.source)
+                significant.forEachIndexed { index, token ->
+                    if (token.type == XbTokenType.PUNCTUATION && token.text == ";") {
+                        if (isEmptyStatement(significant, index)) {
+                            return@forEachIndexed
+                        }
+                        val next = significant.getOrNull(index + 1) ?: return@forEachIndexed
+                        val tokenLine = lineIndex.lineFor(token.range.startOffset)
+                        val nextLine = lineIndex.lineFor(next.range.startOffset)
+                        if (nextLine > tokenLine) {
+                            emitter.report(token.range, "Statement continues on the next line.")
                         }
                     }
                 }
@@ -217,6 +231,56 @@ private val FUNCTION_BOUNDARY_TOKENS = setOf(
     "endproc",
     "endmethod",
 )
+
+private fun isEmptyStatement(tokens: List<com.prestoxbasopp.core.lexer.XbToken>, index: Int): Boolean {
+    val previous = tokens.getOrNull(index - 1)
+    val next = tokens.getOrNull(index + 1)
+    val previousKeyword = previous?.text?.lowercase()
+    val nextKeyword = next?.text?.lowercase()
+    return previous == null ||
+        (previous.type == XbTokenType.PUNCTUATION && previous.text == ";") ||
+        previousKeyword in setOf("then", "do", "else") ||
+        next == null ||
+        (next.type == XbTokenType.PUNCTUATION && next.text == ";") ||
+        nextKeyword in setOf("endif", "enddo", "else")
+}
+
+private class XbLineIndex(source: String) {
+    private val lineStarts: IntArray = buildLineStarts(source)
+
+    fun lineFor(offset: Int): Int {
+        val safeOffset = offset.coerceAtLeast(0)
+        var low = 0
+        var high = lineStarts.lastIndex
+        while (low <= high) {
+            val mid = (low + high) ushr 1
+            val start = lineStarts[mid]
+            val nextStart = if (mid == lineStarts.lastIndex) Int.MAX_VALUE else lineStarts[mid + 1]
+            if (safeOffset < start) {
+                high = mid - 1
+            } else if (safeOffset >= nextStart) {
+                low = mid + 1
+            } else {
+                return mid
+            }
+        }
+        return lineStarts.lastIndex
+    }
+
+    private fun buildLineStarts(source: String): IntArray {
+        if (source.isEmpty()) return intArrayOf(0)
+        val starts = mutableListOf(0)
+        source.forEachIndexed { index, char ->
+            if (char == '\n') {
+                val next = index + 1
+                if (next <= source.length) {
+                    starts += next
+                }
+            }
+        }
+        return starts.toIntArray()
+    }
+}
 
 private fun XbExpression.isConstantExpression(): Boolean {
     return when (this) {

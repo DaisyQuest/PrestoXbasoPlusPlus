@@ -60,14 +60,22 @@
     <li>Unexpected characters and malformed tokens are annotated with descriptive messages.</li>
     <li>Unterminated string literals are reported with clear recovery diagnostics.</li>
     <li>Inspections warn about empty statements, redundant parentheses, constant conditions, self-comparisons, and unreachable statements.</li>
+    <li>Informational highlighting marks line continuations that use a trailing <code>;</code>.</li>
     <li>Inspection severities distinguish between errors, warnings, and informational hints.</li>
   </ul>
 
   <h3>Code Completion</h3>
   <ul>
     <li>Completion suggestions for function and variable declarations in scope.</li>
+    <li>Command attribute completions for configured UI commands (for example, <code>DCSAY</code> attributes).</li>
+    <li>Database column completions when an alias is used with <code>-&gt;</code> and metadata is available.</li>
     <li>Optional case-insensitive matching for rapid navigation.</li>
   </ul>
+  <p>
+    Completion metadata can be customized by placing a <code>xbasepp.completion.json</code>
+    file at the project root. The bundled defaults live under
+    <code>plugin-ide/src/main/resources/completion/metadata.json</code>.
+  </p>
 
   <h3>Navigation and Usages</h3>
   <ul>
@@ -95,6 +103,7 @@
   <ul>
     <li>Indentation-aware formatter for <code>IF</code>/<code>ELSE</code>/<code>ENDIF</code> and loop blocks.</li>
     <li>Foldable regions for control flow blocks to reduce visual noise.</li>
+    <li>Hover over <code>IF</code>/<code>ELSE</code>/<code>ENDIF</code> to highlight the matching block range.</li>
   </ul>
 
   <h3>Rename Refactoring</h3>

@@ -76,4 +76,112 @@ class XbCompletionServiceTest {
 
         assertThat(items).containsExactly(XbCompletionItem("LOCAL", XbCompletionType.KEYWORD))
     }
+
+    @Test
+    fun `suggests command attributes from metadata`() {
+        val metadata = XbCompletionMetadata(
+            commands = listOf(
+                XbCommandMetadata(
+                    name = "DCSAY",
+                    attributes = listOf(
+                        XbCommandAttributeMetadata(name = "SAYSIZE", type = "NUMERIC"),
+                        XbCommandAttributeMetadata(name = "SAYCOLOR", type = "STRING"),
+                    ),
+                ),
+            ),
+        )
+        val service = XbCompletionService(
+            keywords = emptySet(),
+            metadataService = XbCompletionMetadataService(provider = XbCompletionMetadataProvider { metadata }),
+        )
+        val contextText = "DCSAY SA"
+        val context = XbCompletionContext(
+            text = contextText,
+            offset = contextText.length,
+            projectBasePath = null,
+        )
+
+        val items = service.suggest(
+            root = XbPsiFile("sample", XbTextRange(0, 0), "", emptyList()),
+            prefix = "SA",
+            caseSensitive = false,
+            context = context,
+        )
+
+        assertThat(items).containsExactly(
+            XbCompletionItem("SAYCOLOR", XbCompletionType.COMMAND_ATTRIBUTE, "STRING"),
+            XbCompletionItem("SAYSIZE", XbCompletionType.COMMAND_ATTRIBUTE, "NUMERIC"),
+        )
+    }
+
+    @Test
+    fun `suggests table columns from metadata`() {
+        val metadata = XbCompletionMetadata(
+            tables = listOf(
+                XbTableMetadata(
+                    name = "charges",
+                    columns = listOf(
+                        XbTableColumnMetadata(name = "index_no", type = "NUMERIC", length = 10),
+                        XbTableColumnMetadata(name = "account", type = "CHAR", length = 12),
+                    ),
+                ),
+            ),
+        )
+        val service = XbCompletionService(
+            keywords = emptySet(),
+            metadataService = XbCompletionMetadataService(provider = XbCompletionMetadataProvider { metadata }),
+        )
+        val text = "SELE charges\ncharges->in"
+        val context = XbCompletionContext(
+            text = text,
+            offset = text.length,
+            projectBasePath = null,
+        )
+
+        val items = service.suggest(
+            root = XbPsiFile("sample", XbTextRange(0, 0), "", emptyList()),
+            prefix = "in",
+            caseSensitive = false,
+            context = context,
+        )
+
+        assertThat(items).containsExactly(
+            XbCompletionItem("index_no", XbCompletionType.TABLE_COLUMN, "NUMERIC(10)"),
+        )
+    }
+
+    @Test
+    fun `suggests table columns from focused table when no alias is used`() {
+        val metadata = XbCompletionMetadata(
+            tables = listOf(
+                XbTableMetadata(
+                    name = "charges",
+                    columns = listOf(
+                        XbTableColumnMetadata(name = "account", type = "CHAR", length = 12),
+                    ),
+                ),
+            ),
+        )
+        val service = XbCompletionService(
+            keywords = emptySet(),
+            metadataService = XbCompletionMetadataService(provider = XbCompletionMetadataProvider { metadata }),
+        )
+        val text = "SELE charges\n->ac"
+        val context = XbCompletionContext(
+            text = text,
+            offset = text.length,
+            projectBasePath = null,
+        )
+
+        val items = service.suggest(
+            root = XbPsiFile("sample", XbTextRange(0, 0), "", emptyList()),
+            prefix = "ac",
+            caseSensitive = false,
+            context = context,
+        )
+
+        assertThat(items).containsExactly(
+            XbCompletionItem("account", XbCompletionType.TABLE_COLUMN, "CHAR(12)"),
+        )
+    }
 }

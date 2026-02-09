@@ -32,6 +32,7 @@
                    implementationClass="com.prestoxbasopp.ide.XbIdeAnnotator" />
         <completion.contributor language="Xbase++"
                                 implementationClass="com.prestoxbasopp.ide.XbCompletionContributor" />
+        <editorFactoryListener implementation="com.prestoxbasopp.ide.XbIfBlockHighlighter" />
         <formattingService implementation="com.prestoxbasopp.ide.XbFormattingService" />
         <toolWindow id="Xbase++ Macros"
                     anchor="left"

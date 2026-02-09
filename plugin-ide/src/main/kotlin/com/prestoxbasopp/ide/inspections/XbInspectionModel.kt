@@ -145,6 +145,8 @@ class XbInspectionContext private constructor(
             is XbPrintStatement -> Unit
             is XbLocalDeclarationStatement -> Unit
             is XbReturnStatement -> Unit
+            is com.prestoxbasopp.core.ast.XbExitStatement -> Unit
+            is com.prestoxbasopp.core.ast.XbWaitStatement -> Unit
             is XbExpression -> Unit
         }
     }
@@ -229,6 +231,8 @@ class XbInspectionContext private constructor(
                     yieldAll(walkExpressions(initializer))
                 }
             }
+            is com.prestoxbasopp.core.ast.XbExitStatement -> Unit
+            is com.prestoxbasopp.core.ast.XbWaitStatement -> Unit
             is com.prestoxbasopp.core.ast.XbIdentifierExpression -> Unit
             is com.prestoxbasopp.core.ast.XbLiteralExpression -> Unit
         }

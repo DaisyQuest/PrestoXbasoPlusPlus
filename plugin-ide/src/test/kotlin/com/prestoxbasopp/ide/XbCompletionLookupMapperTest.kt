@@ -10,6 +10,7 @@ class XbCompletionLookupMapperTest {
             XbCompletionItem("Alpha", XbCompletionType.FUNCTION),
             XbCompletionItem("Beta", XbCompletionType.VARIABLE),
             XbCompletionItem("LOCAL", XbCompletionType.KEYWORD),
+            XbCompletionItem("SAYSIZE", XbCompletionType.COMMAND_ATTRIBUTE, detail = "NUMERIC"),
         )
 
         val lookups = XbCompletionLookupMapper().map(items)
@@ -31,6 +32,12 @@ class XbCompletionLookupMapperTest {
                 label = "LOCAL",
                 typeText = "KEYWORD",
                 insertText = "LOCAL",
+                caretOffsetDelta = null,
+            ),
+            XbCompletionLookup(
+                label = "SAYSIZE",
+                typeText = "NUMERIC",
+                insertText = "SAYSIZE",
                 caretOffsetDelta = null,
             ),
         )
