@@ -107,6 +107,9 @@ class XbLexer(
                     escaped = false
                 } else if (char == '\\') {
                     escaped = true
+                } else if (char == quote && peek(1) == quote) {
+                    index += 2
+                    continue
                 } else if (char == quote) {
                     index++
                     emitToken(XbTokenType.STRING, start, index)

@@ -63,4 +63,21 @@ class XbLexerTokenizationTest {
         val keywordTexts = result.tokens.filter { it.type == XbTokenType.KEYWORD }.map { it.text }
         assertThat(keywordTexts).contains("WAIT", "EXIT")
     }
+
+    @Test
+    fun `handles doubled quotes inside strings without swallowing comments`() {
+        val source = """
+            local a := "line3 with quotes "" inside"
+            local b := 'x''y'
+            local c := "x""y" // comment after string
+        """.trimIndent()
+
+        val result = XbLexer().lex(source)
+        val tokens = result.tokens.filter { it.type != XbTokenType.EOF }
+
+        assertThat(tokens).anyMatch { it.type == XbTokenType.STRING && it.text == "\"line3 with quotes \"\" inside\"" }
+        assertThat(tokens).anyMatch { it.type == XbTokenType.STRING && it.text == "'x''y'" }
+        assertThat(tokens).anyMatch { it.type == XbTokenType.STRING && it.text == "\"x\"\"y\"" }
+        assertThat(tokens).anyMatch { it.type == XbTokenType.COMMENT && it.text.trim() == "// comment after string" }
+    }
 }
