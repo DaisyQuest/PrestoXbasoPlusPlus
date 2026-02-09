@@ -119,6 +119,9 @@ class XbParser(private val tokens: List<Token>) {
                 expressions += fallbackExpression(question)
             }
             while (match(TokenType.COMMA)) {
+                while (match(TokenType.SEMICOLON)) {
+                    // Allow line continuation between print arguments.
+                }
                 parseExpression(0)?.let { expressions += it } ?: run {
                     recordError("Expected expression after ',' at ${peek().startOffset}")
                     expressions += fallbackExpression(question)

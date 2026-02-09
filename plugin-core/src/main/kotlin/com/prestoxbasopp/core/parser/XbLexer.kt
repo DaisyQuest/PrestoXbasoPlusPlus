@@ -21,7 +21,10 @@ class XbLexer(
     }
 
     private fun nextToken(): Token {
-        skipWhitespace()
+        val errorToken = skipWhitespaceAndComments()
+        if (errorToken != null) {
+            return errorToken
+        }
         if (isAtEnd()) {
             val mapped = mapRange(index, index)
             return Token(TokenType.EOF, "", mapped.startOffset, mapped.endOffset)
@@ -150,14 +153,40 @@ class XbLexer(
         }
     }
 
-    private fun skipWhitespace() {
-        while (!isAtEnd()) {
-            val char = peek()
-            if (char == ' ' || char == '\r' || char == '\t' || char == '\n') {
-                index++
-            } else {
-                return
+    private fun skipWhitespaceAndComments(): Token? {
+        while (true) {
+            while (!isAtEnd()) {
+                val char = peek()
+                if (char == ' ' || char == '\r' || char == '\t' || char == '\n') {
+                    index++
+                } else {
+                    break
+                }
             }
+            if (isAtEnd()) {
+                return null
+            }
+            if (peek() == '/' && peekNext() == '/') {
+                index += 2
+                while (!isAtEnd() && peek() != '\n') {
+                    index++
+                }
+                continue
+            }
+            if (peek() == '/' && peekNext() == '*') {
+                val start = index
+                index += 2
+                while (!isAtEnd() && !(peek() == '*' && peekNext() == '/')) {
+                    index++
+                }
+                if (isAtEnd()) {
+                    val lexeme = source.substring(start, index)
+                    return token(TokenType.ERROR, lexeme, start, index)
+                }
+                index += 2
+                continue
+            }
+            return null
         }
     }
 
