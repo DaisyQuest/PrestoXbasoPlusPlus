@@ -1,0 +1,4 @@
+File
+  Expr.Binary.LessThan
+    Expr.Literal.Number[value=1]
+    Expr.Literal.Number[value=2]

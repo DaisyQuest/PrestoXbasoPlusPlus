@@ -1,0 +1,6 @@
+File
+  Expr.Binary.And
+    Expr.Binary.And
+      Expr.Identifier[name=a]
+      Expr.Identifier[name=b]
+    Expr.Identifier[name=c]

@@ -1,0 +1,8 @@
+File
+  Expr.HashLiteral
+    Hash.Entry
+      Expr.Literal.String[value=a]
+      Expr.Literal.Number[value=1]
+    Hash.Entry
+      Expr.Literal.String[value=b]
+      Expr.Literal.Number[value=2]

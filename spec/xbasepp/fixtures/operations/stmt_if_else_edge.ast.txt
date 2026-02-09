@@ -1,0 +1,7 @@
+File
+  Stmt.If
+    Expr.Identifier[name=x]
+    Block[branch=then]
+    Block[branch=else]
+      Stmt.Return
+        Expr.Literal.Number[value=1]

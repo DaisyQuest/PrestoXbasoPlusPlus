@@ -1,0 +1,10 @@
+File
+  Decl.Function[name=Foo]
+    Params
+      Expr.Identifier[name=a]
+      Expr.Identifier[name=b]
+    Block
+      Stmt.Return
+        Expr.Binary.Add
+          Expr.Identifier[name=a]
+          Expr.Identifier[name=b]

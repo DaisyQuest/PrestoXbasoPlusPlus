@@ -1,0 +1,6 @@
+File
+  Stmt.Local
+    Local.Binding[name=x]
+      Expr.Literal.Number[value=1]
+    Local.Binding[name=y]
+      Expr.Literal.Number[value=2]

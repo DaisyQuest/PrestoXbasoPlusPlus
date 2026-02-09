@@ -1,0 +1,4 @@
+File
+  Stmt.While
+    Expr.Identifier[name=x]
+    Block

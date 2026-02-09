@@ -1,0 +1,6 @@
+File
+  Expr.Binary[op="%"]
+    Expr.Binary[op="%"]
+      Expr.Literal.Number[value=9]
+      Expr.Literal.Number[value=4]
+    Expr.Literal.Number[value=2]

@@ -1,0 +1,6 @@
+File
+  Expr.Index
+    Expr.Index
+      Expr.Identifier[name=matrix]
+      Expr.Literal.Number[value=1]
+    Expr.Literal.Number[value=2]

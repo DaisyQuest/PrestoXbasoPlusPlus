@@ -1,0 +1,12 @@
+File
+  Stmt.AtSayGet
+    Expr.Literal.Number[value=5]
+    Expr.Literal.Number[value=10]
+    At.Say
+      Expr.Literal.String[value=A]
+    At.Get
+      Expr.Identifier[name=value]
+    At.Valid
+      Expr.Binary.GreaterThan
+        Expr.Identifier[name=value]
+        Expr.Literal.Number[value=0]

@@ -1,0 +1,8 @@
+File
+  Stmt.Sequence[recoverVar=oErr]
+    Block[branch=sequence]
+      Stmt.Break
+        Expr.Literal.Number[value=1]
+    Block[branch=recover]
+      Stmt.Return
+        Expr.Identifier[name=oErr]

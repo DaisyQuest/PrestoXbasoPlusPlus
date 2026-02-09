@@ -1,0 +1,6 @@
+File
+  Expr.Binary.Divide
+    Expr.Binary.Divide
+      Expr.Literal.Number[value=8]
+      Expr.Literal.Number[value=2]
+    Expr.Literal.Number[value=2]

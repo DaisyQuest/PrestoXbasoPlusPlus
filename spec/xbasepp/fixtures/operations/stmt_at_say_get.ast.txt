@@ -1,0 +1,6 @@
+File
+  Stmt.AtSayGet
+    Expr.Literal.Number[value=1]
+    Expr.Literal.Number[value=2]
+    At.Say
+      Expr.Literal.String[value=Hi]

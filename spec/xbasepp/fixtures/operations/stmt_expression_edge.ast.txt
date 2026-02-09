@@ -1,0 +1,6 @@
+File
+  Stmt.Expression
+    Expr.Call
+      Expr.Identifier[name=Bar]
+      Expr.Literal.Number[value=1]
+  Stmt.Return

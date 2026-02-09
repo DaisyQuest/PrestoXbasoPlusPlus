@@ -21,12 +21,47 @@ operations:
     example_edge: "\"\""
     expected_ast_shape: Expr.Literal.String
     expected_errors: []
+  - id: expr_literal_nil
+    category: expression
+    precedence_group: primary
+    example_min: "NIL"
+    example_edge: "nil"
+    expected_ast_shape: Expr.Literal.Nil
+    expected_errors: []
+  - id: expr_literal_boolean
+    category: expression
+    precedence_group: primary
+    example_min: ".t."
+    example_edge: ".f."
+    expected_ast_shape: Expr.Literal.Boolean
+    expected_errors: []
   - id: expr_unary_negation
     category: expression
     precedence_group: unary
     example_min: "-1"
     example_edge: "-(2)"
     expected_ast_shape: Expr.Unary.Negation
+    expected_errors: []
+  - id: expr_unary_plus
+    category: expression
+    precedence_group: unary
+    example_min: "+1"
+    example_edge: "+(2)"
+    expected_ast_shape: Expr.Unary
+    expected_errors: []
+  - id: expr_unary_not
+    category: expression
+    precedence_group: unary
+    example_min: "NOT .t."
+    example_edge: ".not. flag"
+    expected_ast_shape: Expr.Unary.Not
+    expected_errors: []
+  - id: expr_unary_macro
+    category: expression
+    precedence_group: unary
+    example_min: "&name"
+    example_edge: "&(\"QOut\")"
+    expected_ast_shape: Expr.Unary
     expected_errors: []
   - id: expr_binary_multiplication
     category: expression
@@ -35,6 +70,20 @@ operations:
     example_edge: "2 * 3 * 4"
     expected_ast_shape: Expr.Binary.Multiply
     expected_errors: []
+  - id: expr_binary_division
+    category: expression
+    precedence_group: multiplicative
+    example_min: "4 / 2"
+    example_edge: "8 / 2 / 2"
+    expected_ast_shape: Expr.Binary.Divide
+    expected_errors: []
+  - id: expr_binary_modulo
+    category: expression
+    precedence_group: multiplicative
+    example_min: "5 % 2"
+    example_edge: "9 % 4 % 2"
+    expected_ast_shape: Expr.Binary
+    expected_errors: []
   - id: expr_binary_addition
     category: expression
     precedence_group: additive
@@ -42,12 +91,131 @@ operations:
     example_edge: "1 + 2 * 3"
     expected_ast_shape: Expr.Binary.Add
     expected_errors: []
+  - id: expr_binary_subtraction
+    category: expression
+    precedence_group: additive
+    example_min: "5 - 3"
+    example_edge: "10 - 4 - 2"
+    expected_ast_shape: Expr.Binary.Subtract
+    expected_errors: []
+  - id: expr_binary_equal
+    category: expression
+    precedence_group: equality
+    example_min: "a == b"
+    example_edge: "1 == 2"
+    expected_ast_shape: Expr.Binary.Equal
+    expected_errors: []
+  - id: expr_binary_not_equal
+    category: expression
+    precedence_group: equality
+    example_min: "a != b"
+    example_edge: "1 != 2"
+    expected_ast_shape: Expr.Binary.NotEqual
+    expected_errors: []
+  - id: expr_binary_less_than
+    category: expression
+    precedence_group: comparison
+    example_min: "1 < 2"
+    example_edge: "x < y"
+    expected_ast_shape: Expr.Binary.LessThan
+    expected_errors: []
+  - id: expr_binary_less_than_or_equal
+    category: expression
+    precedence_group: comparison
+    example_min: "1 <= 2"
+    example_edge: "a <= b"
+    expected_ast_shape: Expr.Binary.LessThanOrEqual
+    expected_errors: []
+  - id: expr_binary_greater_than
+    category: expression
+    precedence_group: comparison
+    example_min: "3 > 2"
+    example_edge: "a > b"
+    expected_ast_shape: Expr.Binary.GreaterThan
+    expected_errors: []
+  - id: expr_binary_greater_than_or_equal
+    category: expression
+    precedence_group: comparison
+    example_min: "3 >= 2"
+    example_edge: "a >= b"
+    expected_ast_shape: Expr.Binary.GreaterThanOrEqual
+    expected_errors: []
+  - id: expr_binary_contains
+    category: expression
+    precedence_group: comparison
+    example_min: "\"a\" $ \"abc\""
+    example_edge: "\"x\" $ value"
+    expected_ast_shape: Expr.Binary
+    expected_errors: []
+  - id: expr_binary_and
+    category: expression
+    precedence_group: logical
+    example_min: "a and b"
+    example_edge: "a and b and c"
+    expected_ast_shape: Expr.Binary.And
+    expected_errors: []
+  - id: expr_binary_or
+    category: expression
+    precedence_group: logical
+    example_min: "a or b"
+    example_edge: "a or b or c"
+    expected_ast_shape: Expr.Binary.Or
+    expected_errors: []
+  - id: expr_call
+    category: expression
+    precedence_group: postfix
+    example_min: "Foo()"
+    example_edge: "Foo(1, 2)"
+    expected_ast_shape: Expr.Call
+    expected_errors: []
+  - id: expr_index
+    category: expression
+    precedence_group: postfix
+    example_min: "items[1]"
+    example_edge: "matrix[1][2]"
+    expected_ast_shape: Expr.Index
+    expected_errors: []
+  - id: expr_array_literal
+    category: expression
+    precedence_group: primary
+    example_min: "{1, 2}"
+    example_edge: "{}"
+    expected_ast_shape: Expr.ArrayLiteral
+    expected_errors: []
+  - id: expr_hash_literal
+    category: expression
+    precedence_group: primary
+    example_min: "{=>}"
+    example_edge: "{ \"a\" => 1, \"b\" => 2 }"
+    expected_ast_shape: Expr.HashLiteral
+    expected_errors: []
+  - id: expr_block_literal
+    category: expression
+    precedence_group: primary
+    example_min: "{|| 1}"
+    example_edge: "{|x, y| x + y}"
+    expected_ast_shape: Expr.BlockLiteral
+    expected_errors: []
+  - id: stmt_expression
+    category: statement
+    precedence_group: statement
+    example_min: "Foo()\nRETURN"
+    example_edge: "Bar(1)\nRETURN"
+    expected_ast_shape: Stmt.Expression
+    expected_errors: []
   - id: stmt_assignment
     category: statement
     precedence_group: statement
     example_min: "x := 1"
     example_edge: "x := y + 2"
     expected_ast_shape: Stmt.Assignment
+    expected_errors: []
+  - id: stmt_local
+    category: statement
+    precedence_group: statement
+    example_min: "LOCAL x"
+    example_edge: "LOCAL x := 1, y := 2"
+    expected_ast_shape: Stmt.Local
     expected_errors: []
   - id: stmt_if_else
     category: statement
@@ -58,8 +226,33 @@ operations:
     example_edge: |-
       IF x
       ELSE
+         RETURN 1
       ENDIF
     expected_ast_shape: Stmt.If
+    expected_errors: []
+  - id: stmt_while_loop
+    category: statement
+    precedence_group: statement
+    example_min: |-
+      WHILE x
+      ENDDO
+    example_edge: |-
+      WHILE x DO
+         RETURN x
+      ENDDO
+    expected_ast_shape: Stmt.While
+    expected_errors: []
+  - id: stmt_do_while_loop
+    category: statement
+    precedence_group: statement
+    example_min: |-
+      DO WHILE x
+      ENDDO
+    example_edge: |-
+      DO WHILE x
+         RETURN x
+      ENDDO
+    expected_ast_shape: Stmt.While
     expected_errors: []
   - id: stmt_for_loop
     category: statement
@@ -72,11 +265,46 @@ operations:
       NEXT
     expected_ast_shape: Stmt.For
     expected_errors: []
+  - id: stmt_sequence
+    category: statement
+    precedence_group: statement
+    example_min: |-
+      BEGIN SEQUENCE
+      END SEQUENCE
+    example_edge: |-
+      BEGIN SEQUENCE
+         BREAK 1
+      RECOVER USING oErr
+         RETURN oErr
+      END SEQUENCE
+    expected_ast_shape: Stmt.Sequence
+    expected_errors: []
+  - id: stmt_at_say_get
+    category: statement
+    precedence_group: statement
+    example_min: "@ 1, 2 SAY \"Hi\""
+    example_edge: "@ 5, 10 SAY \"A\" GET value VALID value > 0"
+    expected_ast_shape: Stmt.AtSayGet
+    expected_errors: []
+  - id: stmt_print
+    category: statement
+    precedence_group: statement
+    example_min: "? 1"
+    example_edge: "? \"A\", \"B\""
+    expected_ast_shape: Stmt.Print
+    expected_errors: []
+  - id: stmt_return
+    category: statement
+    precedence_group: statement
+    example_min: "RETURN 1"
+    example_edge: "RETURN"
+    expected_ast_shape: Stmt.Return
+    expected_errors: []
   - id: stmt_wait
     category: statement
     precedence_group: statement
-    example_min: "WAIT \"Press any key\""
-    example_edge: "WAIT \"Press any key\";"
+    example_min: "WAIT"
+    example_edge: "WAIT \"Press any key\""
     expected_ast_shape: Stmt.Wait
     expected_errors: []
   - id: stmt_exit
@@ -85,6 +313,13 @@ operations:
     example_min: "EXIT"
     example_edge: "EXIT;"
     expected_ast_shape: Stmt.Exit
+    expected_errors: []
+  - id: stmt_break
+    category: statement
+    precedence_group: statement
+    example_min: "BREAK"
+    example_edge: "BREAK 1"
+    expected_ast_shape: Stmt.Break
     expected_errors: []
   - id: decl_function
     category: declaration
@@ -98,4 +333,16 @@ operations:
       RETURN a + b
       ENDFUNCTION
     expected_ast_shape: Decl.Function
+    expected_errors: []
+  - id: decl_procedure
+    category: declaration
+    precedence_group: declaration
+    example_min: |-
+      PROCEDURE Foo()
+      ENDPROC
+    example_edge: |-
+      PROCEDURE Foo(a)
+      RETURN a
+      ENDPROC
+    expected_ast_shape: Decl.Procedure
     expected_errors: []

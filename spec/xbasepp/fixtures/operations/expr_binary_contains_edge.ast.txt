@@ -1,0 +1,4 @@
+File
+  Expr.Binary[op="$"]
+    Expr.Literal.String[value=x]
+    Expr.Identifier[name=value]

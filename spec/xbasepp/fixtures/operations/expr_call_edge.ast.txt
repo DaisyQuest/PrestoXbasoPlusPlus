@@ -1,0 +1,5 @@
+File
+  Expr.Call
+    Expr.Identifier[name=Foo]
+    Expr.Literal.Number[value=1]
+    Expr.Literal.Number[value=2]

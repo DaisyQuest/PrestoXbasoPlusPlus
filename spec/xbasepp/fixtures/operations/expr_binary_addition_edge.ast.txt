@@ -1,0 +1,6 @@
+File
+  Expr.Binary.Add
+    Expr.Literal.Number[value=1]
+    Expr.Binary.Multiply
+      Expr.Literal.Number[value=2]
+      Expr.Literal.Number[value=3]
