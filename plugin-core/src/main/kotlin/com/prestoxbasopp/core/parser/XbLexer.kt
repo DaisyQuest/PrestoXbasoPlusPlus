@@ -39,6 +39,7 @@ class XbLexer(
             current == '-' -> token(TokenType.MINUS, "-", start, index)
             current == '*' -> token(TokenType.STAR, "*", start, index)
             current == '/' -> token(TokenType.SLASH, "/", start, index)
+            current == '%' -> token(TokenType.PERCENT, "%", start, index)
             current == '(' -> token(TokenType.LPAREN, "(", start, index)
             current == ')' -> token(TokenType.RPAREN, ")", start, index)
             current == '[' -> token(TokenType.LBRACKET, "[", start, index)
@@ -48,8 +49,15 @@ class XbLexer(
             current == ';' -> token(TokenType.SEMICOLON, ";", start, index)
             current == ',' -> token(TokenType.COMMA, ",", start, index)
             current == '?' -> token(TokenType.QUESTION, "?", start, index)
+            current == '$' -> token(TokenType.CONTAINS, "$", start, index)
+            current == '&' -> token(TokenType.AMP, "&", start, index)
+            current == '|' -> token(TokenType.PIPE, "|", start, index)
+            current == '@' -> token(TokenType.AT, "@", start, index)
+            current == '.' -> readDotKeyword(start)
             current == '=' -> {
-                if (match('=')) {
+                if (match('>')) {
+                    token(TokenType.ARROW, "=>", start, index)
+                } else if (match('=')) {
                     token(TokenType.EQ, "==", start, index)
                 } else {
                     token(TokenType.EQ, "=", start, index)
@@ -111,19 +119,29 @@ class XbLexer(
     }
 
     private fun readString(start: Int): Token {
-        while (!isAtEnd() && peek() != '"') {
-            if (peek() == '\n') {
+        val builder = StringBuilder()
+        while (!isAtEnd()) {
+            val next = peek()
+            if (next == '"') {
+                if (peekNext() == '"') {
+                    advance()
+                    advance()
+                    builder.append('"')
+                    continue
+                }
                 break
             }
-            advance()
+            if (next == '\n') {
+                break
+            }
+            builder.append(advance())
         }
         if (isAtEnd() || peek() != '"') {
             val lexeme = source.substring(start, index)
             return token(TokenType.ERROR, lexeme, start, index)
         }
         advance()
-        val lexeme = source.substring(start + 1, index - 1)
-        return token(TokenType.STRING, lexeme, start, index)
+        return token(TokenType.STRING, builder.toString(), start, index)
     }
 
     private fun keywordType(text: String): TokenType {
@@ -138,6 +156,15 @@ class XbLexer(
             "return" -> TokenType.RETURN
             "wait" -> TokenType.WAIT
             "exit" -> TokenType.EXIT
+            "begin" -> TokenType.BEGIN
+            "sequence" -> TokenType.SEQUENCE
+            "recover" -> TokenType.RECOVER
+            "using" -> TokenType.USING
+            "break" -> TokenType.BREAK
+            "end" -> TokenType.END
+            "say" -> TokenType.SAY
+            "get" -> TokenType.GET
+            "valid" -> TokenType.VALID
             "function" -> TokenType.FUNCTION
             "procedure" -> TokenType.PROCEDURE
             "endfunction" -> TokenType.ENDFUNCTION
@@ -151,6 +178,11 @@ class XbLexer(
             "and" -> TokenType.AND
             "or" -> TokenType.OR
             "not" -> TokenType.NOT
+            ".and." -> TokenType.AND
+            ".or." -> TokenType.OR
+            ".not." -> TokenType.NOT
+            ".t." -> TokenType.TRUE
+            ".f." -> TokenType.FALSE
             else -> TokenType.IDENTIFIER
         }
     }
@@ -188,8 +220,52 @@ class XbLexer(
                 index += 2
                 continue
             }
+            if (peek() == ';' && isLineContinuation(index)) {
+                index++
+                while (!isAtEnd() && peek() != '\n') {
+                    index++
+                }
+                continue
+            }
             return null
         }
+    }
+
+    private fun readDotKeyword(start: Int): Token {
+        val end = source.indexOf('.', start + 1)
+        if (end == -1) {
+            return token(TokenType.ERROR, ".", start, index)
+        }
+        val lexeme = source.substring(start, end + 1)
+        index = end + 1
+        val type = keywordType(lexeme)
+        if (type == TokenType.IDENTIFIER) {
+            return token(TokenType.ERROR, lexeme, start, index)
+        }
+        val normalized = when (type) {
+            TokenType.AND -> "and"
+            TokenType.OR -> "or"
+            TokenType.NOT -> "not"
+            TokenType.TRUE -> "true"
+            TokenType.FALSE -> "false"
+            else -> lexeme
+        }
+        return token(type, normalized, start, index)
+    }
+
+    private fun isLineContinuation(startIndex: Int): Boolean {
+        var cursor = startIndex + 1
+        while (cursor < source.length) {
+            val char = source[cursor]
+            if (char == '\n') {
+                return true
+            }
+            if (!char.isWhitespace()) {
+                return false
+            }
+            cursor++
+        }
+        return true
     }
 
     private fun match(expected: Char): Boolean {

@@ -57,3 +57,4 @@
 - Structure view nesting and extract refactoring service tests for variable/function extraction behavior.
 - Structure view static variable labeling and icon mapping tests for navigation cues.
 - WAIT/EXIT keyword lexing coverage plus parser golden tests and fixtures for wait/exit statements.
+- Parser golden coverage for macro stress sample with block literals, hash literals, macro operators, and sequence recovery.

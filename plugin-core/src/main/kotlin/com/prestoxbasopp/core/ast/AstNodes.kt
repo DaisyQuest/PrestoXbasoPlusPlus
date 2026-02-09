@@ -59,6 +59,27 @@ data class XbExitStatement(
     override val range: XbTextRange,
 ) : XbStatement
 
+data class XbBreakStatement(
+    val expression: XbExpression?,
+    override val range: XbTextRange,
+) : XbStatement
+
+data class XbSequenceStatement(
+    val body: XbBlock,
+    val recoverVariable: String?,
+    val recoverBlock: XbBlock?,
+    override val range: XbTextRange,
+) : XbStatement
+
+data class XbAtSayGetStatement(
+    val row: XbExpression,
+    val column: XbExpression?,
+    val sayExpression: XbExpression?,
+    val getExpression: XbExpression?,
+    val validExpression: XbExpression?,
+    override val range: XbTextRange,
+) : XbStatement
+
 data class XbIfStatement(
     val condition: XbExpression,
     val thenBlock: XbBlock,
@@ -101,6 +122,7 @@ enum class XbLiteralKind {
     NUMBER,
     STRING,
     NIL,
+    BOOLEAN,
 }
 
 data class XbLiteralExpression(
@@ -141,5 +163,16 @@ data class XbIndexExpression(
 
 data class XbArrayLiteralExpression(
     val elements: List<XbExpression>,
+    override val range: XbTextRange,
+) : XbExpression
+
+data class XbHashLiteralExpression(
+    val entries: List<Pair<XbExpression, XbExpression>>,
+    override val range: XbTextRange,
+) : XbExpression
+
+data class XbBlockLiteralExpression(
+    val parameters: List<String>,
+    val body: XbExpression,
     override val range: XbTextRange,
 ) : XbExpression
