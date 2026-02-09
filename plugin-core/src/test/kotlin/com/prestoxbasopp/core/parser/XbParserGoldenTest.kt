@@ -330,6 +330,36 @@ class XbParserGoldenTest {
     }
 
     @Test
+    fun `parses indexed assignment statements`() {
+        val cases = listOf<GoldenTestCase<XbProgram>>(
+            GoldenTestCase(
+                id = "indexed-assignments",
+                source = """
+                    items[1] := "Mouse"
+                    matrix[1][2] := 3
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Stmt.Assignment
+                        Expr.Index
+                          Expr.Identifier[name=items]
+                          Expr.Literal.Number[value=1]
+                        Expr.Literal.String[value=Mouse]
+                      Stmt.Assignment
+                        Expr.Index
+                          Expr.Index
+                            Expr.Identifier[name=matrix]
+                            Expr.Literal.Number[value=1]
+                          Expr.Literal.Number[value=2]
+                        Expr.Literal.Number[value=3]
+                """.trimIndent(),
+            ),
+        )
+
+        GoldenTestHarness.assertCases(cases, ::parseSource, ::dumpProgram)
+    }
+
+    @Test
     fun `parses wait and exit statements`() {
         val cases = listOf<GoldenTestCase<XbProgram>>(
             GoldenTestCase(

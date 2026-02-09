@@ -76,7 +76,7 @@ class XbParser(private val tokens: List<Token>) {
             }
             TokenType.EOF -> null
             TokenType.IDENTIFIER -> {
-                if (checkNext(TokenType.ASSIGN)) {
+                if (isAssignmentStatementStart()) {
                     parseAssignmentStatement()
                 } else {
                     parseExpressionStatement()
@@ -560,9 +560,36 @@ class XbParser(private val tokens: List<Token>) {
 
     private fun check(type: TokenType): Boolean = !isAtEnd() && peek().type == type
 
-    private fun checkNext(type: TokenType): Boolean {
-        if (current + 1 >= tokens.size) return false
-        return tokens[current + 1].type == type
+    private fun isAssignmentStatementStart(): Boolean {
+        if (!check(TokenType.IDENTIFIER)) return false
+        var index = current + 1
+        if (index >= tokens.size) return false
+        if (tokens[index].type == TokenType.ASSIGN) {
+            return true
+        }
+        while (index < tokens.size && tokens[index].type == TokenType.LBRACKET) {
+            var depth = 0
+            while (index < tokens.size) {
+                val type = tokens[index].type
+                if (type == TokenType.LBRACKET) {
+                    depth++
+                } else if (type == TokenType.RBRACKET) {
+                    depth--
+                    if (depth == 0) {
+                        index++
+                        break
+                    }
+                }
+                index++
+            }
+            if (depth != 0 || index >= tokens.size) {
+                return false
+            }
+            if (tokens[index].type == TokenType.ASSIGN) {
+                return true
+            }
+        }
+        return false
     }
 
     private fun isAtEnd(): Boolean = peek().type == TokenType.EOF
