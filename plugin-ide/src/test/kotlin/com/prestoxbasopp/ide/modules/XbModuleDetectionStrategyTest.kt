@@ -68,11 +68,11 @@ class XbModuleDetectionStrategyTest {
         assertThat(roots).isEmpty()
     }
 
-    private class FakeMarkerFinder(private val markers: List<Path>) : XbModuleMarkerFinder {
+    private class FakeMarkerFinder(private val markers: List<Path>) : XbModuleMarkerFinder(setOf("project.xpj")) {
         override fun findMarkers(baseDir: Path): List<Path> = markers
     }
 
-    private class FakeNamingPolicy(private val name: String) : XbModuleNamingPolicy {
+    private class FakeNamingPolicy(private val name: String) : XbModuleNamingPolicy() {
         override fun suggestName(moduleRoot: Path): String = name
     }
 }

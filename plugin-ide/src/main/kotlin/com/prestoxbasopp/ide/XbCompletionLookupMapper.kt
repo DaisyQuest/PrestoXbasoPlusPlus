@@ -15,7 +15,7 @@ class XbCompletionLookupMapper(
             val plan = insertStrategy(item)
             XbCompletionLookup(
                 label = item.name,
-                typeText = item.type.name,
+                typeText = item.detail ?: item.type.name,
                 insertText = plan.text,
                 caretOffsetDelta = plan.caretOffsetDelta,
             )

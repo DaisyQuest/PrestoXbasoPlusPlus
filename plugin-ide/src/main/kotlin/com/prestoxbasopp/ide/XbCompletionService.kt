@@ -8,21 +8,26 @@ import com.prestoxbasopp.core.psi.XbPsiVariableDeclaration
 data class XbCompletionItem(
     val name: String,
     val type: XbCompletionType,
+    val detail: String? = null,
 )
 
 enum class XbCompletionType {
     FUNCTION,
     VARIABLE,
     KEYWORD,
+    COMMAND_ATTRIBUTE,
+    TABLE_COLUMN,
 }
 
 class XbCompletionService(
     private val keywords: Set<String> = XbKeywords.all,
+    private val metadataService: XbCompletionMetadataService = XbCompletionMetadataService(),
 ) {
     fun suggest(
         root: XbPsiElement,
         prefix: String,
         caseSensitive: Boolean = true,
+        context: XbCompletionContext? = null,
     ): List<XbCompletionItem> {
         val normalizedPrefix = if (caseSensitive) prefix else prefix.lowercase()
         val items = buildList {
@@ -47,6 +52,9 @@ class XbCompletionService(
                 .filter { matchesPrefix(it, normalizedPrefix, caseSensitive) }
                 .map { XbCompletionItem(it, XbCompletionType.KEYWORD) }
                 .forEach { add(it) }
+            context?.let { completionContext ->
+                addAll(metadataService.suggest(completionContext, prefix, caseSensitive))
+            }
         }
         return items
             .distinctBy { it.name to it.type }

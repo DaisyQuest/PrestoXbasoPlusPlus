@@ -24,6 +24,20 @@ class XbInspectionEngineTest {
     }
 
     @Test
+    fun `highlights line continuations`() {
+        val source = """
+            if foo;
+               bar
+            endif
+        """.trimIndent()
+
+        val findings = engine.inspect(source)
+
+        assertThat(findings.any { it.id == "XB205" }).isTrue()
+        assertThat(findings.none { it.id == "XB200" }).isTrue()
+    }
+
+    @Test
     fun `does not flag parentheses used for calls`() {
         val findings = engine.inspect("return LTrim(Str(position))")
 

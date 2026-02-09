@@ -75,10 +75,16 @@ class XbIdeRegistrationTest {
                 .find(pluginXml)
                 ?.groupValues
                 ?.get(1)
+        val editorListenerClass =
+            Regex("""<editorFactoryListener\s+[^>]*implementation="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
 
         assertThat(foldingBuilderClass).isEqualTo("com.prestoxbasopp.ide.XbFoldingBuilder")
         assertThat(formattingServiceClass).isEqualTo("com.prestoxbasopp.ide.XbFormattingService")
         assertThat(renameHandlerClass).isEqualTo("com.prestoxbasopp.ide.XbRenameHandler")
+        assertThat(editorListenerClass).isEqualTo("com.prestoxbasopp.ide.XbIfBlockHighlighter")
     }
 
     @Test

@@ -1,0 +1,22 @@
+{
+  "commands": [
+    {
+      "name": "DCSAY",
+      "attributes": [
+        { "name": "SAYSIZE", "type": "NUMERIC" },
+        { "name": "SAYCOLOR", "type": "STRING" },
+        { "name": "SAYFONT", "type": "STRING" }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "name": "charges",
+      "columns": [
+        { "name": "index_no", "type": "NUMERIC", "length": 10 },
+        { "name": "account", "type": "CHAR", "length": 12 },
+        { "name": "amount", "type": "NUMERIC", "length": 8 }
+      ]
+    }
+  ]
+}

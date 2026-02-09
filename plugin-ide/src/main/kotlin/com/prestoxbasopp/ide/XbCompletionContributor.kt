@@ -35,8 +35,13 @@ private class XbCompletionProvider(
         val document = parameters.editor.document
         val prefix = XbCompletionPrefixExtractor.extract(document, parameters.offset)
         val root = textBuilder.build(document.text, parameters.originalFile.name)
+        val completionContext = XbCompletionContext(
+            text = document.text,
+            offset = parameters.offset,
+            projectBasePath = parameters.originalFile.project.basePath?.let { java.nio.file.Paths.get(it) },
+        )
         val caseSensitive = XbCompletionCasePolicy.isCaseSensitive(prefix)
-        val items = service.suggest(root, prefix, caseSensitive = caseSensitive)
+        val items = service.suggest(root, prefix, caseSensitive = caseSensitive, context = completionContext)
         val resultSet = result.withPrefixMatcher(prefix)
         val lookups = mapper.map(items)
         lookups.forEach { lookup ->
