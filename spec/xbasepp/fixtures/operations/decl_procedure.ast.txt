@@ -1,0 +1,4 @@
+File
+  Decl.Procedure[name=Foo]
+    Params
+    Block

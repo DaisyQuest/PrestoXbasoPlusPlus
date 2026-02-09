@@ -30,6 +30,7 @@ class OperationsCoverageGateTest {
         createFixture("OP_0001_min.xb")
         createFixture("OP_0001_edge.xb")
         createFixture("OP_0001.ast.txt")
+        createFixture("OP_0001_edge.ast.txt")
 
         val result = OperationsCoverageGate.validate(registry, tempDir)
 
@@ -61,6 +62,7 @@ class OperationsCoverageGateTest {
         assertThat(result.missingFixtures["OP_0002"]).containsExactly(
             "OP_0002_edge.xb",
             "OP_0002.ast.txt",
+            "OP_0002_edge.ast.txt",
         )
     }
 

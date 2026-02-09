@@ -98,6 +98,7 @@ object OperationsCoverageGate {
                 "${id}_min.xb",
                 "${id}_edge.xb",
                 "${id}.ast.txt",
+                "${id}_edge.ast.txt",
             )
             val missing = required.filterNot { fixtureName ->
                 Files.exists(fixturesRoot.resolve(fixtureName))

@@ -17,6 +17,7 @@ class GoldenFixtureLoaderTest {
         tempDir.resolve("op_min.xb").writeText("min")
         tempDir.resolve("op_edge.xb").writeText("edge")
         tempDir.resolve("op.ast.txt").writeText("AST\n")
+        tempDir.resolve("op_edge.ast.txt").writeText("AST-EDGE\n")
         val operation = OperationDefinition(
             id = "op",
             category = "expr",
@@ -32,7 +33,8 @@ class GoldenFixtureLoaderTest {
         assertThat(fixture.id).isEqualTo("op")
         assertThat(fixture.minSource).isEqualTo("min")
         assertThat(fixture.edgeSource).isEqualTo("edge")
-        assertThat(fixture.expectedAst).isEqualTo("AST")
+        assertThat(fixture.expectedAstMin).isEqualTo("AST")
+        assertThat(fixture.expectedAstEdge).isEqualTo("AST-EDGE")
         assertThat(fixture.expectedErrors).containsExactly("E1")
         val cases = fixture.toTestCases<String>()
         assertThat(cases.map { it.id }).containsExactly("op:min", "op:edge")

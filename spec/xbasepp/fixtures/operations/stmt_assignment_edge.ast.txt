@@ -1,0 +1,6 @@
+File
+  Stmt.Assignment
+    Expr.Identifier[name=x]
+    Expr.Binary.Add
+      Expr.Identifier[name=y]
+      Expr.Literal.Number[value=2]

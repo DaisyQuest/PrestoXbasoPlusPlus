@@ -7,13 +7,15 @@ import java.nio.file.Path
 private const val MIN_SUFFIX = "_min.xb"
 private const val EDGE_SUFFIX = "_edge.xb"
 private const val AST_SUFFIX = ".ast.txt"
+private const val EDGE_AST_SUFFIX = "_edge.ast.txt"
 
 
 data class GoldenFixture(
     val id: String,
     val minSource: String,
     val edgeSource: String,
-    val expectedAst: String,
+    val expectedAstMin: String,
+    val expectedAstEdge: String,
     val expectedErrors: List<String>,
 ) {
     fun <TAst> toTestCases(): List<GoldenTestCase<TAst>> {
@@ -21,13 +23,13 @@ data class GoldenFixture(
             GoldenTestCase(
                 id = "$id:min",
                 source = minSource,
-                expectedAst = expectedAst,
+                expectedAst = expectedAstMin,
                 expectedErrors = expectedErrors,
             ),
             GoldenTestCase(
                 id = "$id:edge",
                 source = edgeSource,
-                expectedAst = expectedAst,
+                expectedAst = expectedAstEdge,
                 expectedErrors = expectedErrors,
             ),
         )
@@ -45,12 +47,19 @@ object GoldenFixtureLoader {
     fun load(fixturesRoot: Path, id: String, expectedErrors: List<String> = emptyList()): GoldenFixture {
         val minSource = readRequiredFile(fixturesRoot.resolve("$id$MIN_SUFFIX"))
         val edgeSource = readRequiredFile(fixturesRoot.resolve("$id$EDGE_SUFFIX"))
-        val expectedAst = readRequiredFile(fixturesRoot.resolve("$id$AST_SUFFIX")).trimEnd()
+        val expectedAstMin = readRequiredFile(fixturesRoot.resolve("$id$AST_SUFFIX")).trimEnd()
+        val edgeAstPath = fixturesRoot.resolve("$id$EDGE_AST_SUFFIX")
+        val expectedAstEdge = if (Files.exists(edgeAstPath)) {
+            Files.readString(edgeAstPath).trimEnd()
+        } else {
+            expectedAstMin
+        }
         return GoldenFixture(
             id = id,
             minSource = minSource,
             edgeSource = edgeSource,
-            expectedAst = expectedAst,
+            expectedAstMin = expectedAstMin,
+            expectedAstEdge = expectedAstEdge,
             expectedErrors = expectedErrors,
         )
     }

@@ -1,0 +1,5 @@
+File
+  Stmt.Expression
+    Expr.Call
+      Expr.Identifier[name=Foo]
+  Stmt.Return

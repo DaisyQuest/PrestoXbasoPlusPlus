@@ -1,0 +1,4 @@
+File
+  Expr.Binary[op="%"]
+    Expr.Literal.Number[value=5]
+    Expr.Literal.Number[value=2]

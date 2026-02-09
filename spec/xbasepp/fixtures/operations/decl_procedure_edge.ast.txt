@@ -1,0 +1,7 @@
+File
+  Decl.Procedure[name=Foo]
+    Params
+      Expr.Identifier[name=a]
+    Block
+      Stmt.Return
+        Expr.Identifier[name=a]

@@ -1,0 +1,4 @@
+File
+  Stmt.Print
+    Expr.Literal.String[value=A]
+    Expr.Literal.String[value=B]

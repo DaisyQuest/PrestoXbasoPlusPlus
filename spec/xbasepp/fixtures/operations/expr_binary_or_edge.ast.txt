@@ -1,0 +1,6 @@
+File
+  Expr.Binary.Or
+    Expr.Binary.Or
+      Expr.Identifier[name=a]
+      Expr.Identifier[name=b]
+    Expr.Identifier[name=c]

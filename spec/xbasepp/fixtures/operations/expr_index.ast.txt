@@ -1,0 +1,4 @@
+File
+  Expr.Index
+    Expr.Identifier[name=items]
+    Expr.Literal.Number[value=1]

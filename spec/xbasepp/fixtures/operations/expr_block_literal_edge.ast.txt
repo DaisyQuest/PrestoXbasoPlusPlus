@@ -1,0 +1,8 @@
+File
+  Expr.BlockLiteral
+    Params
+      Expr.Identifier[name=x]
+      Expr.Identifier[name=y]
+    Expr.Binary.Add
+      Expr.Identifier[name=x]
+      Expr.Identifier[name=y]

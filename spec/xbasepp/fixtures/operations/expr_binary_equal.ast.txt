@@ -1,0 +1,4 @@
+File
+  Expr.Binary.Equal
+    Expr.Identifier[name=a]
+    Expr.Identifier[name=b]
