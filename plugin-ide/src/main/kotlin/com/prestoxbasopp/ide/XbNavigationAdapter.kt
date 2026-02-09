@@ -15,8 +15,8 @@ class XbNavigationAdapter(
         val name = symbol.symbolName.takeIf { it.isNotBlank() } ?: return emptyList()
         return when (symbol) {
             is XbPsiFunctionDeclaration -> usageTargets(root, name)
-            is XbPsiVariableDeclaration -> usageTargets(root, name)
-            is XbPsiSymbolReference -> declarationTargets(root, name)
+            is XbPsiVariableDeclaration -> variableUsageTargets(root, symbol)
+            is XbPsiSymbolReference -> declarationTargets(root, symbol)
             else -> emptyList()
         }
     }
@@ -28,7 +28,24 @@ class XbNavigationAdapter(
             .sortedBy { it.startOffset }
     }
 
-    private fun declarationTargets(root: com.prestoxbasopp.core.psi.XbPsiElement, name: String): List<XbTextRange> {
+    private fun variableUsageTargets(
+        root: com.prestoxbasopp.core.psi.XbPsiElement,
+        declaration: XbPsiVariableDeclaration,
+    ): List<XbTextRange> {
+        return XbVariableScopeResolver.findUsages(root, declaration)
+            .map { it.textRange }
+            .sortedBy { it.startOffset }
+    }
+
+    private fun declarationTargets(
+        root: com.prestoxbasopp.core.psi.XbPsiElement,
+        reference: XbPsiSymbolReference,
+    ): List<XbTextRange> {
+        val variableDeclaration = XbVariableScopeResolver.resolveDeclaration(root, reference)
+        if (variableDeclaration != null) {
+            return listOf(variableDeclaration.textRange)
+        }
+        val name = reference.symbolName
         val functions = root.walk()
             .filterIsInstance<XbPsiFunctionDeclaration>()
             .filter { it.symbolName == name }

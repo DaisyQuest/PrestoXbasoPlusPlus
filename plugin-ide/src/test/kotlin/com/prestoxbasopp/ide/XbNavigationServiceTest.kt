@@ -129,7 +129,7 @@ class XbNavigationServiceTest {
         val service = XbNavigationService()
         val index = service.buildIndex(root)
 
-        val usages = service.findUsagesFromDefinition(snapshot, index)
+        val usages = service.findUsagesFromDefinition(root, snapshot, index)
 
         assertThat(usages).hasSize(1)
         assertThat(usages.first().symbolName).isEqualTo("main")
@@ -182,10 +182,64 @@ class XbNavigationServiceTest {
         val service = XbNavigationService()
         val index = service.buildIndex(root)
 
-        val usages = service.findUsagesFromDefinition(snapshot, index)
+        val usages = service.findUsagesFromDefinition(root, snapshot, index)
         val target = service.jumpToDefinitionFromInvocation(snapshot, index)
 
         assertThat(usages).isEmpty()
         assertThat(target).isNull()
+    }
+
+    @Test
+    fun `variable definition only finds usages in the same function scope`() {
+        val root = XbPsiFile(
+            name = "sample",
+            textRange = XbTextRange(0, 120),
+            text = "file",
+            children = listOf(
+                XbPsiFunctionDeclaration(
+                    symbolName = "main",
+                    parameters = emptyList(),
+                    textRange = XbTextRange(0, 50),
+                    text = "function main()",
+                ),
+                XbPsiVariableDeclaration(
+                    symbolName = "count",
+                    isMutable = true,
+                    textRange = XbTextRange(10, 15),
+                    text = "count",
+                ),
+                XbPsiSymbolReference(
+                    symbolName = "count",
+                    textRange = XbTextRange(20, 25),
+                    text = "count",
+                ),
+                XbPsiFunctionDeclaration(
+                    symbolName = "other",
+                    parameters = emptyList(),
+                    textRange = XbTextRange(60, 110),
+                    text = "function other()",
+                ),
+                XbPsiVariableDeclaration(
+                    symbolName = "count",
+                    isMutable = true,
+                    textRange = XbTextRange(70, 75),
+                    text = "count",
+                ),
+                XbPsiSymbolReference(
+                    symbolName = "count",
+                    textRange = XbTextRange(80, 85),
+                    text = "count",
+                ),
+            ),
+        )
+        val snapshot = XbPsiSnapshot.fromElement(root.children[1])
+
+        val service = XbNavigationService()
+        val index = service.buildIndex(root)
+
+        val usages = service.findUsagesFromDefinition(root, snapshot, index)
+
+        assertThat(usages).hasSize(1)
+        assertThat(usages.first().textRange).isEqualTo(XbTextRange(20, 25))
     }
 }

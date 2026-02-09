@@ -44,12 +44,21 @@ class XbNavigationService {
         return findFunctionTargets(name, index).usages
     }
 
-    fun findUsagesFromDefinition(snapshot: XbPsiSnapshot, index: XbSymbolIndex): List<XbPsiSymbol> {
-        if (snapshot.elementType != XbPsiElementType.FUNCTION_DECLARATION) {
-            return emptyList()
-        }
+    fun findUsagesFromDefinition(
+        root: XbPsiElement,
+        snapshot: XbPsiSnapshot,
+        index: XbSymbolIndex,
+    ): List<XbPsiSymbol> {
         val name = snapshot.name?.takeIf { it.isNotBlank() } ?: return emptyList()
-        return index.findUsages(name)
+        return when (snapshot.elementType) {
+            XbPsiElementType.FUNCTION_DECLARATION -> index.findUsages(name)
+            XbPsiElementType.VARIABLE_DECLARATION -> {
+                val declaration = XbVariableScopeResolver.findDeclarationByRange(root, snapshot.textRange, name)
+                    ?: return emptyList()
+                XbVariableScopeResolver.findUsages(root, declaration)
+            }
+            else -> emptyList()
+        }
     }
 
     fun jumpToDefinitionFromInvocation(snapshot: XbPsiSnapshot, index: XbSymbolIndex): XbStub? {
