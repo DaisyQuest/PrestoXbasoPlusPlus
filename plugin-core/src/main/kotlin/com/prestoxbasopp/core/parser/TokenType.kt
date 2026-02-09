@@ -22,6 +22,8 @@ enum class TokenType {
     DO,
     ENDDO,
     RETURN,
+    WAIT,
+    EXIT,
     QUESTION,
     AND,
     OR,

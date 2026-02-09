@@ -7,6 +7,7 @@ import com.prestoxbasopp.core.ast.XbBlock
 import com.prestoxbasopp.core.ast.XbCallExpression
 import com.prestoxbasopp.core.ast.XbExpression
 import com.prestoxbasopp.core.ast.XbExpressionStatement
+import com.prestoxbasopp.core.ast.XbExitStatement
 import com.prestoxbasopp.core.ast.XbForStatement
 import com.prestoxbasopp.core.ast.XbFunctionDeclaration
 import com.prestoxbasopp.core.ast.XbIdentifierExpression
@@ -21,6 +22,7 @@ import com.prestoxbasopp.core.ast.XbProgram
 import com.prestoxbasopp.core.ast.XbReturnStatement
 import com.prestoxbasopp.core.ast.XbStatement
 import com.prestoxbasopp.core.ast.XbUnaryExpression
+import com.prestoxbasopp.core.ast.XbWaitStatement
 import com.prestoxbasopp.core.ast.XbWhileStatement
 import com.prestoxbasopp.testframework.golden.AstDumpNode
 
@@ -65,6 +67,13 @@ private fun XbStatement.toDumpNode(): AstDumpNode {
         is XbReturnStatement -> AstDumpNode(
             name = "Stmt.Return",
             children = expression?.let { listOf(it.toDumpNode()) } ?: emptyList(),
+        )
+        is XbWaitStatement -> AstDumpNode(
+            name = "Stmt.Wait",
+            children = expression?.let { listOf(it.toDumpNode()) } ?: emptyList(),
+        )
+        is XbExitStatement -> AstDumpNode(
+            name = "Stmt.Exit",
         )
         is XbIfStatement -> AstDumpNode(
             name = "Stmt.If",

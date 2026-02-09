@@ -136,6 +136,8 @@ class XbLexer(
             "do" -> TokenType.DO
             "enddo" -> TokenType.ENDDO
             "return" -> TokenType.RETURN
+            "wait" -> TokenType.WAIT
+            "exit" -> TokenType.EXIT
             "function" -> TokenType.FUNCTION
             "procedure" -> TokenType.PROCEDURE
             "endfunction" -> TokenType.ENDFUNCTION

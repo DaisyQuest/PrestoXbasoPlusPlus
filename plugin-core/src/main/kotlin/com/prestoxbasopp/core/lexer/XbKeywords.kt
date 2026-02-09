@@ -16,6 +16,8 @@ object XbKeywords {
         "switch",
         "endswitch",
         "return",
+        "wait",
+        "exit",
     )
 
     val declarations = setOf(

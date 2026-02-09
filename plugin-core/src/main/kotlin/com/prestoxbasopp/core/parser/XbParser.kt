@@ -6,6 +6,7 @@ import com.prestoxbasopp.core.ast.XbBlock
 import com.prestoxbasopp.core.ast.XbCallExpression
 import com.prestoxbasopp.core.ast.XbArrayLiteralExpression
 import com.prestoxbasopp.core.ast.XbAssignmentStatement
+import com.prestoxbasopp.core.ast.XbExitStatement
 import com.prestoxbasopp.core.ast.XbExpression
 import com.prestoxbasopp.core.ast.XbExpressionStatement
 import com.prestoxbasopp.core.ast.XbForStatement
@@ -23,6 +24,7 @@ import com.prestoxbasopp.core.ast.XbProcedureDeclaration
 import com.prestoxbasopp.core.ast.XbReturnStatement
 import com.prestoxbasopp.core.ast.XbStatement
 import com.prestoxbasopp.core.ast.XbUnaryExpression
+import com.prestoxbasopp.core.ast.XbWaitStatement
 import com.prestoxbasopp.core.ast.XbWhileStatement
 
 data class XbParseResult(
@@ -60,6 +62,8 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.IF -> parseIfStatement()
             TokenType.WHILE -> parseWhileStatement()
             TokenType.RETURN -> parseReturnStatement()
+            TokenType.WAIT -> parseWaitStatement()
+            TokenType.EXIT -> parseExitStatement()
             TokenType.QUESTION -> parsePrintStatement()
             TokenType.SEMICOLON -> {
                 advance()
@@ -135,7 +139,7 @@ class XbParser(private val tokens: List<Token>) {
 
     private fun parseReturnStatement(): XbStatement {
         val returnToken = advance()
-        val expression = if (isAtEnd() || isTerminator(peek().type)) {
+        val expression = if (isAtEnd() || isTerminator(peek().type) || !canStartExpression(peek().type)) {
             null
         } else {
             parseExpression(0).also { expr ->
@@ -149,6 +153,31 @@ class XbParser(private val tokens: List<Token>) {
         val endToken = previousOr(returnToken)
         val range = rangeFrom(returnToken, endToken)
         return XbReturnStatement(expression, range)
+    }
+
+    private fun parseWaitStatement(): XbStatement {
+        val waitToken = advance()
+        val expression = if (isAtEnd() || isTerminator(peek().type) || !canStartExpression(peek().type)) {
+            null
+        } else {
+            parseExpression(0).also { expr ->
+                if (expr == null) {
+                    recordError("Expected expression after WAIT at ${peek().startOffset}")
+                    synchronize()
+                }
+            }
+        }
+        match(TokenType.SEMICOLON)
+        val endToken = previousOr(waitToken)
+        val range = rangeFrom(waitToken, endToken)
+        return XbWaitStatement(expression, range)
+    }
+
+    private fun parseExitStatement(): XbStatement {
+        val exitToken = advance()
+        match(TokenType.SEMICOLON)
+        val endToken = previousOr(exitToken)
+        return XbExitStatement(rangeFrom(exitToken, endToken))
     }
 
     private fun parseLocalDeclaration(): XbStatement {
@@ -570,6 +599,21 @@ class XbParser(private val tokens: List<Token>) {
             name = "<error>",
             range = rangeFromOffsets(token.startOffset, token.endOffset),
         )
+    }
+
+    private fun canStartExpression(type: TokenType): Boolean {
+        return when (type) {
+            TokenType.NUMBER,
+            TokenType.STRING,
+            TokenType.NIL,
+            TokenType.IDENTIFIER,
+            TokenType.MINUS,
+            TokenType.NOT,
+            TokenType.LPAREN,
+            TokenType.LBRACE,
+            -> true
+            else -> false
+        }
     }
 
     private fun isTerminator(type: TokenType): Boolean {

@@ -54,4 +54,13 @@ class XbLexerTokenizationTest {
         val keywordTexts = result.tokens.filter { it.type == XbTokenType.KEYWORD }.map { it.text }
         assertThat(keywordTexts).containsExactly("IF", "endif")
     }
+
+    @Test
+    fun `wait and exit are treated as keywords`() {
+        val source = "WAIT EXIT"
+        val result = XbLexer().lex(source)
+
+        val keywordTexts = result.tokens.filter { it.type == XbTokenType.KEYWORD }.map { it.text }
+        assertThat(keywordTexts).contains("WAIT", "EXIT")
+    }
 }

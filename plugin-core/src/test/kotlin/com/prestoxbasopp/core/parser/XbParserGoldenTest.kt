@@ -330,6 +330,32 @@ class XbParserGoldenTest {
     }
 
     @Test
+    fun `parses wait and exit statements`() {
+        val cases = listOf<GoldenTestCase<XbProgram>>(
+            GoldenTestCase(
+                id = "wait-no-args-exit",
+                source = "WAIT\nEXIT",
+                expectedAst = """
+                    File
+                      Stmt.Wait
+                      Stmt.Exit
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "wait-with-message",
+                source = "WAIT \"Press any key\";",
+                expectedAst = """
+                    File
+                      Stmt.Wait
+                        Expr.Literal.String[value="Press any key"]
+                """.trimIndent(),
+            ),
+        )
+
+        GoldenTestHarness.assertCases(cases, ::parseSource, ::dumpProgram)
+    }
+
+    @Test
     fun `recovers from invalid tokens and missing terminators`() {
         val cases = listOf<GoldenTestCase<XbProgram>>(
             GoldenTestCase(
