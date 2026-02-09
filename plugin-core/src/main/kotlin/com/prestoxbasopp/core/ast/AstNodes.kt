@@ -50,6 +50,15 @@ data class XbReturnStatement(
     override val range: XbTextRange,
 ) : XbStatement
 
+data class XbWaitStatement(
+    val expression: XbExpression?,
+    override val range: XbTextRange,
+) : XbStatement
+
+data class XbExitStatement(
+    override val range: XbTextRange,
+) : XbStatement
+
 data class XbIfStatement(
     val condition: XbExpression,
     val thenBlock: XbBlock,

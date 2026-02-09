@@ -72,6 +72,20 @@ operations:
       NEXT
     expected_ast_shape: Stmt.For
     expected_errors: []
+  - id: stmt_wait
+    category: statement
+    precedence_group: statement
+    example_min: "WAIT \"Press any key\""
+    example_edge: "WAIT \"Press any key\";"
+    expected_ast_shape: Stmt.Wait
+    expected_errors: []
+  - id: stmt_exit
+    category: statement
+    precedence_group: statement
+    example_min: "EXIT"
+    example_edge: "EXIT;"
+    expected_ast_shape: Stmt.Exit
+    expected_errors: []
   - id: decl_function
     category: declaration
     precedence_group: declaration
