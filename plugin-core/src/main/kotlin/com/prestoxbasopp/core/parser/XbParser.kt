@@ -3,14 +3,18 @@ package com.prestoxbasopp.core.parser
 import com.prestoxbasopp.core.api.XbTextRange
 import com.prestoxbasopp.core.ast.XbBinaryExpression
 import com.prestoxbasopp.core.ast.XbBlock
+import com.prestoxbasopp.core.ast.XbBlockLiteralExpression
+import com.prestoxbasopp.core.ast.XbBreakStatement
 import com.prestoxbasopp.core.ast.XbCallExpression
 import com.prestoxbasopp.core.ast.XbArrayLiteralExpression
 import com.prestoxbasopp.core.ast.XbAssignmentStatement
+import com.prestoxbasopp.core.ast.XbAtSayGetStatement
 import com.prestoxbasopp.core.ast.XbExitStatement
 import com.prestoxbasopp.core.ast.XbExpression
 import com.prestoxbasopp.core.ast.XbExpressionStatement
 import com.prestoxbasopp.core.ast.XbForStatement
 import com.prestoxbasopp.core.ast.XbFunctionDeclaration
+import com.prestoxbasopp.core.ast.XbHashLiteralExpression
 import com.prestoxbasopp.core.ast.XbIdentifierExpression
 import com.prestoxbasopp.core.ast.XbIfStatement
 import com.prestoxbasopp.core.ast.XbIndexExpression
@@ -22,6 +26,7 @@ import com.prestoxbasopp.core.ast.XbPrintStatement
 import com.prestoxbasopp.core.ast.XbProgram
 import com.prestoxbasopp.core.ast.XbProcedureDeclaration
 import com.prestoxbasopp.core.ast.XbReturnStatement
+import com.prestoxbasopp.core.ast.XbSequenceStatement
 import com.prestoxbasopp.core.ast.XbStatement
 import com.prestoxbasopp.core.ast.XbUnaryExpression
 import com.prestoxbasopp.core.ast.XbWaitStatement
@@ -61,15 +66,43 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.FOR -> parseForStatement()
             TokenType.IF -> parseIfStatement()
             TokenType.WHILE -> parseWhileStatement()
+            TokenType.DO -> if (peekNext().type == TokenType.WHILE) {
+                parseDoWhileStatement()
+            } else {
+                parseExpressionStatement()
+            }
             TokenType.RETURN -> parseReturnStatement()
             TokenType.WAIT -> parseWaitStatement()
             TokenType.EXIT -> parseExitStatement()
+            TokenType.BEGIN -> if (peekNext().type == TokenType.SEQUENCE) {
+                parseSequenceStatement()
+            } else {
+                parseExpressionStatement()
+            }
+            TokenType.BREAK -> parseBreakStatement()
+            TokenType.AT -> if (!canStartExpression(peekNext().type)) {
+                val token = advance()
+                recordError("Unexpected token '@' at ${token.startOffset}")
+                synchronizeTo(setOf(TokenType.SEMICOLON))
+                match(TokenType.SEMICOLON)
+                null
+            } else {
+                parseAtSayGetStatement()
+            }
             TokenType.QUESTION -> parsePrintStatement()
             TokenType.SEMICOLON -> {
                 advance()
                 null
             }
-            TokenType.ENDIF, TokenType.ELSE, TokenType.ENDDO, TokenType.ENDFUNCTION, TokenType.ENDPROC, TokenType.NEXT -> {
+            TokenType.ENDIF,
+            TokenType.ELSE,
+            TokenType.ENDDO,
+            TokenType.ENDFUNCTION,
+            TokenType.ENDPROC,
+            TokenType.NEXT,
+            TokenType.RECOVER,
+            TokenType.END,
+            -> {
                 val token = advance()
                 recordError("Unexpected ${token.type.name} at ${token.startOffset}")
                 null
@@ -180,6 +213,91 @@ class XbParser(private val tokens: List<Token>) {
         return XbExitStatement(rangeFrom(exitToken, endToken))
     }
 
+    private fun parseBreakStatement(): XbStatement {
+        val breakToken = advance()
+        val expression = if (isAtEnd() || isTerminator(peek().type) || !canStartExpression(peek().type)) {
+            null
+        } else {
+            parseExpression(0).also { expr ->
+                if (expr == null) {
+                    recordError("Expected expression after BREAK at ${peek().startOffset}")
+                    synchronize()
+                }
+            }
+        }
+        match(TokenType.SEMICOLON)
+        val endToken = previousOr(breakToken)
+        return XbBreakStatement(expression, rangeFrom(breakToken, endToken))
+    }
+
+    private fun parseSequenceStatement(): XbStatement {
+        val beginToken = advance()
+        advance() // consume SEQUENCE
+        val body = parseBlock(setOf(TokenType.RECOVER, TokenType.END))
+        val recoverBlock: XbBlock?
+        val recoverVariable: String?
+        if (match(TokenType.RECOVER)) {
+            recoverVariable = if (match(TokenType.USING) && match(TokenType.IDENTIFIER)) {
+                previous().lexeme
+            } else {
+                null
+            }
+            recoverBlock = parseBlock(setOf(TokenType.END))
+        } else {
+            recoverVariable = null
+            recoverBlock = null
+        }
+        if (!match(TokenType.END)) {
+            recordError("Expected END to close SEQUENCE at ${peek().startOffset}")
+        } else if (!match(TokenType.SEQUENCE)) {
+            recordError("Expected SEQUENCE after END at ${peek().startOffset}")
+        }
+        val endToken = previousOr(beginToken)
+        return XbSequenceStatement(body, recoverVariable, recoverBlock, rangeFrom(beginToken, endToken))
+    }
+
+    private fun parseAtSayGetStatement(): XbStatement {
+        val atToken = advance()
+        val rowExpr = parseExpression(0) ?: run {
+            recordError("Expected row expression after '@' at ${peek().startOffset}")
+            fallbackExpression(atToken)
+        }
+        val columnExpr = if (match(TokenType.COMMA)) {
+            parseExpression(0) ?: run {
+                recordError("Expected column expression after ',' at ${peek().startOffset}")
+                fallbackExpression(atToken)
+            }
+        } else {
+            null
+        }
+        val sayExpr = if (match(TokenType.SAY)) {
+            parseExpression(0) ?: run {
+                recordError("Expected expression after SAY at ${peek().startOffset}")
+                fallbackExpression(atToken)
+            }
+        } else {
+            null
+        }
+        val getExpr = if (match(TokenType.GET)) {
+            parseExpression(0) ?: run {
+                recordError("Expected expression after GET at ${peek().startOffset}")
+                fallbackExpression(atToken)
+            }
+        } else {
+            null
+        }
+        val validExpr = if (match(TokenType.VALID)) {
+            parseExpression(0) ?: run {
+                recordError("Expected expression after VALID at ${peek().startOffset}")
+                fallbackExpression(atToken)
+            }
+        } else {
+            null
+        }
+        val endToken = previousOr(atToken)
+        return XbAtSayGetStatement(rowExpr, columnExpr, sayExpr, getExpr, validExpr, rangeFrom(atToken, endToken))
+    }
+
     private fun parseLocalDeclaration(): XbStatement {
         val localToken = advance()
         val bindings = mutableListOf<XbLocalBinding>()
@@ -245,6 +363,22 @@ class XbParser(private val tokens: List<Token>) {
         return XbWhileStatement(condition, body, rangeFrom(whileToken, endToken))
     }
 
+    private fun parseDoWhileStatement(): XbStatement {
+        val doToken = advance()
+        advance() // consume WHILE
+        val condition = parseExpression(0) ?: run {
+            recordError("Expected condition after DO WHILE at ${peek().startOffset}")
+            synchronizeTo(setOf(TokenType.ENDDO))
+            fallbackExpression(doToken)
+        }
+        val body = parseBlock(setOf(TokenType.ENDDO))
+        if (!match(TokenType.ENDDO)) {
+            recordError("Expected ENDDO to close DO WHILE at ${peek().startOffset}")
+        }
+        val endToken = previousOr(doToken)
+        return XbWhileStatement(condition, body, rangeFrom(doToken, endToken))
+    }
+
     private fun parseForStatement(): XbStatement {
         val forToken = advance()
         val iteratorToken = if (match(TokenType.IDENTIFIER)) previous() else null
@@ -304,7 +438,7 @@ class XbParser(private val tokens: List<Token>) {
         }
         val parameters = parseParameterList()
         val body = parseBlock(setOf(TokenType.ENDFUNCTION))
-        if (!match(TokenType.ENDFUNCTION)) {
+        if (!match(TokenType.ENDFUNCTION) && !isAtEnd()) {
             recordError("Expected ENDFUNCTION to close FUNCTION at ${peek().startOffset}")
         }
         val endToken = previousOr(functionToken)
@@ -324,7 +458,7 @@ class XbParser(private val tokens: List<Token>) {
         }
         val parameters = parseParameterList()
         val body = parseBlock(setOf(TokenType.ENDPROC))
-        if (!match(TokenType.ENDPROC)) {
+        if (!match(TokenType.ENDPROC) && !isAtEnd()) {
             recordError("Expected ENDPROC to close PROCEDURE at ${peek().startOffset}")
         }
         val endToken = previousOr(procedureToken)
@@ -402,8 +536,10 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.NUMBER -> XbLiteralExpression(XbLiteralKind.NUMBER, token.lexeme, rangeFrom(token, token))
             TokenType.STRING -> XbLiteralExpression(XbLiteralKind.STRING, token.lexeme, rangeFrom(token, token))
             TokenType.NIL -> XbLiteralExpression(XbLiteralKind.NIL, "nil", rangeFrom(token, token))
+            TokenType.TRUE -> XbLiteralExpression(XbLiteralKind.BOOLEAN, "true", rangeFrom(token, token))
+            TokenType.FALSE -> XbLiteralExpression(XbLiteralKind.BOOLEAN, "false", rangeFrom(token, token))
             TokenType.IDENTIFIER -> XbIdentifierExpression(token.lexeme, rangeFrom(token, token))
-            TokenType.MINUS, TokenType.NOT -> {
+            TokenType.MINUS, TokenType.NOT, TokenType.AMP -> {
                 val operator = token.lexeme
                 val expression = parseExpression(PREFIX_PRECEDENCE) ?: run {
                     recordError("Expected expression after unary '$operator' at ${peek().startOffset}")
@@ -426,20 +562,89 @@ class XbParser(private val tokens: List<Token>) {
                 expression
             }
             TokenType.LBRACE -> {
-                val elements = mutableListOf<XbExpression>()
-                if (!check(TokenType.RBRACE)) {
-                    do {
-                        parseExpression(0)?.let { elements += it } ?: run {
-                            recordError("Expected expression in array literal at ${peek().startOffset}")
-                            elements += fallbackExpression(token)
+                if (match(TokenType.PIPE)) {
+                    val parameters = mutableListOf<String>()
+                    if (!match(TokenType.PIPE)) {
+                        do {
+                            if (match(TokenType.IDENTIFIER)) {
+                                parameters += previous().lexeme
+                            } else {
+                                recordError("Expected parameter name in block literal at ${peek().startOffset}")
+                                break
+                            }
+                        } while (match(TokenType.COMMA))
+                        if (!match(TokenType.PIPE)) {
+                            recordError("Expected '|' after block parameters at ${peek().startOffset}")
                         }
-                    } while (match(TokenType.COMMA))
+                    }
+                    val body = parseExpression(0) ?: run {
+                        recordError("Expected expression in block literal at ${peek().startOffset}")
+                        fallbackExpression(token)
+                    }
+                    if (!match(TokenType.RBRACE)) {
+                        recordError("Expected '}' after block literal at ${peek().startOffset}")
+                    }
+                    val endToken = previousOr(token)
+                    XbBlockLiteralExpression(parameters, body, rangeFrom(token, endToken))
+                } else if (match(TokenType.ARROW)) {
+                    if (!match(TokenType.RBRACE)) {
+                        recordError("Expected '}' after hash literal at ${peek().startOffset}")
+                    }
+                    val endToken = previousOr(token)
+                    XbHashLiteralExpression(emptyList(), rangeFrom(token, endToken))
+                } else {
+                    val firstExpr = if (!check(TokenType.RBRACE)) {
+                        parseExpression(0) ?: run {
+                            recordError("Expected expression in array literal at ${peek().startOffset}")
+                            fallbackExpression(token)
+                        }
+                    } else {
+                        null
+                    }
+                    if (firstExpr != null && match(TokenType.ARROW)) {
+                        val entries = mutableListOf<Pair<XbExpression, XbExpression>>()
+                        val valueExpr = parseExpression(0) ?: run {
+                            recordError("Expected value expression in hash literal at ${peek().startOffset}")
+                            fallbackExpression(token)
+                        }
+                        entries += firstExpr to valueExpr
+                        while (match(TokenType.COMMA)) {
+                            val keyExpr = parseExpression(0) ?: run {
+                                recordError("Expected key expression in hash literal at ${peek().startOffset}")
+                                fallbackExpression(token)
+                            }
+                            if (!match(TokenType.ARROW)) {
+                                recordError("Expected '=>' after hash key at ${peek().startOffset}")
+                            }
+                            val nextValueExpr = parseExpression(0) ?: run {
+                                recordError("Expected value expression in hash literal at ${peek().startOffset}")
+                                fallbackExpression(token)
+                            }
+                            entries += keyExpr to nextValueExpr
+                        }
+                        if (!match(TokenType.RBRACE)) {
+                            recordError("Expected '}' after hash literal at ${peek().startOffset}")
+                        }
+                        val endToken = previousOr(token)
+                        XbHashLiteralExpression(entries, rangeFrom(token, endToken))
+                    } else {
+                        val elements = mutableListOf<XbExpression>()
+                        firstExpr?.let { elements += it }
+                        if (firstExpr != null) {
+                            while (match(TokenType.COMMA)) {
+                                parseExpression(0)?.let { elements += it } ?: run {
+                                    recordError("Expected expression in array literal at ${peek().startOffset}")
+                                    elements += fallbackExpression(token)
+                                }
+                            }
+                        }
+                        if (!match(TokenType.RBRACE)) {
+                            recordError("Expected '}' after array literal at ${peek().startOffset}")
+                        }
+                        val endToken = previousOr(token)
+                        XbArrayLiteralExpression(elements, rangeFrom(token, endToken))
+                    }
                 }
-                if (!match(TokenType.RBRACE)) {
-                    recordError("Expected '}' after array literal at ${peek().startOffset}")
-                }
-                val endToken = previousOr(token)
-                XbArrayLiteralExpression(elements, rangeFrom(token, endToken))
             }
             TokenType.ERROR -> {
                 recordError("Unexpected token '${token.lexeme}' at ${token.startOffset}")
@@ -525,10 +730,10 @@ class XbParser(private val tokens: List<Token>) {
         return when (type) {
             TokenType.OR -> 1
             TokenType.AND -> 2
-            TokenType.EQ, TokenType.NEQ -> 3
+            TokenType.EQ, TokenType.NEQ, TokenType.CONTAINS -> 3
             TokenType.LT, TokenType.LTE, TokenType.GT, TokenType.GTE -> 4
             TokenType.PLUS, TokenType.MINUS -> 5
-            TokenType.STAR, TokenType.SLASH -> 6
+            TokenType.STAR, TokenType.SLASH, TokenType.PERCENT -> 6
             else -> null
         }
     }
@@ -595,11 +800,16 @@ class XbParser(private val tokens: List<Token>) {
     private fun isAtEnd(): Boolean = peek().type == TokenType.EOF
 
     private fun advance(): Token {
-        if (!isAtEnd()) current++
-        return previous()
+        if (!isAtEnd()) {
+            current++
+            return previous()
+        }
+        return peek()
     }
 
     private fun peek(): Token = tokens[current]
+
+    private fun peekNext(): Token = if (current + 1 < tokens.size) tokens[current + 1] else tokens.last()
 
     private fun previous(): Token = tokens[current - 1]
 
@@ -633,9 +843,12 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.NUMBER,
             TokenType.STRING,
             TokenType.NIL,
+            TokenType.TRUE,
+            TokenType.FALSE,
             TokenType.IDENTIFIER,
             TokenType.MINUS,
             TokenType.NOT,
+            TokenType.AMP,
             TokenType.LPAREN,
             TokenType.LBRACE,
             -> true
@@ -651,6 +864,8 @@ class XbParser(private val tokens: List<Token>) {
             type == TokenType.ENDFUNCTION ||
             type == TokenType.ENDPROC ||
             type == TokenType.NEXT ||
+            type == TokenType.RECOVER ||
+            type == TokenType.END ||
             type == TokenType.EOF
     }
 
@@ -664,6 +879,8 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.ENDFUNCTION,
             TokenType.ENDPROC,
             TokenType.NEXT,
+            TokenType.RECOVER,
+            TokenType.END,
             TokenType.EOF,
         )
 

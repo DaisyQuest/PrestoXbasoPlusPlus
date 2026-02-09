@@ -2,9 +2,13 @@ package com.prestoxbasopp.core.parser
 
 import com.prestoxbasopp.core.ast.XbArrayLiteralExpression
 import com.prestoxbasopp.core.ast.XbAssignmentStatement
+import com.prestoxbasopp.core.ast.XbAtSayGetStatement
 import com.prestoxbasopp.core.ast.XbBinaryExpression
+import com.prestoxbasopp.core.ast.XbBlockLiteralExpression
 import com.prestoxbasopp.core.ast.XbBlock
+import com.prestoxbasopp.core.ast.XbBreakStatement
 import com.prestoxbasopp.core.ast.XbCallExpression
+import com.prestoxbasopp.core.ast.XbHashLiteralExpression
 import com.prestoxbasopp.core.ast.XbExpression
 import com.prestoxbasopp.core.ast.XbExpressionStatement
 import com.prestoxbasopp.core.ast.XbExitStatement
@@ -20,6 +24,7 @@ import com.prestoxbasopp.core.ast.XbPrintStatement
 import com.prestoxbasopp.core.ast.XbProcedureDeclaration
 import com.prestoxbasopp.core.ast.XbProgram
 import com.prestoxbasopp.core.ast.XbReturnStatement
+import com.prestoxbasopp.core.ast.XbSequenceStatement
 import com.prestoxbasopp.core.ast.XbStatement
 import com.prestoxbasopp.core.ast.XbUnaryExpression
 import com.prestoxbasopp.core.ast.XbWaitStatement
@@ -74,6 +79,30 @@ private fun XbStatement.toDumpNode(): AstDumpNode {
         )
         is XbExitStatement -> AstDumpNode(
             name = "Stmt.Exit",
+        )
+        is XbBreakStatement -> AstDumpNode(
+            name = "Stmt.Break",
+            children = expression?.let { listOf(it.toDumpNode()) } ?: emptyList(),
+        )
+        is XbSequenceStatement -> AstDumpNode(
+            name = "Stmt.Sequence",
+            attributes = listOfNotNull(
+                recoverVariable?.let { "recoverVar" to it },
+            ).toMap(),
+            children = buildList {
+                add(body.toDumpNode(branch = "sequence"))
+                recoverBlock?.let { add(it.toDumpNode(branch = "recover")) }
+            },
+        )
+        is XbAtSayGetStatement -> AstDumpNode(
+            name = "Stmt.AtSayGet",
+            children = buildList {
+                add(row.toDumpNode())
+                column?.let { add(it.toDumpNode()) }
+                sayExpression?.let { add(AstDumpNode(name = "At.Say", children = listOf(it.toDumpNode()))) }
+                getExpression?.let { add(AstDumpNode(name = "At.Get", children = listOf(it.toDumpNode()))) }
+                validExpression?.let { add(AstDumpNode(name = "At.Valid", children = listOf(it.toDumpNode()))) }
+            },
         )
         is XbIfStatement -> AstDumpNode(
             name = "Stmt.If",
@@ -157,6 +186,10 @@ private fun XbExpression.toDumpNode(): AstDumpNode {
             XbLiteralKind.NIL -> AstDumpNode(
                 name = "Expr.Literal.Nil",
             )
+            XbLiteralKind.BOOLEAN -> AstDumpNode(
+                name = "Expr.Literal.Boolean",
+                attributes = mapOf("value" to value),
+            )
         }
         is XbIdentifierExpression -> AstDumpNode(
             name = "Expr.Identifier",
@@ -219,6 +252,26 @@ private fun XbExpression.toDumpNode(): AstDumpNode {
         is XbArrayLiteralExpression -> AstDumpNode(
             name = "Expr.ArrayLiteral",
             children = elements.map { it.toDumpNode() },
+        )
+        is XbHashLiteralExpression -> AstDumpNode(
+            name = "Expr.HashLiteral",
+            children = entries.flatMap { (key, value) ->
+                listOf(
+                    AstDumpNode(name = "Hash.Entry", children = listOf(key.toDumpNode(), value.toDumpNode())),
+                )
+            },
+        )
+        is XbBlockLiteralExpression -> AstDumpNode(
+            name = "Expr.BlockLiteral",
+            children = listOf(
+                AstDumpNode(
+                    name = "Params",
+                    children = parameters.map { param ->
+                        AstDumpNode(name = "Expr.Identifier", attributes = mapOf("name" to param))
+                    },
+                ),
+                body.toDumpNode(),
+            ),
         )
         else -> AstDumpNode(name = "Expr.Unknown")
     }
