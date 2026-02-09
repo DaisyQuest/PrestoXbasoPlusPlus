@@ -24,10 +24,27 @@ class XbRenameService(
 
     fun rename(source: String, offset: Int, newName: String): XbRenameServiceResult {
         val root = builder.build(source)
-        val oldName = XbPsiSymbolLocator.findSymbol(root, offset)?.symbolName
+        val symbol = XbPsiSymbolLocator.findSymbol(root, offset)
+        val oldName = symbol?.symbolName
             ?: return XbRenameServiceResult(source, emptyList(), listOf("No symbol found at the caret."), null)
+        val anchor = when (symbol) {
+            is com.prestoxbasopp.core.psi.XbPsiVariableDeclaration -> XbRenameAnchor(
+                declarationRange = symbol.textRange,
+                elementType = com.prestoxbasopp.core.psi.XbPsiElementType.VARIABLE_DECLARATION,
+            )
+            is com.prestoxbasopp.core.psi.XbPsiSymbolReference -> {
+                val declaration = XbVariableScopeResolver.resolveDeclaration(root, symbol)
+                declaration?.let {
+                    XbRenameAnchor(
+                        declarationRange = it.textRange,
+                        elementType = com.prestoxbasopp.core.psi.XbPsiElementType.VARIABLE_DECLARATION,
+                    )
+                }
+            }
+            else -> null
+        }
         val snapshot = XbPsiSnapshot.fromElement(root)
-        val result = refactoring.rename(snapshot, oldName, newName)
+        val result = refactoring.rename(snapshot, oldName, newName, anchor)
         if (result.errors.isNotEmpty()) {
             return XbRenameServiceResult(source, result.edits, result.errors, oldName)
         }

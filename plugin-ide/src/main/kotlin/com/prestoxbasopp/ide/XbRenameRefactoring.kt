@@ -32,8 +32,18 @@ data class XbProjectRenameResult(
     val errors: List<String>,
 )
 
+data class XbRenameAnchor(
+    val declarationRange: XbTextRange,
+    val elementType: XbPsiElementType,
+)
+
 class XbRenameRefactoring {
-    fun rename(snapshot: XbPsiSnapshot, oldName: String, newName: String): XbRenameResult {
+    fun rename(
+        snapshot: XbPsiSnapshot,
+        oldName: String,
+        newName: String,
+        anchor: XbRenameAnchor? = null,
+    ): XbRenameResult {
         if (newName.isBlank()) {
             return XbRenameResult(snapshot, emptyList(), listOf("New name must not be blank."))
         }
@@ -41,7 +51,12 @@ class XbRenameRefactoring {
             return XbRenameResult(snapshot, emptyList(), emptyList())
         }
         val edits = mutableListOf<XbRenameEdit>()
-        val updated = renameInSnapshot(snapshot, oldName, newName, edits)
+        val allowedRanges = if (anchor?.elementType == XbPsiElementType.VARIABLE_DECLARATION) {
+            XbVariableScopeResolver.collectRenameRanges(snapshot, anchor.declarationRange, oldName)
+        } else {
+            null
+        }
+        val updated = renameInSnapshot(snapshot, oldName, newName, edits, allowedRanges)
         return XbRenameResult(updated, edits, emptyList())
     }
 
@@ -55,7 +70,7 @@ class XbRenameRefactoring {
         val edits = mutableListOf<XbProjectRenameEdit>()
         val updatedTargets = targets.map { target ->
             val localEdits = mutableListOf<XbRenameEdit>()
-            val updatedSnapshot = renameInSnapshot(target.snapshot, oldName, newName, localEdits)
+            val updatedSnapshot = renameInSnapshot(target.snapshot, oldName, newName, localEdits, null)
             localEdits.forEach { edit ->
                 edits += XbProjectRenameEdit(target.sourceId, edit.textRange, edit.replacement)
             }
@@ -69,8 +84,9 @@ class XbRenameRefactoring {
         oldName: String,
         newName: String,
         edits: MutableList<XbRenameEdit>,
+        allowedRanges: Set<XbTextRange>?,
     ): XbPsiSnapshot {
-        val renamedChildren = snapshot.children.map { renameInSnapshot(it, oldName, newName, edits) }
+        val renamedChildren = snapshot.children.map { renameInSnapshot(it, oldName, newName, edits, allowedRanges) }
         val shouldRename = when (snapshot.elementType) {
             XbPsiElementType.FUNCTION_DECLARATION,
             XbPsiElementType.VARIABLE_DECLARATION,
@@ -78,7 +94,7 @@ class XbRenameRefactoring {
             -> snapshot.name == oldName
             else -> false
         }
-        if (!shouldRename) {
+        if (!shouldRename || (allowedRanges != null && snapshot.textRange !in allowedRanges)) {
             return snapshot.copy(children = renamedChildren)
         }
         val updatedText = replaceFirstToken(snapshot.text, oldName, newName)

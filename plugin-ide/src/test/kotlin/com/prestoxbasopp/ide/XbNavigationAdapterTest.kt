@@ -69,4 +69,27 @@ class XbNavigationAdapterTest {
         val declarationStart = source.indexOf("count\n")
         assertThat(targets).containsExactly(XbTextRange(declarationStart, declarationStart + "count".length))
     }
+
+    @Test
+    fun `variable definition only navigates to usages in the same scope`() {
+        val source = """
+            function Main()
+               local count
+               count := count + 1
+            endfunction
+
+            function Other()
+               local count
+               count := count + 2
+            endfunction
+        """.trimIndent()
+
+        val definitionOffset = source.indexOf("local count") + "local ".length
+        val targets = adapter.findTargets(source, definitionOffset)
+
+        val firstUsage = source.indexOf("count := count + 1")
+        assertThat(targets).containsExactly(
+            XbTextRange(firstUsage, firstUsage + "count".length),
+        )
+    }
 }

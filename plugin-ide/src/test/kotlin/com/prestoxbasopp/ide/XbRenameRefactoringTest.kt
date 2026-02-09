@@ -148,4 +148,66 @@ class XbRenameRefactoringTest {
         assertThat(result.edits).isEmpty()
         assertThat(result.updatedTargets).containsExactly(target)
     }
+
+    @Test
+    fun `renames variable references within the anchored scope only`() {
+        val snapshot = XbPsiSnapshot(
+            elementType = XbPsiElementType.FILE,
+            name = "root",
+            textRange = XbTextRange(0, 120),
+            text = "file",
+            children = listOf(
+                XbPsiSnapshot(
+                    elementType = XbPsiElementType.FUNCTION_DECLARATION,
+                    name = "main",
+                    textRange = XbTextRange(0, 50),
+                    text = "function main()",
+                ),
+                XbPsiSnapshot(
+                    elementType = XbPsiElementType.VARIABLE_DECLARATION,
+                    name = "count",
+                    textRange = XbTextRange(10, 15),
+                    text = "count",
+                ),
+                XbPsiSnapshot(
+                    elementType = XbPsiElementType.SYMBOL_REFERENCE,
+                    name = "count",
+                    textRange = XbTextRange(20, 25),
+                    text = "count",
+                ),
+                XbPsiSnapshot(
+                    elementType = XbPsiElementType.FUNCTION_DECLARATION,
+                    name = "other",
+                    textRange = XbTextRange(60, 110),
+                    text = "function other()",
+                ),
+                XbPsiSnapshot(
+                    elementType = XbPsiElementType.VARIABLE_DECLARATION,
+                    name = "count",
+                    textRange = XbTextRange(70, 75),
+                    text = "count",
+                ),
+                XbPsiSnapshot(
+                    elementType = XbPsiElementType.SYMBOL_REFERENCE,
+                    name = "count",
+                    textRange = XbTextRange(80, 85),
+                    text = "count",
+                ),
+            ),
+        )
+
+        val result = XbRenameRefactoring().rename(
+            snapshot,
+            "count",
+            "total",
+            XbRenameAnchor(XbTextRange(10, 15), XbPsiElementType.VARIABLE_DECLARATION),
+        )
+
+        assertThat(result.errors).isEmpty()
+        assertThat(result.edits).hasSize(2)
+        assertThat(result.updatedSnapshot.children[1].name).isEqualTo("total")
+        assertThat(result.updatedSnapshot.children[2].name).isEqualTo("total")
+        assertThat(result.updatedSnapshot.children[4].name).isEqualTo("count")
+        assertThat(result.updatedSnapshot.children[5].name).isEqualTo("count")
+    }
 }
