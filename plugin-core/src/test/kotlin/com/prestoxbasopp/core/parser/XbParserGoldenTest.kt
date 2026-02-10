@@ -135,6 +135,52 @@ class XbParserGoldenTest {
     }
 
     @Test
+    fun `parses endprocedure and endfunc terminators without errors`() {
+        val cases = listOf<GoldenTestCase<XbProgram>>(
+            GoldenTestCase(
+                id = "function-endfunc",
+                source = """
+                    FUNCTION BuildTitle(name)
+                       RETURN "Hello " + name
+                    ENDFUNC
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Decl.Function[name=BuildTitle]
+                        Params
+                          Expr.Identifier[name=name]
+                        Block
+                          Stmt.Return
+                            Expr.Binary.Add
+                              Expr.Literal.String[value="Hello "]
+                              Expr.Identifier[name=name]
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "procedure-endprocedure",
+                source = """
+                    PROCEDURE RenderStatusBar(userName)
+                       ? "Status for " + userName
+                    ENDPROCEDURE
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Decl.Procedure[name=RenderStatusBar]
+                        Params
+                          Expr.Identifier[name=userName]
+                        Block
+                          Stmt.Print
+                            Expr.Binary.Add
+                              Expr.Literal.String[value="Status for "]
+                              Expr.Identifier[name=userName]
+                """.trimIndent(),
+            ),
+        )
+
+        GoldenTestHarness.assertCases(cases, ::parseSource, ::dumpProgram)
+    }
+
+    @Test
     fun `parses inventory sample without spurious diagnostics`() {
         val cases = listOf<GoldenTestCase<XbProgram>>(
             GoldenTestCase(

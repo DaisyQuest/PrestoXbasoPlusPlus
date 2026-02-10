@@ -16,6 +16,10 @@ object XbKeywords {
         "switch",
         "endswitch",
         "return",
+        "endfunction",
+        "endfunc",
+        "endproc",
+        "endprocedure",
         "wait",
         "exit",
     )

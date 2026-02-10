@@ -168,7 +168,9 @@ class XbLexer(
             "function" -> TokenType.FUNCTION
             "procedure" -> TokenType.PROCEDURE
             "endfunction" -> TokenType.ENDFUNCTION
+            "endfunc" -> TokenType.ENDFUNCTION
             "endproc" -> TokenType.ENDPROC
+            "endprocedure" -> TokenType.ENDPROC
             "local" -> TokenType.LOCAL
             "for" -> TokenType.FOR
             "to" -> TokenType.TO
