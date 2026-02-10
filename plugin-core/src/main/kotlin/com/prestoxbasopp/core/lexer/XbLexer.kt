@@ -76,7 +76,7 @@ class XbLexer(
                     current == '{' && peek(1) == '^' -> {
                         lexDate()
                     }
-                    current == '{' && peek(1) == '|' -> {
+                    current == '{' && isCodeblockStart() -> {
                         lexCodeblock()
                     }
                     current == '#' -> {
@@ -146,7 +146,16 @@ class XbLexer(
 
         private fun lexCodeblock() {
             val start = index
-            index += 2
+            index++
+            while (index < source.length && source[index].isWhitespace()) {
+                index++
+            }
+            if (index >= source.length || source[index] != '|') {
+                errors += error("Unterminated codeblock literal", start, index)
+                emitToken(XbTokenType.CODEBLOCK, start, index)
+                return
+            }
+            index++
             var depth = 1
             var stringQuote: Char? = null
             var escaped = false
@@ -330,9 +339,17 @@ class XbLexer(
             return if (target in source.indices) source[target] else null
         }
 
+        private fun isCodeblockStart(): Boolean {
+            var cursor = index + 1
+            while (cursor < source.length && source[cursor].isWhitespace()) {
+                cursor++
+            }
+            return cursor < source.length && source[cursor] == '|'
+        }
+
         companion object {
-            private val OPERATORS = setOf('+', '-', '*', '/', '=', '<', '>', '!', '^', '%', '?')
-            private val PUNCTUATION = setOf('(', ')', '{', '}', '[', ']', ';', ',', ':', '.')
+            private val OPERATORS = setOf('+', '-', '*', '/', '=', '<', '>', '!', '^', '%', '?', '&', '|', '$')
+            private val PUNCTUATION = setOf('(', ')', '{', '}', '[', ']', ';', ',', ':', '.', '@')
         }
 
         private fun isValidDateLiteral(content: String): Boolean {
