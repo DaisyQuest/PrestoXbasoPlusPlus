@@ -15,11 +15,11 @@ class XbLexerEdgeCaseTest {
 
     @Test
     fun `reports unexpected characters`() {
-        val source = "@"
+        val source = "~"
         val result = XbLexer().lex(source)
 
-        assertThat(result.errors.map { it.message }).contains("Unexpected character '@'")
-        assertThat(result.tokens).anyMatch { it.type == XbTokenType.UNKNOWN && it.text == "@" }
+        assertThat(result.errors.map { it.message }).contains("Unexpected character '~'")
+        assertThat(result.tokens).anyMatch { it.type == XbTokenType.UNKNOWN && it.text == "~" }
     }
 
     @Test
@@ -57,6 +57,29 @@ class XbLexerEdgeCaseTest {
 
         val operatorTexts = result.tokens.filter { it.type == XbTokenType.OPERATOR }.map { it.text }
         assertThat(operatorTexts).contains("==", "!=", "<=", ">=", "&&", "||", "::", "->")
+    }
+
+    @Test
+    fun `lexes macro operators and at say get tokens`() {
+        val source = """
+            h["key"] := "value"
+            &("QOut")( "Hello " + &cMacro + "!" )
+            k := Eval( { |n| IIF( n % 2 == 0, ;
+                ( {|m| m*m } )(n), ;
+                ( {|m| m+m } )(n) ) } )
+            @ 5, 10 SAY "Enter:" GET cInput
+            c := "x" $ "y"
+        """.trimIndent()
+
+        val result = XbLexer().lex(source)
+
+        assertThat(result.errors).isEmpty()
+        val tokens = result.tokens.filter { it.type != XbTokenType.EOF }
+        assertThat(tokens).noneMatch { it.type == XbTokenType.UNKNOWN }
+        assertThat(tokens).anyMatch { it.type == XbTokenType.OPERATOR && it.text == "&" }
+        assertThat(tokens).anyMatch { it.type == XbTokenType.OPERATOR && it.text == "$" }
+        assertThat(tokens).anyMatch { it.type == XbTokenType.PUNCTUATION && it.text == "@" }
+        assertThat(tokens).anyMatch { it.type == XbTokenType.CODEBLOCK }
     }
 
     @Test

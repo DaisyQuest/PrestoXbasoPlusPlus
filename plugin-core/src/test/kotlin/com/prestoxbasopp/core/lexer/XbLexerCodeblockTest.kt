@@ -33,4 +33,18 @@ class XbLexerCodeblockTest {
         assertThat(result.errors).isEmpty()
         assertThat(result.tokens).anyMatch { it.type == XbTokenType.CODEBLOCK && it.text == source }
     }
+
+    @Test
+    fun `lexes codeblock with whitespace after opening brace`() {
+        val source = """
+            { |n| IIF( n % 2 == 0, ;
+                ( {|m| m*m } )(n), ;
+                ( {|m| m+m } )(n) ) }
+        """.trimIndent()
+
+        val result = XbLexer().lex(source)
+
+        assertThat(result.errors).isEmpty()
+        assertThat(result.tokens).anyMatch { it.type == XbTokenType.CODEBLOCK && it.text == source }
+    }
 }
