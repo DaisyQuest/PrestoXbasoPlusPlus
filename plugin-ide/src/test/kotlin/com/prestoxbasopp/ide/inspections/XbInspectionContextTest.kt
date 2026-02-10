@@ -91,4 +91,15 @@ class XbInspectionContextTest {
         assertThat(context.formatMessage("Missing endif"))
             .isEqualTo("Missing endif.")
     }
+
+    @Test
+    fun `fromLexOnly skips parser and psi construction`() {
+        val context = XbInspectionContext.fromLexOnly("return 1")
+
+        assertThat(context.parseResult.program).isNull()
+        assertThat(context.parseResult.errors).isEmpty()
+        assertThat(context.psiFile).isNull()
+        assertThat(context.tokens).isNotEmpty()
+    }
+
 }
