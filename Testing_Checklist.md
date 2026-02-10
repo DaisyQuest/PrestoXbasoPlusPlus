@@ -58,4 +58,5 @@
 - Structure view static variable labeling and icon mapping tests for navigation cues.
 - WAIT/EXIT keyword lexing coverage plus parser golden tests and fixtures for wait/exit statements.
 - Parser golden coverage for macro stress sample with block literals, hash literals, macro operators, and sequence recovery.
+- Parser golden coverage for macro stress user variant with trailing line continuation and sequence recovery.
 - Lexer coverage for codeblock literals with nested braces, comments, and string content.
