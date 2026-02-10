@@ -540,6 +540,58 @@ class XbParserGoldenTest {
                 ),
             ),
             GoldenTestCase(
+                id = "line-continuation-blank-line",
+                source = """
+                    FUNCTION Main()
+                       LOCAL cWeird := ;
+                          "line1" + Chr(13)+Chr(10) + ;
+                          "line2 ; looks like a terminator but isn't" + Chr(10) + ;
+
+                       LOCAL h := {=>}
+                       h["key"] := "value"
+                    RETURN NIL
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Decl.Function[name=Main]
+                        Params
+                        Block
+                          Stmt.Local
+                            Local.Binding[name=cWeird]
+                              Expr.Binary.Add
+                                Expr.Binary.Add
+                                  Expr.Binary.Add
+                                    Expr.Binary.Add
+                                      Expr.Binary.Add
+                                        Expr.Literal.String[value=line1]
+                                        Expr.Call
+                                          Expr.Identifier[name=Chr]
+                                          Expr.Literal.Number[value=13]
+                                      Expr.Call
+                                        Expr.Identifier[name=Chr]
+                                        Expr.Literal.Number[value=10]
+                                    Expr.Literal.String[value="line2 ; looks like a terminator but isn't"]
+                                  Expr.Call
+                                    Expr.Identifier[name=Chr]
+                                    Expr.Literal.Number[value=10]
+                                Expr.Identifier[name="<error>"]
+                          Stmt.Local
+                            Local.Binding[name=h]
+                              Expr.HashLiteral
+                          Stmt.Assignment
+                            Expr.Index
+                              Expr.Identifier[name=h]
+                              Expr.Literal.String[value=key]
+                            Expr.Literal.String[value=value]
+                          Stmt.Return
+                            Expr.Literal.Nil
+                """.trimIndent(),
+                expectedErrors = listOf(
+                    "Unexpected token SEMICOLON at 135",
+                    "Expected expression after '+' at 141",
+                ),
+            ),
+            GoldenTestCase(
                 id = "if-missing-condition",
                 source = "if then return 1; endif",
                 expectedAst = """
