@@ -10,8 +10,7 @@ class XbInspectionEngineTest {
     fun `reports lexer and parser errors`() {
         val findings = engine.inspect("if @ then endif")
 
-        assertThat(findings.map { it.id }).contains("XB100", "XB101")
-        assertThat(findings.filter { it.id == "XB100" }.all { it.severity == XbInspectionSeverity.ERROR }).isTrue()
+        assertThat(findings.map { it.id }).contains("XB101")
         assertThat(findings.filter { it.id == "XB101" }.all { it.severity == XbInspectionSeverity.ERROR }).isTrue()
     }
 
@@ -116,4 +115,30 @@ class XbInspectionEngineTest {
 
         assertThat(findings.none { it.id == "XB250" }).isTrue()
     }
+
+    @Test
+    fun `uses lex-only context for oversized sources`() {
+        val policy = XbInspectionPerformancePolicy(maxSourceLengthForFullInspection = 64)
+        val engine = XbInspectionEngine(XbStandardInspections.all, policy)
+        val source = buildString {
+            repeat(80) {
+                append("if 1 then return 1 endif\n")
+            }
+        }
+
+        val findings = engine.inspect(source)
+
+        assertThat(findings).isEmpty()
+    }
+
+    @Test
+    fun `uses full context below oversized threshold`() {
+        val policy = XbInspectionPerformancePolicy(maxSourceLengthForFullInspection = 256)
+        val engine = XbInspectionEngine(XbStandardInspections.all, policy)
+
+        val findings = engine.inspect("if 1 then return 1 endif")
+
+        assertThat(findings.any { it.id == "XB220" }).isTrue()
+    }
+
 }

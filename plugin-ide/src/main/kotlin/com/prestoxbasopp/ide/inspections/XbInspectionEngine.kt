@@ -1,10 +1,19 @@
 package com.prestoxbasopp.ide.inspections
 
-class XbInspectionEngine(private val inspections: List<XbInspectionRule>) {
+class XbInspectionEngine(
+    private val inspections: List<XbInspectionRule>,
+    private val policy: XbInspectionPerformancePolicy = XbInspectionPerformancePolicy(),
+) {
     fun inspect(
         source: String,
         profile: XbInspectionProfile = XbInspectionProfile(),
-        contextProvider: (String) -> XbInspectionContext = { XbInspectionContext.fromSource(it) },
+        contextProvider: (String) -> XbInspectionContext = { text ->
+            if (policy.shouldUseLexOnlyContext(text)) {
+                XbInspectionContext.fromLexOnly(text)
+            } else {
+                XbInspectionContext.fromSource(text)
+            }
+        },
     ): List<XbInspectionFinding> {
         val context = contextProvider(source)
         val findings = inspections
@@ -20,4 +29,11 @@ class XbInspectionEngine(private val inspections: List<XbInspectionRule>) {
             .thenBy { it.severity.ordinal }
             .thenBy { it.id })
     }
+}
+
+
+data class XbInspectionPerformancePolicy(
+    val maxSourceLengthForFullInspection: Int = 350_000,
+) {
+    fun shouldUseLexOnlyContext(source: String): Boolean = source.length > maxSourceLengthForFullInspection
 }

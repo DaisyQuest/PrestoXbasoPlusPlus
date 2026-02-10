@@ -75,7 +75,7 @@ class XbInspectionContext private constructor(
     val source: String,
     val lexResult: XbLexResult,
     val parseResult: XbParseResult,
-    val psiFile: XbPsiFile,
+    val psiFile: XbPsiFile?,
 ) {
     val tokens: List<XbToken> = lexResult.tokens
     val lexerErrors: List<XbLexerError> = lexResult.errors
@@ -316,6 +316,15 @@ class XbInspectionContext private constructor(
             val parseResult = parser(source)
             val psiFile = psiBuilder.build(source)
             return XbInspectionContext(source, lexResult, parseResult, psiFile)
+        }
+
+        fun fromLexOnly(
+            source: String,
+            lexer: XbLexer = XbLexer(),
+        ): XbInspectionContext {
+            val lexResult = lexer.lex(source)
+            val parseResult = XbParseResult(program = null, errors = emptyList())
+            return XbInspectionContext(source, lexResult, parseResult, psiFile = null)
         }
     }
 }
