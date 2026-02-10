@@ -516,6 +516,9 @@ class XbParser(private val tokens: List<Token>) {
             val precedence = infixPrecedence(peek().type) ?: break
             if (precedence < minPrecedence) break
             val operatorToken = advance()
+            if (!canStartExpression(peek().type) && isExpressionBoundary(peek().type)) {
+                return left
+            }
             val right = parseExpression(precedence + 1) ?: run {
                 recordError("Expected expression after '${operatorToken.lexeme}' at ${peek().startOffset}")
                 fallbackExpression(operatorToken)
@@ -855,6 +858,15 @@ class XbParser(private val tokens: List<Token>) {
             -> true
             else -> false
         }
+    }
+
+    private fun isExpressionBoundary(type: TokenType): Boolean {
+        return type == TokenType.SEMICOLON ||
+            type == TokenType.COMMA ||
+            type == TokenType.RPAREN ||
+            type == TokenType.RBRACKET ||
+            type == TokenType.RBRACE ||
+            isTerminator(type)
     }
 
     private fun isTerminator(type: TokenType): Boolean {
