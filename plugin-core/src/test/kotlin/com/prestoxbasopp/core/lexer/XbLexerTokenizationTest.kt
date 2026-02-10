@@ -65,6 +65,15 @@ class XbLexerTokenizationTest {
     }
 
     @Test
+    fun `terminator variants are treated as keywords`() {
+        val source = "endfunction endfunc endproc endprocedure"
+        val result = XbLexer().lex(source)
+
+        val keywordTexts = result.tokens.filter { it.type == XbTokenType.KEYWORD }.map { it.text }
+        assertThat(keywordTexts).contains("endfunction", "endfunc", "endproc", "endprocedure")
+    }
+
+    @Test
     fun `handles doubled quotes inside strings without swallowing comments`() {
         val source = """
             local a := "line3 with quotes "" inside"

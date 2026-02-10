@@ -9,6 +9,7 @@ import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -44,6 +45,8 @@ import com.prestoxbasopp.core.ast.XbUnaryExpression
 import com.prestoxbasopp.core.ast.XbWhileStatement
 import com.prestoxbasopp.core.parser.XbParser
 import java.awt.BorderLayout
+import java.awt.datatransfer.StringSelection
+import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
@@ -241,6 +244,9 @@ class XbAstPresenter {
 
 class XbAstPanel {
     private val messageLabel = JBLabel()
+    private val copyButton = JButton("Copy AST").apply {
+        isEnabled = false
+    }
     private val tree = Tree(DefaultMutableTreeNode("File")).apply {
         isRootVisible = true
         showsRootHandles = true
@@ -248,17 +254,26 @@ class XbAstPanel {
     }
     val component: JPanel = JPanel(BorderLayout()).apply {
         border = JBUI.Borders.empty(8)
-        add(messageLabel, BorderLayout.NORTH)
+        val header = JPanel(BorderLayout()).apply {
+            add(messageLabel, BorderLayout.CENTER)
+            add(copyButton, BorderLayout.EAST)
+        }
+        add(header, BorderLayout.NORTH)
         add(ScrollPaneFactory.createScrollPane(tree), BorderLayout.CENTER)
     }
+    private val textFormatter = XbAstTextFormatter()
+    private var latestPresentation: XbAstPresentation? = null
 
     init {
         TreeSpeedSearch(tree)
+        copyButton.addActionListener { copyAstToClipboard() }
     }
 
     fun render(presentation: XbAstPresentation) {
+        latestPresentation = presentation
         messageLabel.text = presentation.message ?: ""
         messageLabel.isVisible = presentation.message != null
+        copyButton.isEnabled = presentation.root != null
         val rootNode = presentation.root?.toSwingNode() ?: DefaultMutableTreeNode("File")
         tree.model = DefaultTreeModel(rootNode)
         TreeUtil.expandAll(tree)
@@ -269,12 +284,34 @@ class XbAstPanel {
         }
     }
 
+    private fun copyAstToClipboard() {
+        val root = latestPresentation?.root ?: return
+        val text = textFormatter.format(root)
+        CopyPasteManager.getInstance().setContents(StringSelection(text))
+    }
+
     private fun XbAstTreeNode.toSwingNode(): DefaultMutableTreeNode {
         val node = DefaultMutableTreeNode(label)
         children.forEach { child ->
             node.add(child.toSwingNode())
         }
         return node
+    }
+}
+
+class XbAstTextFormatter {
+    fun format(root: XbAstTreeNode): String {
+        val lines = mutableListOf<String>()
+        appendNode(root, "", lines)
+        return lines.joinToString("\n")
+    }
+
+    private fun appendNode(node: XbAstTreeNode, indent: String, lines: MutableList<String>) {
+        lines.add("$indent${node.label}")
+        val nextIndent = "$indent  "
+        node.children.forEach { child ->
+            appendNode(child, nextIndent, lines)
+        }
     }
 }
 
