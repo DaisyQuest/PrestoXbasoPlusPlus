@@ -234,6 +234,7 @@ class XbAstPresenter {
             XbLiteralKind.NUMBER -> "Literal (Number): ${expression.value}"
             XbLiteralKind.STRING -> "Literal (String): ${expression.value}"
             XbLiteralKind.NIL -> "Literal (Nil)"
+            XbLiteralKind.BOOLEAN -> "Literal (Boolean): ${expression.value}"
         }
     }
 }
