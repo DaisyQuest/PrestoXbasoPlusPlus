@@ -147,15 +147,72 @@ class XbLexer(
         private fun lexCodeblock() {
             val start = index
             index += 2
-            while (index < source.length && !(source[index] == '|' && peek(1) == '}')) {
-                index++
+            var depth = 1
+            var stringQuote: Char? = null
+            var escaped = false
+            while (index < source.length) {
+                val char = source[index]
+                if (stringQuote != null) {
+                    if (escaped) {
+                        escaped = false
+                        index++
+                        continue
+                    }
+                    when {
+                        char == '\\' -> {
+                            escaped = true
+                            index++
+                        }
+                        char == stringQuote && peek(1) == stringQuote -> {
+                            index += 2
+                        }
+                        char == stringQuote -> {
+                            stringQuote = null
+                            index++
+                        }
+                        else -> index++
+                    }
+                    continue
+                }
+                if (char == '"' || char == '\'') {
+                    stringQuote = char
+                    index++
+                    continue
+                }
+                if (char == '/' && peek(1) == '/') {
+                    index += 2
+                    while (index < source.length && source[index] != '\n') {
+                        index++
+                    }
+                    continue
+                }
+                if (char == '/' && peek(1) == '*') {
+                    index += 2
+                    while (index < source.length && !(source[index] == '*' && peek(1) == '/')) {
+                        index++
+                    }
+                    if (index < source.length) {
+                        index += 2
+                    }
+                    continue
+                }
+                when (char) {
+                    '{' -> {
+                        depth++
+                        index++
+                    }
+                    '}' -> {
+                        depth--
+                        index++
+                        if (depth == 0) {
+                            emitToken(XbTokenType.CODEBLOCK, start, index)
+                            return
+                        }
+                    }
+                    else -> index++
+                }
             }
-            if (index >= source.length) {
-                errors += error("Unterminated codeblock literal", start, index)
-                emitToken(XbTokenType.CODEBLOCK, start, index)
-                return
-            }
-            index += 2
+            errors += error("Unterminated codeblock literal", start, index)
             emitToken(XbTokenType.CODEBLOCK, start, index)
         }
 
