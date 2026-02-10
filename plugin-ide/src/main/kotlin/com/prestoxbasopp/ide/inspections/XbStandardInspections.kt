@@ -292,6 +292,11 @@ private fun XbExpression.isConstantExpression(): Boolean {
         is XbIndexExpression -> false
         is com.prestoxbasopp.core.ast.XbArrayLiteralExpression ->
             elements.all { it.isConstantExpression() }
+        is com.prestoxbasopp.core.ast.XbHashLiteralExpression ->
+            entries.all { (key, value) ->
+                key.isConstantExpression() && value.isConstantExpression()
+            }
+        is com.prestoxbasopp.core.ast.XbBlockLiteralExpression -> false
     }
 }
 

@@ -3,12 +3,16 @@ package com.prestoxbasopp.ide.inspections
 import com.prestoxbasopp.core.api.XbTextRange
 import com.prestoxbasopp.core.ast.XbAstNode
 import com.prestoxbasopp.core.ast.XbAssignmentStatement
+import com.prestoxbasopp.core.ast.XbAtSayGetStatement
 import com.prestoxbasopp.core.ast.XbBlock
+import com.prestoxbasopp.core.ast.XbBlockLiteralExpression
+import com.prestoxbasopp.core.ast.XbBreakStatement
 import com.prestoxbasopp.core.ast.XbCallExpression
 import com.prestoxbasopp.core.ast.XbExpression
 import com.prestoxbasopp.core.ast.XbExpressionStatement
 import com.prestoxbasopp.core.ast.XbForStatement
 import com.prestoxbasopp.core.ast.XbFunctionDeclaration
+import com.prestoxbasopp.core.ast.XbHashLiteralExpression
 import com.prestoxbasopp.core.ast.XbIfStatement
 import com.prestoxbasopp.core.ast.XbIndexExpression
 import com.prestoxbasopp.core.ast.XbLocalDeclarationStatement
@@ -16,7 +20,9 @@ import com.prestoxbasopp.core.ast.XbProgram
 import com.prestoxbasopp.core.ast.XbProcedureDeclaration
 import com.prestoxbasopp.core.ast.XbPrintStatement
 import com.prestoxbasopp.core.ast.XbReturnStatement
+import com.prestoxbasopp.core.ast.XbSequenceStatement
 import com.prestoxbasopp.core.ast.XbStatement
+import com.prestoxbasopp.core.ast.XbWaitStatement
 import com.prestoxbasopp.core.ast.XbWhileStatement
 import com.prestoxbasopp.core.lexer.XbLexResult
 import com.prestoxbasopp.core.lexer.XbLexer
@@ -140,13 +146,19 @@ class XbInspectionContext private constructor(
             is XbForStatement -> yieldAll(walkStatements(node.body))
             is XbFunctionDeclaration -> yieldAll(walkStatements(node.body))
             is XbProcedureDeclaration -> yieldAll(walkStatements(node.body))
+            is XbSequenceStatement -> {
+                yieldAll(walkStatements(node.body))
+                node.recoverBlock?.let { yieldAll(walkStatements(it)) }
+            }
             is XbExpressionStatement -> Unit
             is XbAssignmentStatement -> Unit
             is XbPrintStatement -> Unit
             is XbLocalDeclarationStatement -> Unit
             is XbReturnStatement -> Unit
+            is XbBreakStatement -> Unit
             is com.prestoxbasopp.core.ast.XbExitStatement -> Unit
-            is com.prestoxbasopp.core.ast.XbWaitStatement -> Unit
+            is XbWaitStatement -> Unit
+            is XbAtSayGetStatement -> Unit
             is XbExpression -> Unit
         }
     }
@@ -187,6 +199,10 @@ class XbInspectionContext private constructor(
             }
             is XbFunctionDeclaration -> yieldAll(walkExpressions(node.body))
             is XbProcedureDeclaration -> yieldAll(walkExpressions(node.body))
+            is XbSequenceStatement -> {
+                yieldAll(walkExpressions(node.body))
+                node.recoverBlock?.let { yieldAll(walkExpressions(it)) }
+            }
             is com.prestoxbasopp.core.ast.XbUnaryExpression -> {
                 yield(node.expression)
                 yieldAll(walkExpressions(node.expression))
@@ -221,6 +237,34 @@ class XbInspectionContext private constructor(
                 yield(node.value)
                 yieldAll(walkExpressions(node.value))
             }
+            is XbBreakStatement -> node.expression?.let { expression ->
+                yield(expression)
+                yieldAll(walkExpressions(expression))
+            }
+            is XbWaitStatement -> node.expression?.let { expression ->
+                yield(expression)
+                yieldAll(walkExpressions(expression))
+            }
+            is XbAtSayGetStatement -> {
+                yield(node.row)
+                yieldAll(walkExpressions(node.row))
+                node.column?.let { column ->
+                    yield(column)
+                    yieldAll(walkExpressions(column))
+                }
+                node.sayExpression?.let { say ->
+                    yield(say)
+                    yieldAll(walkExpressions(say))
+                }
+                node.getExpression?.let { get ->
+                    yield(get)
+                    yieldAll(walkExpressions(get))
+                }
+                node.validExpression?.let { valid ->
+                    yield(valid)
+                    yieldAll(walkExpressions(valid))
+                }
+            }
             is XbPrintStatement -> node.expressions.forEach { expression ->
                 yield(expression)
                 yieldAll(walkExpressions(expression))
@@ -232,9 +276,18 @@ class XbInspectionContext private constructor(
                 }
             }
             is com.prestoxbasopp.core.ast.XbExitStatement -> Unit
-            is com.prestoxbasopp.core.ast.XbWaitStatement -> Unit
             is com.prestoxbasopp.core.ast.XbIdentifierExpression -> Unit
             is com.prestoxbasopp.core.ast.XbLiteralExpression -> Unit
+            is XbHashLiteralExpression -> node.entries.forEach { (key, value) ->
+                yield(key)
+                yieldAll(walkExpressions(key))
+                yield(value)
+                yieldAll(walkExpressions(value))
+            }
+            is XbBlockLiteralExpression -> {
+                yield(node.body)
+                yieldAll(walkExpressions(node.body))
+            }
         }
     }
 
