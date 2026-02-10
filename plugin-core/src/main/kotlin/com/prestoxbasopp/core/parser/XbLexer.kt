@@ -260,6 +260,21 @@ class XbLexer(
         while (cursor < source.length) {
             val char = source[cursor]
             if (char == '\n') {
+                return !isBlankLine(cursor + 1)
+            }
+            if (!char.isWhitespace()) {
+                return false
+            }
+            cursor++
+        }
+        return true
+    }
+
+    private fun isBlankLine(startIndex: Int): Boolean {
+        var cursor = startIndex
+        while (cursor < source.length) {
+            val char = source[cursor]
+            if (char == '\n') {
                 return true
             }
             if (!char.isWhitespace()) {
