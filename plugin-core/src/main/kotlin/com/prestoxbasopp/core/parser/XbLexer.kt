@@ -53,6 +53,7 @@ class XbLexer(
             current == '&' -> token(TokenType.AMP, "&", start, index)
             current == '|' -> token(TokenType.PIPE, "|", start, index)
             current == '@' -> token(TokenType.AT, "@", start, index)
+            current == '#' -> token(TokenType.NEQ, "!=", start, index)
             current == '.' -> readDotKeyword(start)
             current == '=' -> {
                 if (match('>')) {

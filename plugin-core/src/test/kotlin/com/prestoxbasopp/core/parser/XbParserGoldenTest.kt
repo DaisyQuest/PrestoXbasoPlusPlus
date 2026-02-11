@@ -76,6 +76,21 @@ class XbParserGoldenTest {
                 """.trimIndent(),
             ),
             GoldenTestCase(
+                id = "not-equal-hash-operator",
+                source = "if a # b then return 1; endif",
+                expectedAst = """
+                    File
+                      Stmt.If
+                        Expr.Binary.NotEqual
+                          Expr.Identifier[name=a]
+                          Expr.Identifier[name=b]
+                        Block[branch=then]
+                          Stmt.Return
+                            Expr.Literal.Number[value=1]
+                        Block[branch=else]
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
                 id = "while-loop",
                 source = "while n > 0 do n - 1; enddo",
                 expectedAst = """
@@ -643,6 +658,20 @@ class XbParserGoldenTest {
                           Stmt.Return
                             Expr.Literal.Number[value=2]
                         Block[branch=else]
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "directive-with-at-say-get",
+                source = "#define UI_ENABLED 1\n@ 1, 2 SAY \"Hi\" GET value",
+                expectedAst = """
+                    File
+                      Stmt.AtSayGet
+                        Expr.Literal.Number[value=1]
+                        Expr.Literal.Number[value=2]
+                        At.Say
+                          Expr.Literal.String[value=Hi]
+                        At.Get
+                          Expr.Identifier[name=value]
                 """.trimIndent(),
             ),
         )
