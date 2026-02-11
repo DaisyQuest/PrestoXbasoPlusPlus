@@ -1,9 +1,10 @@
 package com.prestoxbasopp.ide.modules
 
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+
+import java.lang.reflect.Proxy
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -55,7 +56,7 @@ class XbModuleInitializationTest {
         val registry = FakeRegistry(hasModules = false)
         val decider = XbModuleInitializationDecider(state, registry)
 
-        val project = ProjectManager.getInstance().defaultProject
+        val project = fakeProject()
         assertThat(decider.shouldPrompt(project)).isFalse()
     }
 
@@ -78,7 +79,7 @@ class XbModuleInitializationTest {
             FakePathResolver(Paths.get(".")),
         )
 
-        val project = ProjectManager.getInstance().defaultProject
+        val project = fakeProject()
         val result = initializer.initializeIfNeeded(project)
 
         assertThat(result.prompted).isTrue()
@@ -87,6 +88,18 @@ class XbModuleInitializationTest {
         assertThat(prompt.prompted).isTrue()
         assertThat(creator.receivedCandidates).containsExactly(candidate)
     }
+
+    private fun fakeProject(): Project = Proxy.newProxyInstance(
+        Project::class.java.classLoader,
+        arrayOf(Project::class.java),
+    ) { _, method, _ ->
+        when (method.name) {
+            "isDisposed" -> false
+            "isOpen" -> true
+            "getName" -> "fake-project"
+            else -> null
+        }
+    } as Project
 
     private class StaticStrategy(private val candidates: List<XbModuleCandidate>) : XbModuleDetectionStrategy {
         override fun detectCandidates(baseDir: Path): List<XbModuleCandidate> = candidates

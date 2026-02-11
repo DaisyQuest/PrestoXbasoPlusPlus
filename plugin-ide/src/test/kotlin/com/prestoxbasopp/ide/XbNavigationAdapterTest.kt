@@ -23,9 +23,9 @@ class XbNavigationAdapterTest {
         val referenceOffset = source.indexOf("Add(1")
         val targets = adapter.findTargets(source, referenceOffset)
 
-        val expectedStart = source.indexOf("function Add")
-        val expectedEnd = source.indexOf(")", expectedStart) + 1
-        assertThat(targets).containsExactly(XbTextRange(expectedStart, expectedEnd))
+        val declarationStart = source.indexOf("function Add")
+        val declarationEnd = source.indexOf("endfunction", declarationStart) + "endfunction".length
+        assertThat(targets).containsExactly(XbTextRange(declarationStart, declarationEnd))
     }
 
     @Test
@@ -87,9 +87,10 @@ class XbNavigationAdapterTest {
         val definitionOffset = source.indexOf("local count") + "local ".length
         val targets = adapter.findTargets(source, definitionOffset)
 
-        val firstUsage = source.indexOf("count := count + 1")
+        val assignmentStart = source.indexOf("count := count + 1")
         assertThat(targets).containsExactly(
-            XbTextRange(firstUsage, firstUsage + "count".length),
+            XbTextRange(assignmentStart, assignmentStart + "count".length),
+            XbTextRange(assignmentStart + "count := ".length, assignmentStart + "count := count".length),
         )
     }
 }

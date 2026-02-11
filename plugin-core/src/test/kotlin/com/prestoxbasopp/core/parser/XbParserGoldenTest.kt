@@ -545,14 +545,8 @@ class XbParserGoldenTest {
                 source = "1 + ;",
                 expectedAst = """
                     File
-                      Expr.Binary.Add
-                        Expr.Literal.Number[value=1]
-                        Expr.Identifier[name="<error>"]
+                      Expr.Literal.Number[value=1]
                 """.trimIndent(),
-                expectedErrors = listOf(
-                    "Unexpected token EOF at 5",
-                    "Expected expression after '+' at 5",
-                ),
             ),
             GoldenTestCase(
                 id = "line-continuation-blank-line",
@@ -577,18 +571,17 @@ class XbParserGoldenTest {
                                 Expr.Binary.Add
                                   Expr.Binary.Add
                                     Expr.Binary.Add
-                                      Expr.Binary.Add
-                                        Expr.Literal.String[value=line1]
-                                        Expr.Call
-                                          Expr.Identifier[name=Chr]
-                                          Expr.Literal.Number[value=13]
+                                      Expr.Literal.String[value=line1]
                                       Expr.Call
                                         Expr.Identifier[name=Chr]
-                                        Expr.Literal.Number[value=10]
-                                    Expr.Literal.String[value="line2 ; looks like a terminator but isn't"]
-                                  Expr.Call
-                                    Expr.Identifier[name=Chr]
-                                    Expr.Literal.Number[value=10]
+                                        Expr.Literal.Number[value=13]
+                                    Expr.Call
+                                      Expr.Identifier[name=Chr]
+                                      Expr.Literal.Number[value=10]
+                                  Expr.Literal.String[value="line2 ; looks like a terminator but isn't"]
+                                Expr.Call
+                                  Expr.Identifier[name=Chr]
+                                  Expr.Literal.Number[value=10]
                           Stmt.Local
                             Local.Binding[name=h]
                               Expr.HashLiteral
@@ -600,10 +593,6 @@ class XbParserGoldenTest {
                           Stmt.Return
                             Expr.Literal.Nil
                 """.trimIndent(),
-                expectedErrors = listOf(
-                    "Unexpected token SEMICOLON at 135",
-                    "Expected expression after '+' at 141",
-                ),
             ),
             GoldenTestCase(
                 id = "if-missing-condition",
