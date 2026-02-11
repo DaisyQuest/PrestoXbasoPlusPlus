@@ -88,7 +88,8 @@ class XbExtractFunctionService {
         }
         val lineStart = lineStartOffset(source, selectionStart)
         val indent = lineIndent(source, lineStart)
-        val replaced = source.replaceRange(selectionStart, selectionEnd, "$indent$functionName()")
+        val replacement = buildFunctionCallReplacement(source, selectionEnd, indent, functionName)
+        val replaced = source.replaceRange(selectionStart, selectionEnd, replacement)
         val trimmed = replaced.trimEnd()
         val updated = buildString {
             append(trimmed)
@@ -96,6 +97,14 @@ class XbExtractFunctionService {
             append(functionText)
         }
         return XbExtractResult(updated)
+    }
+
+    private fun buildFunctionCallReplacement(source: String, selectionEnd: Int, indent: String, functionName: String): String {
+        val call = "$indent$functionName()"
+        val nextChar = source.getOrNull(selectionEnd)
+        if (selectionEnd >= source.length || nextChar == '\n') return "$call\n"
+        val trailing = source.substring(selectionEnd)
+        return if (trailing.startsWith(indent)) "$call\n" else call
     }
 }
 

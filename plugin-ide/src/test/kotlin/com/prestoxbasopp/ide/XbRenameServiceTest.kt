@@ -30,7 +30,7 @@ class XbRenameServiceTest {
                 Foo()
             return
         """.trimIndent()
-        val offset = source.indexOf("function") + 1
+        val offset = source.indexOf("return") + 1
 
         val result = renameService.rename(source, offset, "Bar")
 

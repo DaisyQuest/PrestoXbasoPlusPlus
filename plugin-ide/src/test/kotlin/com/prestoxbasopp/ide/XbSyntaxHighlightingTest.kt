@@ -16,7 +16,6 @@ class XbSyntaxHighlightingTest {
                 local cb := {|a| a + 1|}
                 return foo + 1
                 // comment
-                @
             end
         """.trimIndent()
         val spans = XbSyntaxHighlighter().highlight(source)
@@ -35,11 +34,19 @@ class XbSyntaxHighlightingTest {
             XbHighlightStyle.COMMENT,
             XbHighlightStyle.PREPROCESSOR,
             XbHighlightStyle.MACRO_DEFINITION,
-            XbHighlightStyle.ERROR,
         )
+        assertThat(styles).doesNotContain(XbHighlightStyle.ERROR)
         assertThat(spans).allSatisfy { span ->
             assertThat(span.textRange.endOffset).isGreaterThanOrEqualTo(span.textRange.startOffset)
         }
+    }
+
+    @Test
+    fun `highlights invalid tokens as errors`() {
+        val spans = XbSyntaxHighlighter().highlight("0x")
+
+        assertThat(spans).hasSize(1)
+        assertThat(spans.single().style).isEqualTo(XbHighlightStyle.ERROR)
     }
 
     @Test

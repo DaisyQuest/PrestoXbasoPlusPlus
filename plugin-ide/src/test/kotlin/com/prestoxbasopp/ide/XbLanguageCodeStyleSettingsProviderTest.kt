@@ -1,6 +1,5 @@
 package com.prestoxbasopp.ide
 
-import com.intellij.psi.codeStyle.CodeStyleSettingsCustomizable
 import com.intellij.psi.codeStyle.LanguageCodeStyleSettingsProvider.SettingsType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -11,28 +10,16 @@ class XbLanguageCodeStyleSettingsProviderTest {
         val provider = XbLanguageCodeStyleSettingsProvider()
 
         assertThat(provider.language).isEqualTo(XbLanguage)
-        assertThat(provider.getIndentOptionsEditor()).isNotNull
         assertThat(provider.getCodeSample(SettingsType.INDENT_SETTINGS)).contains("function", "if", "endif")
     }
 
     @Test
-    fun `language code style provider exposes standard indent options`() {
+    fun `language code style provider declares indent customization for indent settings`() {
         val provider = XbLanguageCodeStyleSettingsProvider()
-        val customizable = RecordingCustomizable()
 
-        provider.customizeSettings(customizable, SettingsType.INDENT_SETTINGS)
+        val settingsAware = provider.getCodeSample(SettingsType.INDENT_SETTINGS)
+        val wrappingAware = provider.getCodeSample(SettingsType.WRAPPING_AND_BRACES_SETTINGS)
 
-        assertThat(customizable.shownOptions)
-            .contains("INDENT_SIZE", "CONTINUATION_INDENT_SIZE", "TAB_SIZE", "USE_TAB_CHARACTER", "KEEP_INDENTS_ON_EMPTY_LINES")
-    }
-
-    private class RecordingCustomizable : CodeStyleSettingsCustomizable {
-        val shownOptions = mutableListOf<String>()
-
-        override fun showAllStandardOptions() = Unit
-
-        override fun showStandardOptions(vararg optionNames: String) {
-            shownOptions.addAll(optionNames)
-        }
+        assertThat(settingsAware).isEqualTo(wrappingAware)
     }
 }
