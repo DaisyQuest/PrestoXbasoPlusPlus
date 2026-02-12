@@ -341,18 +341,36 @@ class XbLexer(
             if (source[position] != '\\' || peekFrom(position, 1) != quote) {
                 return false
             }
-            var cursor = position + 2
-            while (cursor < source.length) {
-                val current = source[cursor]
-                if (current == '\n' || current == '\r') {
-                    return false
-                }
-                if (current == quote) {
-                    return true
-                }
-                cursor++
+            val continuationStart = position + 2
+            if (!isLikelyStringContinuation(continuationStart)) {
+                return false
             }
-            return false
+            val nextQuote = source.indexOf(quote, continuationStart)
+            if (nextQuote == -1) {
+                return false
+            }
+            val nextLineBreak = nextLineBreakIndex(continuationStart)
+            return nextLineBreak == -1 || nextQuote < nextLineBreak
+        }
+
+        private fun nextLineBreakIndex(start: Int): Int {
+            val nextLf = source.indexOf('\n', start)
+            val nextCr = source.indexOf('\r', start)
+            return when {
+                nextLf == -1 -> nextCr
+                nextCr == -1 -> nextLf
+                else -> minOf(nextLf, nextCr)
+            }
+        }
+
+        private fun isLikelyStringContinuation(start: Int): Boolean {
+            if (start >= source.length) {
+                return false
+            }
+            return when (source[start]) {
+                ' ', '\t', '\n', '\r', ';', ',', ')', ']', '}', '+', '-', '*', '/', '%', '=' -> false
+                else -> true
+            }
         }
 
         private fun peek(offset: Int): Char? {
