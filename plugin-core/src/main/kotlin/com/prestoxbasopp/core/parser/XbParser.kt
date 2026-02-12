@@ -80,6 +80,7 @@ class XbParser(private val tokens: List<Token>) {
                 parseExpressionStatement()
             }
             TokenType.BREAK -> parseBreakStatement()
+            TokenType.INDEX -> parseIndexCommandStatement()
             TokenType.AT -> if (!canStartAtSayGetExpression(peekNext().type)) {
                 val token = advance()
                 recordError("Unexpected token '@' at ${token.startOffset}")
@@ -118,6 +119,36 @@ class XbParser(private val tokens: List<Token>) {
             }
             else -> parseExpressionStatement()
         }
+    }
+
+    private fun parseIndexCommandStatement(): XbStatement? {
+        val indexToken = advance()
+        if (!match(TokenType.ON)) {
+            recordError("Expected ON after INDEX at ${peek().startOffset}")
+            return parseExpressionStatement()
+        }
+        val keyExpression = parseExpression(0) ?: run {
+            recordError("Expected expression after INDEX ON at ${peek().startOffset}")
+            fallbackExpression(indexToken)
+        }
+        if (!match(TokenType.TO)) {
+            recordError("Expected TO after INDEX ON expression at ${peek().startOffset}")
+            return XbExpressionStatement(keyExpression, rangeFrom(indexToken, previousOr(indexToken)))
+        }
+        val targetExpression = if (match(TokenType.IDENTIFIER)) {
+            XbIdentifierExpression(previous().lexeme, rangeFrom(previous(), previous()))
+        } else {
+            recordError("Expected identifier after TO at ${peek().startOffset}")
+            fallbackExpression(indexToken)
+        }
+        match(TokenType.SEMICOLON)
+        val commandExpression = XbBinaryExpression(
+            operator = "to",
+            left = keyExpression,
+            right = targetExpression,
+            range = rangeFromOffsets(keyExpression.range.startOffset, targetExpression.range.endOffset),
+        )
+        return XbExpressionStatement(commandExpression, rangeFrom(indexToken, previousOr(indexToken)))
     }
 
     private fun parseExpressionStatement(): XbStatement? {
@@ -764,19 +795,29 @@ class XbParser(private val tokens: List<Token>) {
                 }
                 TokenType.LBRACKET -> {
                     advance()
-                    val indexExpr = parseExpression(0) ?: run {
+                    val indexExpressions = mutableListOf<XbExpression>()
+                    parseExpression(0)?.let { indexExpressions += it } ?: run {
                         recordError("Expected expression inside indexer at ${peek().startOffset}")
-                        fallbackExpression(previous())
+                        indexExpressions += fallbackExpression(previous())
+                    }
+                    while (match(TokenType.COMMA)) {
+                        parseExpression(0)?.let { indexExpressions += it } ?: run {
+                            recordError("Expected expression after ',' inside indexer at ${peek().startOffset}")
+                            indexExpressions += fallbackExpression(previous())
+                        }
                     }
                     if (!match(TokenType.RBRACKET)) {
                         recordError("Expected ']' after index expression at ${peek().startOffset}")
                     }
-                    val endToken = previousOr(lastTokenFrom(indexExpr.range))
-                    XbIndexExpression(
-                        target = currentExpression,
-                        index = indexExpr,
-                        range = rangeFromOffsets(currentExpression.range.startOffset, endToken.endOffset),
-                    )
+                    var indexedExpression = currentExpression
+                    for (indexExpr in indexExpressions) {
+                        indexedExpression = XbIndexExpression(
+                            target = indexedExpression,
+                            index = indexExpr,
+                            range = rangeFromOffsets(indexedExpression.range.startOffset, indexExpr.range.endOffset),
+                        )
+                    }
+                    indexedExpression
                 }
                 TokenType.COLON -> {
                     val colonToken = advance()
@@ -822,19 +863,27 @@ class XbParser(private val tokens: List<Token>) {
         }
         var target: XbExpression = XbIdentifierExpression(previous().lexeme, rangeFrom(previous(), previous()))
         while (match(TokenType.LBRACKET)) {
-            val indexExpr = parseExpression(0) ?: run {
+            val indexExpressions = mutableListOf<XbExpression>()
+            parseExpression(0)?.let { indexExpressions += it } ?: run {
                 recordError("Expected expression inside indexer at ${peek().startOffset}")
-                fallbackExpression(previous())
+                indexExpressions += fallbackExpression(previous())
+            }
+            while (match(TokenType.COMMA)) {
+                parseExpression(0)?.let { indexExpressions += it } ?: run {
+                    recordError("Expected expression after ',' inside indexer at ${peek().startOffset}")
+                    indexExpressions += fallbackExpression(previous())
+                }
             }
             if (!match(TokenType.RBRACKET)) {
                 recordError("Expected ']' after index expression at ${peek().startOffset}")
             }
-            val endToken = previousOr(lastTokenFrom(indexExpr.range))
-            target = XbIndexExpression(
-                target = target,
-                index = indexExpr,
-                range = rangeFromOffsets(target.range.startOffset, endToken.endOffset),
-            )
+            for (indexExpr in indexExpressions) {
+                target = XbIndexExpression(
+                    target = target,
+                    index = indexExpr,
+                    range = rangeFromOffsets(target.range.startOffset, indexExpr.range.endOffset),
+                )
+            }
         }
         return target
     }

@@ -75,7 +75,7 @@ class XbLexer(
                 if (match('=')) {
                     token(TokenType.NEQ, "!=", start, index)
                 } else {
-                    token(TokenType.ERROR, "!", start, index)
+                    token(TokenType.NOT, "not", start, index)
                 }
             }
             current == '<' -> {
@@ -230,6 +230,8 @@ class XbLexer(
             "say" -> TokenType.SAY
             "get" -> TokenType.GET
             "valid" -> TokenType.VALID
+            "on" -> TokenType.ON
+            "index" -> TokenType.INDEX
             "function" -> TokenType.FUNCTION
             "procedure" -> TokenType.PROCEDURE
             "endfunction" -> TokenType.ENDFUNCTION
