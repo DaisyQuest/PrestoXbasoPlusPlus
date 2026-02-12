@@ -15,6 +15,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.ui.ScrollPaneFactory
 import com.intellij.ui.TreeSpeedSearch
 import com.intellij.ui.components.JBLabel
@@ -49,6 +50,8 @@ import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.datatransfer.StringSelection
 import com.google.gson.GsonBuilder
+import java.util.concurrent.Executor
+import java.util.concurrent.atomic.AtomicLong
 import java.util.regex.Pattern
 import javax.swing.JButton
 import javax.swing.JTabbedPane
@@ -75,6 +78,12 @@ data class XbAstPresentation(
     val root: XbAstTreeNode?,
     val message: String?,
     val parserErrors: List<XbParserErrorEntry> = emptyList(),
+    val isLoading: Boolean = false,
+)
+
+data class XbAstDocumentSnapshot(
+    val fileName: String?,
+    val text: String?,
 )
 
 data class XbParserErrorEntry(
@@ -436,11 +445,19 @@ class XbAstPanel {
         latestPresentation = presentation
         messageLabel.text = presentation.message ?: ""
         messageLabel.isVisible = presentation.message != null
-        copyAstButton.isEnabled = presentation.root != null
-        copyErrorsJsonButton.isEnabled = presentation.parserErrors.isNotEmpty()
+        copyAstButton.isEnabled = presentation.root != null && !presentation.isLoading
+        copyErrorsJsonButton.isEnabled = presentation.parserErrors.isNotEmpty() && !presentation.isLoading
         val rootNode = presentation.root?.toSwingNode() ?: DefaultMutableTreeNode("File")
         tree.model = DefaultTreeModel(rootNode)
-        TreeUtil.expandAll(tree)
+        if (presentation.isLoading) {
+            tree.emptyText.text = "Loading AST..."
+            parserErrorsArea.text = "Loading parser errors..."
+            return
+        }
+
+        if ((presentation.root?.countNodes() ?: 0) <= 400) {
+            TreeUtil.expandAll(tree)
+        }
         parserErrorsArea.text = parserErrorReportBuilder.formatForDisplay(presentation.parserErrors)
         tree.emptyText.text = if (presentation.root == null) {
             "No AST to display."
@@ -468,6 +485,10 @@ class XbAstPanel {
         }
         return node
     }
+
+    private fun XbAstTreeNode.countNodes(): Int {
+        return 1 + children.sumOf { it.countNodes() }
+    }
 }
 
 class XbAstTextFormatter {
@@ -492,6 +513,7 @@ private class XbAstToolWindowController(
     private val presenter: XbAstPresenter = XbAstPresenter(),
 ) : Disposable {
     private val connection = project.messageBus.connect(this)
+    private val coordinator = XbAstPresentationCoordinator(presenter)
     private var activeDocument: Document? = null
     private val documentListener = object : DocumentListener {
         override fun documentChanged(event: DocumentEvent) {
@@ -517,8 +539,12 @@ private class XbAstToolWindowController(
         val editor = FileEditorManager.getInstance(project).selectedTextEditor
         val file = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
         updateDocumentListener(editor?.document)
-        val presentation = buildPresentation(file, editor)
-        panel.render(presentation)
+        val snapshot = buildSnapshot(file, editor)
+        coordinator.schedule(
+            snapshot = snapshot,
+            onLoading = panel::render,
+            onReady = panel::render,
+        )
     }
 
     private fun updateDocumentListener(document: Document?) {
@@ -530,11 +556,62 @@ private class XbAstToolWindowController(
         activeDocument?.addDocumentListener(documentListener)
     }
 
-    private fun buildPresentation(file: VirtualFile?, editor: Editor?): XbAstPresentation {
-        return ApplicationManager.getApplication().runReadAction<XbAstPresentation> {
-            val fileName = file?.name
-            val text = editor?.document?.text
-            presenter.present(fileName, text)
+    private fun buildSnapshot(file: VirtualFile?, editor: Editor?): XbAstDocumentSnapshot {
+        return ApplicationManager.getApplication().runReadAction<XbAstDocumentSnapshot> {
+            XbAstDocumentSnapshot(
+                fileName = file?.name,
+                text = editor?.document?.text,
+            )
         }
+    }
+}
+
+class XbAstPresentationCoordinator(
+    private val presenter: XbAstPresenter,
+    private val executor: Executor = AppExecutorUtil.getAppExecutorService(),
+    private val uiDispatcher: ((() -> Unit) -> Unit) = { runnable ->
+        ApplicationManager.getApplication().invokeLater(runnable)
+    },
+    private val largeFileThreshold: Int = 100_000,
+) {
+    private val revision = AtomicLong(0)
+
+    fun schedule(
+        snapshot: XbAstDocumentSnapshot,
+        onLoading: (XbAstPresentation) -> Unit,
+        onReady: (XbAstPresentation) -> Unit,
+    ) {
+        val currentRevision = revision.incrementAndGet()
+        onLoading(buildLoadingPresentation(snapshot))
+        executor.execute {
+            val computed = presenter.present(snapshot.fileName, snapshot.text)
+            uiDispatcher {
+                if (currentRevision == revision.get()) {
+                    onReady(computed)
+                }
+            }
+        }
+    }
+
+    private fun buildLoadingPresentation(snapshot: XbAstDocumentSnapshot): XbAstPresentation {
+        if (snapshot.text == null) {
+            return XbAstPresentation(
+                root = null,
+                message = "No active editor.",
+                isLoading = true,
+            )
+        }
+
+        val fileLabel = snapshot.fileName?.let { "File: $it" } ?: "File: (unsaved)"
+        val loadingMessage = if (snapshot.text.length >= largeFileThreshold) {
+            "$fileLabel — Loading AST for large file (${snapshot.text.length} chars)..."
+        } else {
+            "$fileLabel — Loading AST..."
+        }
+        return XbAstPresentation(
+            root = null,
+            message = loadingMessage,
+            isLoading = true,
+        )
     }
 }
