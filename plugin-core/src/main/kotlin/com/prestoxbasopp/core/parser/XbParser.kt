@@ -127,6 +127,13 @@ class XbParser(private val tokens: List<Token>) {
                     parseDefaultCommandStatement()
                 } else if (isIdentifierKeyword(peek(), "alertbox")) {
                     parseAlertBoxStatement()
+                } else if (
+                    isIdentifierKeyword(peek(), "class") ||
+                    isIdentifierKeyword(peek(), "inline") ||
+                    isIdentifierKeyword(peek(), "method") ||
+                    isIdentifierKeyword(peek(), "endclass")
+                ) {
+                    parseClassLikeStatement()
                 } else if (isAssignmentStatementStart()) {
                     parseAssignmentStatement()
                 } else {
@@ -240,6 +247,36 @@ class XbParser(private val tokens: List<Token>) {
         return XbExpressionStatement(
             expression = XbIdentifierExpression(setToken.lexeme, rangeFrom(setToken, setToken)),
             range = rangeFrom(setToken, endToken),
+        )
+    }
+
+    private fun parseClassLikeStatement(): XbStatement {
+        val startToken = advance()
+        val keyword = startToken.lexeme.lowercase()
+        if (keyword == "endclass") {
+            return XbExpressionStatement(
+                expression = XbIdentifierExpression(startToken.lexeme, rangeFrom(startToken, startToken)),
+                range = rangeFrom(startToken, startToken),
+            )
+        }
+        while (!isAtEnd()) {
+            if (check(TokenType.SEMICOLON)) {
+                advance()
+                break
+            }
+            val tokenType = peek().type
+            if (tokenType in CLASS_LIKE_BOUNDARY_TOKENS) {
+                break
+            }
+            if (tokenType == TokenType.IDENTIFIER && isClassLikeBoundaryKeyword(peek().lexeme)) {
+                break
+            }
+            advance()
+        }
+        val endToken = previousOr(startToken)
+        return XbExpressionStatement(
+            expression = XbIdentifierExpression(startToken.lexeme, rangeFrom(startToken, startToken)),
+            range = rangeFrom(startToken, endToken),
         )
     }
 
@@ -764,7 +801,8 @@ class XbParser(private val tokens: List<Token>) {
             if (!canStartExpression(peek().type) && isExpressionBoundary(peek().type)) {
                 return left
             }
-            val right = parseExpression(precedence + 1) ?: run {
+            val rightPrecedence = if (operatorToken.type == TokenType.ASSIGN) precedence else precedence + 1
+            val right = parseExpression(rightPrecedence) ?: run {
                 recordError("Expected expression after '${operatorToken.lexeme}' at ${peek().startOffset}")
                 fallbackExpression(operatorToken)
             }
@@ -976,19 +1014,34 @@ class XbParser(private val tokens: List<Token>) {
                     )
                 }
                 TokenType.ARROW -> {
-                    if (peekNext().type != TokenType.IDENTIFIER) {
+                    if (peekNext().type != TokenType.IDENTIFIER && peekNext().type != TokenType.LPAREN) {
                         return currentExpression
                     }
                     advance()
-                    val memberToken = if (match(TokenType.IDENTIFIER)) previous() else null
-                    if (memberToken == null) {
-                        recordError("Expected member name after '->' at ${peek().startOffset}")
-                        currentExpression
-                    } else {
-                        XbIdentifierExpression(
-                            name = "${renderExpression(currentExpression)}->${memberToken.lexeme}",
-                            range = rangeFromOffsets(currentExpression.range.startOffset, memberToken.endOffset),
-                        )
+                    when {
+                        match(TokenType.IDENTIFIER) -> {
+                            val memberToken = previous()
+                            XbIdentifierExpression(
+                                name = "${renderExpression(currentExpression)}->${memberToken.lexeme}",
+                                range = rangeFromOffsets(currentExpression.range.startOffset, memberToken.endOffset),
+                            )
+                        }
+                        match(TokenType.LPAREN) -> {
+                            val parenStart = previous()
+                            val scopedExpression = parseExpression(0) ?: run {
+                                recordError("Expected expression after '->(' at ${peek().startOffset}")
+                                fallbackExpression(parenStart)
+                            }
+                            if (!match(TokenType.RPAREN)) {
+                                recordError("Expected ')' after scoped '->(' expression at ${peek().startOffset}")
+                            }
+                            val endToken = previousOr(parenStart)
+                            XbIdentifierExpression(
+                                name = "${renderExpression(currentExpression)}->(${renderExpression(scopedExpression)})",
+                                range = rangeFromOffsets(currentExpression.range.startOffset, endToken.endOffset),
+                            )
+                        }
+                        else -> currentExpression
                     }
                 }
                 else -> return currentExpression
@@ -1055,6 +1108,9 @@ class XbParser(private val tokens: List<Token>) {
     private fun renderExpression(expression: XbExpression): String {
         return when (expression) {
             is XbIdentifierExpression -> expression.name
+            is XbCallExpression -> "${renderExpression(expression.callee)}()"
+            is XbIndexExpression -> "${renderExpression(expression.target)}[${renderExpression(expression.index)}]"
+            is XbUnaryExpression -> "${expression.operator}${renderExpression(expression.expression)}"
             else -> "<expr>"
         }
     }
@@ -1067,6 +1123,7 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.LT, TokenType.LTE, TokenType.GT, TokenType.GTE -> 4
             TokenType.PLUS, TokenType.MINUS -> 5
             TokenType.STAR, TokenType.SLASH, TokenType.PERCENT -> 6
+            TokenType.ASSIGN -> 0
             else -> null
         }
     }
@@ -1152,6 +1209,14 @@ class XbParser(private val tokens: List<Token>) {
             operator == TokenType.SLASH ||
             operator == TokenType.PERCENT) &&
             tokens[index + 1].type == TokenType.EQ
+    }
+
+    private fun isClassLikeBoundaryKeyword(lexeme: String): Boolean {
+        val normalized = lexeme.lowercase()
+        return normalized == "class" ||
+            normalized == "method" ||
+            normalized == "inline" ||
+            normalized == "endclass"
     }
 
     private fun isAtEnd(): Boolean = peek().type == TokenType.EOF
@@ -1329,6 +1394,25 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.NEXT,
             TokenType.RECOVER,
             TokenType.END,
+            TokenType.EOF,
+        )
+
+        private val CLASS_LIKE_BOUNDARY_TOKENS = setOf(
+            TokenType.FUNCTION,
+            TokenType.PROCEDURE,
+            TokenType.LOCAL,
+            TokenType.FOR,
+            TokenType.IF,
+            TokenType.WHILE,
+            TokenType.DO,
+            TokenType.RETURN,
+            TokenType.WAIT,
+            TokenType.EXIT,
+            TokenType.BEGIN,
+            TokenType.BREAK,
+            TokenType.INDEX,
+            TokenType.QUESTION,
+            TokenType.AT,
             TokenType.EOF,
         )
 
