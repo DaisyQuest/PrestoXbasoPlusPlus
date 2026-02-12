@@ -14,13 +14,13 @@ class XbSourceOffsetMapping(
     }
 
     val logicalLength: Int = segments.maxOfOrNull { it.logicalEnd } ?: 0
+    private val logicalStarts: IntArray = IntArray(segments.size) { index -> segments[index].logicalStart }
 
     fun toSourceOffset(logicalOffset: Int): Int? {
         if (logicalOffset < 0) {
             return null
         }
-        val segment = segments.firstOrNull { logicalOffset >= it.logicalStart && logicalOffset < it.logicalEnd }
-            ?: return null
+        val segment = findContainingSegment(logicalOffset) ?: return null
         return segment.sourceStart + (logicalOffset - segment.logicalStart)
     }
 
@@ -37,9 +37,47 @@ class XbSourceOffsetMapping(
         if (logicalOffset == 0) {
             return segments.firstOrNull()?.sourceStart
         }
-        val segment = segments.lastOrNull { logicalOffset > it.logicalStart && logicalOffset <= it.logicalEnd }
+        val segment = findContainingSegmentForRangeEnd(logicalOffset)
             ?: return null
         return segment.sourceStart + (logicalOffset - segment.logicalStart)
+    }
+
+    private fun findContainingSegment(logicalOffset: Int): Segment? {
+        if (segments.isEmpty()) {
+            return null
+        }
+        var low = 0
+        var high = segments.lastIndex
+        while (low <= high) {
+            val mid = (low + high) ushr 1
+            val segment = segments[mid]
+            when {
+                logicalOffset < segment.logicalStart -> high = mid - 1
+                logicalOffset >= segment.logicalEnd -> low = mid + 1
+                else -> return segment
+            }
+        }
+        return null
+    }
+
+    private fun findContainingSegmentForRangeEnd(logicalOffset: Int): Segment? {
+        if (segments.isEmpty()) {
+            return null
+        }
+        val insertionPoint = logicalStarts.binarySearch(logicalOffset)
+        val index = when {
+            insertionPoint >= 0 -> insertionPoint - 1
+            else -> -insertionPoint - 2
+        }
+        if (index !in segments.indices) {
+            return null
+        }
+        val segment = segments[index]
+        return if (logicalOffset > segment.logicalStart && logicalOffset <= segment.logicalEnd) {
+            segment
+        } else {
+            null
+        }
     }
 
     companion object {
