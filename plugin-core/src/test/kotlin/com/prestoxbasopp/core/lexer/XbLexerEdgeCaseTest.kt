@@ -83,6 +83,22 @@ class XbLexerEdgeCaseTest {
     }
 
     @Test
+    fun `accepts tilde inside both quote styles and single quoted backslash as complete string`() {
+        val source = """
+            @ 6.5,23 DCPUSHBUTTON CAPTION "~CANCEL"
+            @ 6.5,10 DCPUSHBUTTON CAPTION '~OK'
+            cPath += '\\'
+        """.trimIndent()
+
+        val result = XbLexer().lex(source)
+
+        assertThat(result.errors).isEmpty()
+        assertThat(result.tokens).anyMatch { it.type == XbTokenType.STRING && it.text == "\"~CANCEL\"" }
+        assertThat(result.tokens).anyMatch { it.type == XbTokenType.STRING && it.text == "'~OK'" }
+        assertThat(result.tokens).anyMatch { it.type == XbTokenType.STRING && it.text == "'\\\\'" }
+    }
+
+    @Test
     fun `reports unterminated date literals`() {
         val source = "{^2024-01-02"
         val result = XbLexer().lex(source)

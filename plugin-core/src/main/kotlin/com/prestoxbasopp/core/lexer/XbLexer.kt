@@ -100,12 +100,13 @@ class XbLexer(
         private fun lexString(quote: Char) {
             val start = index
             index++
+            val supportsBackslashEscapes = quote == '"'
             var escaped = false
             while (index < source.length) {
                 val char = source[index]
                 if (escaped) {
                     escaped = false
-                } else if (char == '\\') {
+                } else if (supportsBackslashEscapes && char == '\\') {
                     escaped = true
                 } else if (char == quote && peek(1) == quote) {
                     index += 2
@@ -158,6 +159,7 @@ class XbLexer(
             index++
             var depth = 1
             var stringQuote: Char? = null
+            var stringSupportsBackslashEscapes = false
             var escaped = false
             while (index < source.length) {
                 val char = source[index]
@@ -168,7 +170,7 @@ class XbLexer(
                         continue
                     }
                     when {
-                        char == '\\' -> {
+                        stringSupportsBackslashEscapes && char == '\\' -> {
                             escaped = true
                             index++
                         }
@@ -185,6 +187,7 @@ class XbLexer(
                 }
                 if (char == '"' || char == '\'') {
                     stringQuote = char
+                    stringSupportsBackslashEscapes = char == '"'
                     index++
                     continue
                 }
