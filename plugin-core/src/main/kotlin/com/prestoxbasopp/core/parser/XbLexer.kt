@@ -42,7 +42,7 @@ class XbLexer(
             current == '%' -> token(TokenType.PERCENT, "%", start, index)
             current == '(' -> token(TokenType.LPAREN, "(", start, index)
             current == ')' -> token(TokenType.RPAREN, ")", start, index)
-            current == '[' -> token(TokenType.LBRACKET, "[", start, index)
+            current == '[' -> readBracketLiteralOrLBracket(start)
             current == ']' -> token(TokenType.RBRACKET, "]", start, index)
             current == '{' -> token(TokenType.LBRACE, "{", start, index)
             current == '}' -> token(TokenType.RBRACE, "}", start, index)
@@ -145,6 +145,19 @@ class XbLexer(
         }
         advance()
         return token(TokenType.STRING, builder.toString(), start, index)
+    }
+
+    private fun readBracketLiteralOrLBracket(start: Int): Token {
+        val closeBracket = source.indexOf(']', index)
+        if (closeBracket != -1) {
+            val content = source.substring(index, closeBracket)
+            val hasLineBreak = content.any { it == '\n' || it == '\r' }
+            if (!hasLineBreak && content.contains('\\')) {
+                index = closeBracket + 1
+                return token(TokenType.STRING, content, start, index)
+            }
+        }
+        return token(TokenType.LBRACKET, "[", start, index)
     }
 
     private fun keywordType(text: String): TokenType {

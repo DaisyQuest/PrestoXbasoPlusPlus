@@ -229,4 +229,27 @@ class XbLexerTokenizationTest {
         assertThat(tokens.none { it.type == TokenType.ERROR }).isTrue()
     }
 
+    @Test
+    fun `tokenizes fexists windows path argument without unexpected slash tokens`() {
+        val source = """fExists("C:\"+y2+"s"+x1+"Place\"+z3+".tmw")"""
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.none { it.type == TokenType.ERROR }).isTrue()
+        assertThat(tokens.filter { it.type == TokenType.STRING }.map { it.lexeme }).containsExactly(
+            "C:\\",
+            "s",
+            "Place\\",
+            ".tmw",
+        )
+    }
+
+    @Test
+    fun `tokenizes bracket path literal with backslash as string`() {
+        val source = """File2SEi(rootPath()+datExport,[data\],"NO")"""
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.none { it.type == TokenType.ERROR }).isTrue()
+        assertThat(tokens).anyMatch { it.type == TokenType.STRING && it.lexeme == "data\\" }
+    }
+
 }
