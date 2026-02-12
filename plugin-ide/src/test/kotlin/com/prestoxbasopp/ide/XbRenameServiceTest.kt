@@ -115,4 +115,51 @@ class XbRenameServiceTest {
         assertThat(result.updatedText).contains("local total")
         assertThat(result.updatedText).contains("total := total + 2")
     }
+
+    @Test
+    fun `renames function parameters as local scope declarations`() {
+        val source = """
+            function Main(count)
+                return count + 1
+            endfunction
+
+            function Other()
+                local count := 5
+                return count
+            endfunction
+        """.trimIndent()
+        val offset = source.indexOf("count + 1") + 1
+
+        val result = renameService.rename(source, offset, "total")
+
+        assertThat(result.errors).isEmpty()
+        assertThat(result.updatedText).contains("function Main(total)")
+        assertThat(result.updatedText).contains("return total + 1")
+        assertThat(result.updatedText).contains("local count := 5")
+    }
+
+    @Test
+    fun `renames private variables only in their declaring function`() {
+        val source = """
+            function Main()
+                private count
+                count := count + 1
+            endfunction
+
+            function Other()
+                private count
+                count := count + 2
+            endfunction
+        """.trimIndent()
+        val offset = source.indexOf("count + 1") + 1
+
+        val result = renameService.rename(source, offset, "total")
+
+        assertThat(result.errors).isEmpty()
+        assertThat(result.updatedText).contains("private total")
+        assertThat(result.updatedText).contains("total := total + 1")
+        assertThat(result.updatedText).contains("private count")
+        assertThat(result.updatedText).contains("count := count + 2")
+    }
+
 }

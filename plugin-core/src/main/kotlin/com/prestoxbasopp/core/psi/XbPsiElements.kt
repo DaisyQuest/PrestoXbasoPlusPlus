@@ -28,11 +28,20 @@ class XbPsiFunctionDeclaration(
 class XbPsiVariableDeclaration(
     override val symbolName: String,
     val isMutable: Boolean,
+    val storageClass: XbVariableStorageClass = XbVariableStorageClass.LOCAL,
     textRange: XbTextRange,
     text: String,
     children: List<XbPsiElement> = emptyList(),
 ) : XbBasePsiElement(symbolName, textRange, text, children, XbPsiElementType.VARIABLE_DECLARATION), XbPsiSymbol {
     override val role: XbSymbolRole = XbSymbolRole.DECLARATION
+}
+
+enum class XbVariableStorageClass {
+    LOCAL,
+    STATIC,
+    PRIVATE,
+    PUBLIC,
+    GLOBAL,
 }
 
 class XbPsiSymbolReference(

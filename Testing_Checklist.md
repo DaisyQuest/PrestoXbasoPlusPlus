@@ -64,3 +64,5 @@
 - AST tool window async presentation coordinator tests for loading-state messaging, large-file indicators, and stale-result suppression.
 - Parser compatibility coverage for production snippets using pass-by-reference `@` arguments and colon-based method dispatch in call expressions.
 - Parser compatibility coverage for legacy `DO CASE` / `SET ... TO` / `PARAMETERS` statements and sparse argument lists (e.g., double-comma calls).
+
+- Scope-resolution coverage for LOCAL parameters plus PRIVATE/PUBLIC/GLOBAL declaration semantics across PSI builder, navigation, and rename services.

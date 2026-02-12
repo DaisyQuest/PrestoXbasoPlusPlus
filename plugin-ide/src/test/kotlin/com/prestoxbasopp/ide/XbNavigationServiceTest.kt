@@ -242,4 +242,51 @@ class XbNavigationServiceTest {
         assertThat(usages).hasSize(1)
         assertThat(usages.first().textRange).isEqualTo(XbTextRange(20, 25))
     }
+
+    @Test
+    fun `public declaration resolves when local and private declarations are absent`() {
+        val source = """
+            public count
+
+            function Main()
+                count := count + 1
+            endfunction
+        """.trimIndent()
+        val root = XbPsiTextBuilder().build(source)
+        val snapshot = XbPsiSnapshot.fromElement(
+            root.children.filterIsInstance<com.prestoxbasopp.core.psi.XbPsiVariableDeclaration>().first { it.symbolName == "count" },
+        )
+
+        val service = XbNavigationService()
+        val usages = service.findUsagesFromDefinition(root, snapshot, service.buildIndex(root))
+
+        assertThat(usages).hasSize(2)
+    }
+
+    @Test
+    fun `private declaration remains function scoped for usages`() {
+        val source = """
+            function Main()
+                private count
+                count := count + 1
+            endfunction
+
+            function Other()
+                count := 5
+            endfunction
+        """.trimIndent()
+        val root = XbPsiTextBuilder().build(source)
+        val declaration = root.children.filterIsInstance<com.prestoxbasopp.core.psi.XbPsiVariableDeclaration>()
+            .first { it.symbolName == "count" && it.textRange.startOffset < source.indexOf("endfunction") }
+        val snapshot = XbPsiSnapshot.fromElement(declaration)
+
+        val service = XbNavigationService()
+        val usages = service.findUsagesFromDefinition(root, snapshot, service.buildIndex(root))
+
+        assertThat(usages.map { it.textRange.startOffset }).containsExactlyInAnyOrder(
+            source.indexOf("count := count + 1"),
+            source.indexOf("count := count + 1") + "count := ".length,
+        )
+    }
+
 }

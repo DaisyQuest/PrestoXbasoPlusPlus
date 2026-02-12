@@ -9,6 +9,7 @@ data class XbPsiSnapshot(
     val text: String,
     val parameters: List<String> = emptyList(),
     val isMutable: Boolean? = null,
+    val storageClass: XbVariableStorageClass? = null,
     val literalKind: String? = null,
     val symbolRole: XbSymbolRole? = null,
     val children: List<XbPsiSnapshot> = emptyList(),
@@ -17,6 +18,7 @@ data class XbPsiSnapshot(
         fun fromElement(element: XbPsiElement): XbPsiSnapshot {
             val parameters = if (element is XbPsiFunctionDeclaration) element.parameters else emptyList()
             val isMutable = if (element is XbPsiVariableDeclaration) element.isMutable else null
+            val storageClass = if (element is XbPsiVariableDeclaration) element.storageClass else null
             val literalKind = if (element is XbPsiLiteral) element.literalKind else null
             val symbolRole = if (element is XbPsiSymbol) element.role else null
             return XbPsiSnapshot(
@@ -26,6 +28,7 @@ data class XbPsiSnapshot(
                 text = element.text,
                 parameters = parameters,
                 isMutable = isMutable,
+                storageClass = storageClass,
                 literalKind = literalKind,
                 symbolRole = symbolRole,
                 children = element.children.map { fromElement(it) },
@@ -56,6 +59,7 @@ data class XbPsiSnapshot(
                 XbPsiElementType.VARIABLE_DECLARATION -> XbPsiVariableDeclaration(
                     symbolName = snapshot.name.orEmpty(),
                     isMutable = snapshot.isMutable ?: false,
+                    storageClass = snapshot.storageClass ?: XbVariableStorageClass.LOCAL,
                     textRange = snapshot.textRange,
                     text = snapshot.text,
                     children = children,
