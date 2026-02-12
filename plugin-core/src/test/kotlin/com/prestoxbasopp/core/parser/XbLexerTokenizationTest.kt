@@ -41,4 +41,35 @@ class XbLexerTokenizationTest {
         assertThat(token.type).isEqualTo(TokenType.ERROR)
         assertThat(token.lexeme).isEqualTo("!")
     }
+
+    @Test
+    fun `tokenizes single quoted string with backslash`() {
+        val source = "cPath += '\\\\'"
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.PLUS,
+            TokenType.EQ,
+            TokenType.STRING,
+        )
+        assertThat(tokens.last().lexeme).isEqualTo("\\\\")
+    }
+
+    @Test
+    fun `tokenizes hash not equal operator in conditional expression`() {
+        val source = "IF valtype(soSatOK) # \"L\""
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IF,
+            TokenType.IDENTIFIER,
+            TokenType.LPAREN,
+            TokenType.IDENTIFIER,
+            TokenType.RPAREN,
+            TokenType.NEQ,
+            TokenType.STRING,
+        )
+        assertThat(tokens[5].lexeme).isEqualTo("!=")
+    }
 }

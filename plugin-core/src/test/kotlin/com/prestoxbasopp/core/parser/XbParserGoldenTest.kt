@@ -91,6 +91,40 @@ class XbParserGoldenTest {
                 """.trimIndent(),
             ),
             GoldenTestCase(
+                id = "hash-not-equal-with-parenthesized-call",
+                source = "IF valtype(soSatOK) # \"L\"; RETURN soSatOK; ENDIF",
+                expectedAst = """
+                    File
+                      Stmt.If
+                        Expr.Binary.NotEqual
+                          Expr.Call
+                            Expr.Identifier[name=valtype]
+                            Expr.Identifier[name=soSatOK]
+                          Expr.Literal.String[value=L]
+                        Block[branch=then]
+                          Stmt.Return
+                            Expr.Identifier[name=soSatOK]
+                        Block[branch=else]
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "single-quoted-backslash-string-in-compound-assignment-shape",
+                source = "cPath += '\\\\'",
+                expectedAst = """
+                    File
+                      Stmt.Expression
+                        Expr.Binary.Add
+                          Expr.Identifier[name=cPath]
+                          Expr.Identifier[name="<error>"]
+                      Stmt.Expression
+                        Expr.Literal.String[value="\\\\"]
+                """.trimIndent(),
+                expectedErrors = listOf(
+                    "Unexpected token EQ at 7",
+                    "Expected expression after '+' at 9",
+                ),
+            ),
+            GoldenTestCase(
                 id = "while-loop",
                 source = "while n > 0 do n - 1; enddo",
                 expectedAst = """
