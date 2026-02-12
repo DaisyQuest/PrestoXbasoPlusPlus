@@ -96,6 +96,7 @@ class XbParser(private val tokens: List<Token>) {
             }
             TokenType.ENDIF,
             TokenType.ELSE,
+            TokenType.ELSEIF,
             TokenType.ENDDO,
             TokenType.ENDFUNCTION,
             TokenType.ENDPROC,
@@ -334,11 +335,41 @@ class XbParser(private val tokens: List<Token>) {
             fallbackExpression(ifToken)
         }
         match(TokenType.THEN)
-        val thenBlock = parseBlock(setOf(TokenType.ELSE, TokenType.ENDIF))
-        val elseBlock = if (match(TokenType.ELSE)) {
+        val thenBlock = parseBlock(setOf(TokenType.ELSEIF, TokenType.ELSE, TokenType.ENDIF))
+
+        val elseIfBranches = mutableListOf<Triple<Token, XbExpression, XbBlock>>()
+        while (match(TokenType.ELSEIF)) {
+            val elseIfToken = previous()
+            val elseIfCondition = parseExpression(0) ?: run {
+                recordError("Expected condition after ELSEIF at ${peek().startOffset}")
+                synchronizeTo(setOf(TokenType.THEN, TokenType.ELSEIF, TokenType.ELSE, TokenType.ENDIF))
+                fallbackExpression(elseIfToken)
+            }
+            match(TokenType.THEN)
+            val elseIfThenBlock = parseBlock(setOf(TokenType.ELSEIF, TokenType.ELSE, TokenType.ENDIF))
+            elseIfBranches += Triple(elseIfToken, elseIfCondition, elseIfThenBlock)
+        }
+
+        val explicitElse = if (match(TokenType.ELSE)) {
             parseBlock(setOf(TokenType.ENDIF))
         } else {
             null
+        }
+        var elseBlock = explicitElse
+        for ((elseIfToken, elseIfCondition, elseIfThenBlock) in elseIfBranches.asReversed()) {
+            val nestedElseIf = XbIfStatement(
+                condition = elseIfCondition,
+                thenBlock = elseIfThenBlock,
+                elseBlock = elseBlock,
+                range = rangeFromOffsets(
+                    elseIfToken.startOffset,
+                    elseBlock?.range?.endOffset ?: elseIfThenBlock.range.endOffset,
+                ),
+            )
+            elseBlock = XbBlock(
+                statements = listOf(nestedElseIf),
+                range = nestedElseIf.range,
+            )
         }
         if (!match(TokenType.ENDIF)) {
             recordError("Expected ENDIF to close IF at ${peek().startOffset}")
@@ -873,6 +904,7 @@ class XbParser(private val tokens: List<Token>) {
         return type == TokenType.SEMICOLON ||
             type == TokenType.ENDIF ||
             type == TokenType.ELSE ||
+            type == TokenType.ELSEIF ||
             type == TokenType.ENDDO ||
             type == TokenType.ENDFUNCTION ||
             type == TokenType.ENDPROC ||
@@ -888,6 +920,7 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.SEMICOLON,
             TokenType.ENDIF,
             TokenType.ELSE,
+            TokenType.ELSEIF,
             TokenType.ENDDO,
             TokenType.ENDFUNCTION,
             TokenType.ENDPROC,
