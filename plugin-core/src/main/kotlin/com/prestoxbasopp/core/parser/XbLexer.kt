@@ -34,7 +34,7 @@ class XbLexer(
         return when {
             current.isLetter() || current == '_' -> readIdentifier(start)
             current.isDigit() -> readNumber(start)
-            current == '"' -> readString(start)
+            current == '"' || current == '\'' -> readString(start, current)
             current == '+' -> token(TokenType.PLUS, "+", start, index)
             current == '-' -> token(TokenType.MINUS, "-", start, index)
             current == '*' -> token(TokenType.STAR, "*", start, index)
@@ -119,15 +119,15 @@ class XbLexer(
         return token(TokenType.NUMBER, lexeme, start, index)
     }
 
-    private fun readString(start: Int): Token {
+    private fun readString(start: Int, delimiter: Char): Token {
         val builder = StringBuilder()
         while (!isAtEnd()) {
             val next = peek()
-            if (next == '"') {
-                if (peekNext() == '"') {
+            if (next == delimiter) {
+                if (peekNext() == delimiter) {
                     advance()
                     advance()
-                    builder.append('"')
+                    builder.append(delimiter)
                     continue
                 }
                 break
@@ -137,7 +137,7 @@ class XbLexer(
             }
             builder.append(advance())
         }
-        if (isAtEnd() || peek() != '"') {
+        if (isAtEnd() || peek() != delimiter) {
             val lexeme = source.substring(start, index)
             return token(TokenType.ERROR, lexeme, start, index)
         }
