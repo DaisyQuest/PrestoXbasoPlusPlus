@@ -55,5 +55,26 @@ class XbAstPresenterTest {
         val presentation = presenter.present(fileName = "sample.prg", text = source)
 
         assertThat(presentation.message).isEqualTo("File: sample.prg — Parser error: 1")
+        assertThat(presentation.parserErrors).hasSize(1)
+        assertThat(presentation.parserErrors.single().message).contains("Expected ENDIF")
+    }
+
+    @Test
+    fun `includes parser error context evidence`() {
+        val presenter = XbAstPresenter()
+        val source = """
+            FUNCTION Foo()
+               LOCAL x :=
+            ENDFUNCTION
+        """.trimIndent()
+
+        val presentation = presenter.present(fileName = "broken.prg", text = source)
+
+        assertThat(presentation.parserErrors).isNotEmpty()
+        val firstError = presentation.parserErrors.first()
+        assertThat(firstError.evidence).isNotNull
+        assertThat(firstError.evidence?.lines).isNotEmpty()
+        assertThat(firstError.line).isNotNull
+        assertThat(firstError.column).isNotNull
     }
 }
