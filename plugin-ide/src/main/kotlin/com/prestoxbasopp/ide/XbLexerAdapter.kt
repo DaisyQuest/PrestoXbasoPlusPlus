@@ -63,20 +63,24 @@ class XbLexerAdapter : LexerBase() {
         val expanded = mutableListOf<LexerToken>()
         var cursor = 0
         for (token in coreTokens) {
-            if (token.range.startOffset > cursor) {
-                expanded += LexerToken(TokenType.WHITE_SPACE, cursor, token.range.startOffset)
+            val start = token.range.startOffset.coerceIn(cursor, source.length)
+            val end = token.range.endOffset.coerceIn(start, source.length)
+            if (start > cursor) {
+                expanded += LexerToken(TokenType.WHITE_SPACE, cursor, start)
             }
             val elementType = if (token.type == XbLexerTokenType.PREPROCESSOR && isMacroDefinitionDirective(token.text)) {
                 XbHighlighterTokenSet.MACRO_DEFINITION
             } else {
                 XbHighlighterTokenSet.forToken(token.type)
             }
-            expanded += LexerToken(
-                elementType,
-                token.range.startOffset,
-                token.range.endOffset,
-            )
-            cursor = token.range.endOffset
+            if (end > start) {
+                expanded += LexerToken(
+                    elementType,
+                    start,
+                    end,
+                )
+                cursor = end
+            }
         }
         if (cursor < source.length) {
             expanded += LexerToken(TokenType.WHITE_SPACE, cursor, source.length)

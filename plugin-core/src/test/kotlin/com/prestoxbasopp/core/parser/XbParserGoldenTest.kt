@@ -1484,4 +1484,45 @@ class XbParserGoldenTest {
     private fun dumpProgram(program: XbProgram): String {
         return AstDumpFormat.render(program.toDumpNode())
     }
+
+    @Test
+    fun `parses slash division and comments without ambiguity`() {
+        val cases = listOf<GoldenTestCase<XbProgram>>(
+            GoldenTestCase(
+                id = "division-basic",
+                source = "a := 8 / 2;",
+                expectedAst = """
+                    File
+                      Stmt.Assignment
+                        Expr.Identifier[name=a]
+                        Expr.Binary.Divide
+                          Expr.Literal.Number[value=8]
+                          Expr.Literal.Number[value=2]
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "division-next-to-comments",
+                source = """
+                    a := 12 / 3 // line comment
+                    b := 8/*block*/ /2
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Stmt.Assignment
+                        Expr.Identifier[name=a]
+                        Expr.Binary.Divide
+                          Expr.Literal.Number[value=12]
+                          Expr.Literal.Number[value=3]
+                      Stmt.Assignment
+                        Expr.Identifier[name=b]
+                        Expr.Binary.Divide
+                          Expr.Literal.Number[value=8]
+                          Expr.Literal.Number[value=2]
+                """.trimIndent(),
+            ),
+        )
+
+        GoldenTestHarness.assertCases(cases, ::parseSource, ::dumpProgram)
+    }
+
 }
