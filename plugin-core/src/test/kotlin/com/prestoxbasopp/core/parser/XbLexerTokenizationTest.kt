@@ -152,4 +152,29 @@ class XbLexerTokenizationTest {
         )
     }
 
+
+
+
+    @Test
+    fun `tokenizes tilde characters inside caption strings`() {
+        val source = """
+            @ 6.5,23 DCPUSHBUTTON CAPTION "~CANCEL"
+            @ 6.5,10 DCPUSHBUTTON CAPTION "~OK"
+        """.trimIndent()
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens).anyMatch { it.type == TokenType.STRING && it.lexeme == "~CANCEL" }
+        assertThat(tokens).anyMatch { it.type == TokenType.STRING && it.lexeme == "~OK" }
+        assertThat(tokens.none { it.type == TokenType.ERROR }).isTrue()
+    }
+
+    @Test
+    fun `tokenizes right comparison and append with single quoted backslash`() {
+        val source = """IF right(cPath,1)=='\' ; cPath += '\' ; ENDIF"""
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens).anyMatch { it.type == TokenType.STRING && it.lexeme == "\\" }
+        assertThat(tokens.none { it.type == TokenType.ERROR }).isTrue()
+    }
+
 }
