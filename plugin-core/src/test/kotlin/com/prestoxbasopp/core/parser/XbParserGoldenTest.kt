@@ -199,6 +199,36 @@ class XbParserGoldenTest {
                         Block[branch=else]
                 """.trimIndent(),
             ),
+
+            GoldenTestCase(
+                id = "bracket-backslash-literal-in-rat-call-and-append",
+                source = """
+                    IF lAddBS .AND. Rat([\],cTemp)<>len(cTemp)
+                      cTemp := cTemp+[\]
+                    ENDIF
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Stmt.If
+                        Expr.Binary.And
+                          Expr.Identifier[name=lAddBS]
+                          Expr.Binary.NotEqual
+                            Expr.Call
+                              Expr.Identifier[name=Rat]
+                              Expr.Literal.String[value="\\"]
+                              Expr.Identifier[name=cTemp]
+                            Expr.Call
+                              Expr.Identifier[name=len]
+                              Expr.Identifier[name=cTemp]
+                        Block[branch=then]
+                          Stmt.Assignment
+                            Expr.Identifier[name=cTemp]
+                            Expr.Binary.Add
+                              Expr.Identifier[name=cTemp]
+                              Expr.Literal.String[value="\\"]
+                        Block[branch=else]
+                """.trimIndent(),
+            ),
             GoldenTestCase(
                 id = "contains-escaped-punctuation-string",
                 source = """IF cChar$'<>:"/|\?*' ; RETURN cChar ; ENDIF""",

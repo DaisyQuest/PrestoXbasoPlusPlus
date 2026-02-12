@@ -79,6 +79,9 @@ class XbLexer(
                     current == '{' && isCodeblockStart() -> {
                         lexCodeblock()
                     }
+                    current == '[' -> {
+                        lexBracketLiteralOrPunctuation()
+                    }
                     current == '#' && peek(1)?.let { it.isLetterOrDigit() || it == '_' } == true -> {
                         lexSymbol()
                     }
@@ -295,6 +298,23 @@ class XbLexer(
             val text = source.substring(start, index)
             val type = if (keywordSet.contains(text.lowercase())) XbTokenType.KEYWORD else XbTokenType.IDENTIFIER
             emitToken(type, start, index)
+        }
+
+
+        private fun lexBracketLiteralOrPunctuation() {
+            val start = index
+            val closeBracket = source.indexOf(']', index + 1)
+            if (closeBracket != -1) {
+                val content = source.substring(index + 1, closeBracket)
+                val hasLineBreak = content.any { it == '\n' || it == '\r' }
+                if (!hasLineBreak && content.contains('\\')) {
+                    index = closeBracket + 1
+                    emitToken(XbTokenType.STRING, start, index)
+                    return
+                }
+            }
+            index++
+            emitToken(XbTokenType.PUNCTUATION, start, index)
         }
 
         private fun lexOperatorOrPunctuation() {
