@@ -62,4 +62,4 @@
 - Lexer coverage for codeblock literals with nested braces, comments, and string content.
 - Header insight tab coverage for include resolution, missing headers, conflict detection, presenter fallbacks, and all table model branches.
 - AST tool window async presentation coordinator tests for loading-state messaging, large-file indicators, and stale-result suppression.
-
+- Parser compatibility coverage for production snippets using pass-by-reference `@` arguments and colon-based method dispatch in call expressions.

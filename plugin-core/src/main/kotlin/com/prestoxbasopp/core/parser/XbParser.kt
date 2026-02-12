@@ -80,7 +80,7 @@ class XbParser(private val tokens: List<Token>) {
                 parseExpressionStatement()
             }
             TokenType.BREAK -> parseBreakStatement()
-            TokenType.AT -> if (!canStartExpression(peekNext().type)) {
+            TokenType.AT -> if (!canStartAtSayGetExpression(peekNext().type)) {
                 val token = advance()
                 recordError("Unexpected token '@' at ${token.startOffset}")
                 synchronizeTo(setOf(TokenType.SEMICOLON))
@@ -619,7 +619,7 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.TRUE -> XbLiteralExpression(XbLiteralKind.BOOLEAN, "true", rangeFrom(token, token))
             TokenType.FALSE -> XbLiteralExpression(XbLiteralKind.BOOLEAN, "false", rangeFrom(token, token))
             TokenType.IDENTIFIER -> XbIdentifierExpression(token.lexeme, rangeFrom(token, token))
-            TokenType.MINUS, TokenType.PLUS, TokenType.NOT, TokenType.AMP -> {
+            TokenType.MINUS, TokenType.PLUS, TokenType.NOT, TokenType.AMP, TokenType.AT -> {
                 val operator = token.lexeme
                 val expression = parseExpression(PREFIX_PRECEDENCE) ?: run {
                     recordError("Expected expression after unary '$operator' at ${peek().startOffset}")
@@ -775,6 +775,39 @@ class XbParser(private val tokens: List<Token>) {
                     XbIndexExpression(
                         target = currentExpression,
                         index = indexExpr,
+                        range = rangeFromOffsets(currentExpression.range.startOffset, endToken.endOffset),
+                    )
+                }
+                TokenType.COLON -> {
+                    val colonToken = advance()
+                    val memberToken = if (match(TokenType.IDENTIFIER)) previous() else null
+                    if (memberToken == null) {
+                        recordError("Expected member name after ':' at ${peek().startOffset}")
+                    }
+                    val arguments = mutableListOf<XbExpression>()
+                    arguments += currentExpression
+                    if (match(TokenType.LPAREN)) {
+                        if (!check(TokenType.RPAREN)) {
+                            do {
+                                parseExpression(0)?.let { arguments += it } ?: run {
+                                    recordError("Expected expression in argument list at ${peek().startOffset}")
+                                    arguments += fallbackExpression(previousOr(colonToken))
+                                }
+                            } while (match(TokenType.COMMA))
+                        }
+                        if (!match(TokenType.RPAREN)) {
+                            recordError("Expected ')' after arguments at ${peek().startOffset}")
+                        }
+                    }
+                    val calleeToken = memberToken ?: colonToken
+                    val callee = XbIdentifierExpression(
+                        calleeToken.lexeme.ifEmpty { "<error>" },
+                        rangeFrom(calleeToken, calleeToken),
+                    )
+                    val endToken = previousOr(calleeToken)
+                    XbCallExpression(
+                        callee = callee,
+                        arguments = arguments,
                         range = rangeFromOffsets(currentExpression.range.startOffset, endToken.endOffset),
                     )
                 }
@@ -935,6 +968,10 @@ class XbParser(private val tokens: List<Token>) {
         )
     }
 
+    private fun canStartAtSayGetExpression(type: TokenType): Boolean {
+        return canStartExpression(type) && type != TokenType.AT
+    }
+
     private fun canStartExpression(type: TokenType): Boolean {
         return when (type) {
             TokenType.NUMBER,
@@ -947,6 +984,7 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.PLUS,
             TokenType.NOT,
             TokenType.AMP,
+            TokenType.AT,
             TokenType.LPAREN,
             TokenType.LBRACE,
             -> true

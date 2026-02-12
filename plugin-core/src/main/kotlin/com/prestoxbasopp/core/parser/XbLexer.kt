@@ -68,7 +68,7 @@ class XbLexer(
                 if (match('=')) {
                     token(TokenType.ASSIGN, ":=", start, index)
                 } else {
-                    token(TokenType.ERROR, ":", start, index)
+                    token(TokenType.COLON, ":", start, index)
                 }
             }
             current == '!' -> {
