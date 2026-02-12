@@ -74,6 +74,40 @@ class XbLexerTokenizationTest {
     }
 
     @Test
+    fun `tokenizes angle bracket not equal operator in conditional expression`() {
+        val source = "IF right(cdxMCImportPath,1)<>'\\'"
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IF,
+            TokenType.IDENTIFIER,
+            TokenType.LPAREN,
+            TokenType.IDENTIFIER,
+            TokenType.COMMA,
+            TokenType.NUMBER,
+            TokenType.RPAREN,
+            TokenType.NEQ,
+            TokenType.STRING,
+        )
+        assertThat(tokens[7].lexeme).isEqualTo("!=")
+        assertThat(tokens[8].lexeme).isEqualTo("\\")
+    }
+
+    @Test
+    fun `tokenizes single quoted backslash in reassignment statements`() {
+        val source = "cdxMCImportPath += '\\\\'"
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.PLUS,
+            TokenType.EQ,
+            TokenType.STRING,
+        )
+        assertThat(tokens.last().lexeme).isEqualTo("\\\\")
+    }
+
+    @Test
     fun `tokenizes slash as division operator when not part of comment`() {
         val tokens = XbLexer("a / b").lex().filter { it.type != TokenType.EOF }
 

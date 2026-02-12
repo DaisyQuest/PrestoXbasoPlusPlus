@@ -108,6 +108,27 @@ class XbParserGoldenTest {
                 """.trimIndent(),
             ),
             GoldenTestCase(
+                id = "angle-bracket-not-equal-with-backslash-string-literal",
+                source = "IF right(cdxMCImportPath,1)<>'\\' ; cdxMCImportPath += '\\' ; ENDIF",
+                expectedAst = """
+                    File
+                      Stmt.If
+                        Expr.Binary.NotEqual
+                          Expr.Call
+                            Expr.Identifier[name=right]
+                            Expr.Identifier[name=cdxMCImportPath]
+                            Expr.Literal.Number[value=1]
+                          Expr.Literal.String[value="\\"]
+                        Block[branch=then]
+                          Stmt.Assignment
+                            Expr.Identifier[name=cdxMCImportPath]
+                            Expr.Binary.Add
+                              Expr.Identifier[name=cdxMCImportPath]
+                              Expr.Literal.String[value="\\"]
+                        Block[branch=else]
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
                 id = "single-quoted-backslash-string-in-compound-assignment-shape",
                 source = "cPath += '\\'",
                 expectedAst = """
