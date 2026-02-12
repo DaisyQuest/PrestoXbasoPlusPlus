@@ -154,6 +154,30 @@ class XbLexerTokenizationTest {
 
 
 
+    @Test
+    fun `tokenizes quoted backslash literals in comparison and concatenation`() {
+        val source = """IF cCleanString[len(cCleanString)]="\" ; cCleanString := cCleanString + "\" ; ENDIF"""
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens).anyMatch { it.type == TokenType.STRING && it.lexeme == "\\" }
+        assertThat(tokens.count { it.type == TokenType.STRING && it.lexeme == "\\" }).isEqualTo(2)
+        assertThat(tokens.none { it.type == TokenType.ERROR }).isTrue()
+    }
+
+    @Test
+    fun `tokenizes backslash question mark inside single quoted string`() {
+        val source = """IF cChar$'<>:"/|\?*'"""
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IF,
+            TokenType.IDENTIFIER,
+            TokenType.CONTAINS,
+            TokenType.STRING,
+        )
+        assertThat(tokens.last().lexeme).isEqualTo("<>:\"/|\\?*")
+        assertThat(tokens.none { it.type == TokenType.ERROR }).isTrue()
+    }
 
     @Test
     fun `tokenizes tilde characters inside caption strings`() {

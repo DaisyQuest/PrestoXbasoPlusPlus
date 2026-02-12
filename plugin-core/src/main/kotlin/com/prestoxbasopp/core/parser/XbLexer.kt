@@ -289,6 +289,7 @@ class XbLexer(
         return true
     }
 
+
     private fun match(expected: Char): Boolean {
         if (isAtEnd()) return false
         if (source[index] != expected) return false

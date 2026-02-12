@@ -172,6 +172,48 @@ class XbParserGoldenTest {
                           Expr.Literal.Number[value=5]
                 """.trimIndent(),
             ),
+
+            GoldenTestCase(
+                id = "quoted-backslash-string-comparison-and-append",
+                source = """
+                    IF cCleanString[len(cCleanString)]="\"
+                       cCleanString := cCleanString + "\"
+                    ENDIF
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Stmt.If
+                        Expr.Binary[op="="]
+                          Expr.Index
+                            Expr.Identifier[name=cCleanString]
+                            Expr.Call
+                              Expr.Identifier[name=len]
+                              Expr.Identifier[name=cCleanString]
+                          Expr.Literal.String[value="\\"]
+                        Block[branch=then]
+                          Stmt.Assignment
+                            Expr.Identifier[name=cCleanString]
+                            Expr.Binary.Add
+                              Expr.Identifier[name=cCleanString]
+                              Expr.Literal.String[value="\\"]
+                        Block[branch=else]
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "contains-escaped-punctuation-string",
+                source = """IF cChar$'<>:"/|\?*' ; RETURN cChar ; ENDIF""",
+                expectedAst = """
+                    File
+                      Stmt.If
+                        Expr.Binary[op="$"]
+                          Expr.Identifier[name=cChar]
+                          Expr.Literal.String[value="<>:\"/|\\?*"]
+                        Block[branch=then]
+                          Stmt.Return
+                            Expr.Identifier[name=cChar]
+                        Block[branch=else]
+                """.trimIndent(),
+            ),
             GoldenTestCase(
                 id = "compound-assignment-missing-right-hand-side-reports-error",
                 source = "total +=",
