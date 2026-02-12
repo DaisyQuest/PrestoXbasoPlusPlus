@@ -109,19 +109,62 @@ class XbParserGoldenTest {
             ),
             GoldenTestCase(
                 id = "single-quoted-backslash-string-in-compound-assignment-shape",
-                source = "cPath += '\\\\'",
+                source = "cPath += '\\'",
                 expectedAst = """
                     File
-                      Stmt.Expression
+                      Stmt.Assignment
+                        Expr.Identifier[name=cPath]
                         Expr.Binary.Add
                           Expr.Identifier[name=cPath]
+                          Expr.Literal.String[value="\\"]
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "compound-assignments-expand-to-binary-operations",
+                source = "a += 1; b -= 2; c *= 3; d /= 4; e %= 5",
+                expectedAst = """
+                    File
+                      Stmt.Assignment
+                        Expr.Identifier[name=a]
+                        Expr.Binary.Add
+                          Expr.Identifier[name=a]
+                          Expr.Literal.Number[value=1]
+                      Stmt.Assignment
+                        Expr.Identifier[name=b]
+                        Expr.Binary.Subtract
+                          Expr.Identifier[name=b]
+                          Expr.Literal.Number[value=2]
+                      Stmt.Assignment
+                        Expr.Identifier[name=c]
+                        Expr.Binary.Multiply
+                          Expr.Identifier[name=c]
+                          Expr.Literal.Number[value=3]
+                      Stmt.Assignment
+                        Expr.Identifier[name=d]
+                        Expr.Binary.Divide
+                          Expr.Identifier[name=d]
+                          Expr.Literal.Number[value=4]
+                      Stmt.Assignment
+                        Expr.Identifier[name=e]
+                        Expr.Binary[op="%"]
+                          Expr.Identifier[name=e]
+                          Expr.Literal.Number[value=5]
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "compound-assignment-missing-right-hand-side-reports-error",
+                source = "total +=",
+                expectedAst = """
+                    File
+                      Stmt.Assignment
+                        Expr.Identifier[name=total]
+                        Expr.Binary.Add
+                          Expr.Identifier[name=total]
                           Expr.Identifier[name="<error>"]
-                      Stmt.Expression
-                        Expr.Literal.String[value="\\\\"]
                 """.trimIndent(),
                 expectedErrors = listOf(
-                    "Unexpected token EQ at 7",
-                    "Expected expression after '+' at 9",
+                    "Unexpected token EOF at 8",
+                    "Expected expression after assignment operator at 8",
                 ),
             ),
             GoldenTestCase(
