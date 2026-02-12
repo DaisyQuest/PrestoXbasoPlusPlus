@@ -18,6 +18,7 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.ScrollPaneFactory
 import com.intellij.ui.TreeSpeedSearch
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.tree.TreeUtil
@@ -45,8 +46,12 @@ import com.prestoxbasopp.core.ast.XbUnaryExpression
 import com.prestoxbasopp.core.ast.XbWhileStatement
 import com.prestoxbasopp.core.parser.XbParser
 import java.awt.BorderLayout
+import java.awt.CardLayout
 import java.awt.datatransfer.StringSelection
+import com.google.gson.GsonBuilder
+import java.util.regex.Pattern
 import javax.swing.JButton
+import javax.swing.JTabbedPane
 import javax.swing.JPanel
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
@@ -69,9 +74,143 @@ data class XbAstTreeNode(
 data class XbAstPresentation(
     val root: XbAstTreeNode?,
     val message: String?,
+    val parserErrors: List<XbParserErrorEntry> = emptyList(),
+)
+
+data class XbParserErrorEntry(
+    val message: String,
+    val offset: Int?,
+    val line: Int?,
+    val column: Int?,
+    val evidence: XbParserErrorEvidence?,
+)
+
+data class XbParserErrorEvidence(
+    val startLine: Int,
+    val endLine: Int,
+    val focusLine: Int,
+    val lines: List<String>,
+)
+
+class XbParserErrorReportBuilder(
+    private val contextLines: Int = 10,
+) {
+    private val offsetPattern = Pattern.compile("\\bat\\s+(\\d+)\\b")
+
+    fun build(text: String, errors: List<String>): List<XbParserErrorEntry> {
+        if (errors.isEmpty()) {
+            return emptyList()
+        }
+        val locator = XbSourceLineLocator(text)
+        return errors.map { error ->
+            val offset = parseOffset(error)
+            val location = offset?.let { locator.resolve(it) }
+            val evidence = location?.let { lineInfo ->
+                buildEvidence(locator.lines, lineInfo.line)
+            }
+            XbParserErrorEntry(
+                message = error,
+                offset = offset,
+                line = location?.line,
+                column = location?.column,
+                evidence = evidence,
+            )
+        }
+    }
+
+    fun formatForDisplay(entries: List<XbParserErrorEntry>): String {
+        if (entries.isEmpty()) {
+            return "No parser errors."
+        }
+        return entries.joinToString("\n\n") { entry ->
+            val location = when {
+                entry.line != null && entry.column != null -> "line ${entry.line}, column ${entry.column}"
+                entry.offset != null -> "offset ${entry.offset}"
+                else -> "unknown location"
+            }
+            val header = "• ${entry.message} [$location]"
+            val evidence = entry.evidence?.lines
+                ?.mapIndexed { index, line ->
+                    val lineNumber = entry.evidence.startLine + index
+                    val marker = if (lineNumber == entry.evidence.focusLine) ">" else " "
+                    "$marker ${lineNumber.toString().padStart(4, ' ')} | $line"
+                }
+                ?.joinToString("\n")
+            if (evidence == null) {
+                header
+            } else {
+                "$header\n$evidence"
+            }
+        }
+    }
+
+    fun toPrettyJson(entries: List<XbParserErrorEntry>): String {
+        return GsonBuilder().setPrettyPrinting().create().toJson(entries)
+    }
+
+    private fun parseOffset(error: String): Int? {
+        val matcher = offsetPattern.matcher(error)
+        if (!matcher.find()) {
+            return null
+        }
+        return matcher.group(1)?.toIntOrNull()
+    }
+
+    private fun buildEvidence(lines: List<String>, focusLine: Int): XbParserErrorEvidence {
+        val startLine = (focusLine - contextLines).coerceAtLeast(1)
+        val endLine = (focusLine + contextLines).coerceAtMost(lines.size)
+        return XbParserErrorEvidence(
+            startLine = startLine,
+            endLine = endLine,
+            focusLine = focusLine,
+            lines = lines.subList(startLine - 1, endLine),
+        )
+    }
+}
+
+private class XbSourceLineLocator(text: String) {
+    val lines: List<String> = text.split("\n")
+    private val lineStarts: IntArray = buildLineStarts(text)
+
+    fun resolve(offset: Int): XbSourceLocation {
+        if (lineStarts.isEmpty()) {
+            return XbSourceLocation(line = 1, column = 1)
+        }
+        val clampedOffset = offset.coerceIn(0, (lineStarts.last() + lines.last().length).coerceAtLeast(0))
+        var lineIndex = lineStarts.binarySearch(clampedOffset)
+        if (lineIndex < 0) {
+            lineIndex = -lineIndex - 2
+        }
+        if (lineIndex < 0) {
+            lineIndex = 0
+        }
+        val lineStart = lineStarts[lineIndex]
+        val column = (clampedOffset - lineStart) + 1
+        return XbSourceLocation(line = lineIndex + 1, column = column)
+    }
+
+    private fun buildLineStarts(text: String): IntArray {
+        if (text.isEmpty()) {
+            return intArrayOf(0)
+        }
+        val starts = mutableListOf(0)
+        text.forEachIndexed { index, c ->
+            if (c == '\n' && index + 1 < text.length) {
+                starts += (index + 1)
+            }
+        }
+        return starts.toIntArray()
+    }
+}
+
+private data class XbSourceLocation(
+    val line: Int,
+    val column: Int,
 )
 
 class XbAstPresenter {
+    private val parserErrorReportBuilder = XbParserErrorReportBuilder()
+
     fun present(fileName: String?, text: String?): XbAstPresentation {
         if (text == null) {
             return XbAstPresentation(null, "No active editor.")
@@ -80,7 +219,8 @@ class XbAstPresenter {
         val program = parseResult.program
         val root = program?.let { buildProgramNode(it) }
         val message = buildMessage(fileName, parseResult.errors.size)
-        return XbAstPresentation(root, message)
+        val parserErrors = parserErrorReportBuilder.build(text, parseResult.errors)
+        return XbAstPresentation(root, message, parserErrors)
     }
 
     private fun buildMessage(fileName: String?, errorCount: Int): String {
@@ -244,7 +384,11 @@ class XbAstPresenter {
 
 class XbAstPanel {
     private val messageLabel = JBLabel()
-    private val copyButton = JButton("Copy AST").apply {
+    private val astButtonPanel = JPanel(BorderLayout())
+    private val copyAstButton = JButton("Copy AST").apply {
+        isEnabled = false
+    }
+    private val copyErrorsJsonButton = JButton("Copy Errors JSON").apply {
         isEnabled = false
     }
     private val tree = Tree(DefaultMutableTreeNode("File")).apply {
@@ -252,31 +396,52 @@ class XbAstPanel {
         showsRootHandles = true
         emptyText.text = "No AST to display."
     }
+    private val parserErrorsArea = JBTextArea().apply {
+        isEditable = false
+        lineWrap = false
+    }
+    private val tabs = JTabbedPane().apply {
+        addTab("AST", ScrollPaneFactory.createScrollPane(tree))
+        addTab("Parser Errors", ScrollPaneFactory.createScrollPane(parserErrorsArea))
+    }
+    private val buttonCards = JPanel(CardLayout()).apply {
+        add(astButtonPanel, "AST")
+        add(copyErrorsJsonButton, "Parser Errors")
+    }
     val component: JPanel = JPanel(BorderLayout()).apply {
         border = JBUI.Borders.empty(8)
         val header = JPanel(BorderLayout()).apply {
             add(messageLabel, BorderLayout.CENTER)
-            add(copyButton, BorderLayout.EAST)
+            add(buttonCards, BorderLayout.EAST)
         }
         add(header, BorderLayout.NORTH)
-        add(ScrollPaneFactory.createScrollPane(tree), BorderLayout.CENTER)
+        add(tabs, BorderLayout.CENTER)
     }
     private val textFormatter = XbAstTextFormatter()
+    private val parserErrorReportBuilder = XbParserErrorReportBuilder()
     private var latestPresentation: XbAstPresentation? = null
 
     init {
+        astButtonPanel.add(copyAstButton, BorderLayout.EAST)
         TreeSpeedSearch(tree)
-        copyButton.addActionListener { copyAstToClipboard() }
+        copyAstButton.addActionListener { copyAstToClipboard() }
+        copyErrorsJsonButton.addActionListener { copyErrorsJsonToClipboard() }
+        tabs.addChangeListener {
+            val selectedTitle = tabs.getTitleAt(tabs.selectedIndex)
+            (buttonCards.layout as CardLayout).show(buttonCards, selectedTitle)
+        }
     }
 
     fun render(presentation: XbAstPresentation) {
         latestPresentation = presentation
         messageLabel.text = presentation.message ?: ""
         messageLabel.isVisible = presentation.message != null
-        copyButton.isEnabled = presentation.root != null
+        copyAstButton.isEnabled = presentation.root != null
+        copyErrorsJsonButton.isEnabled = presentation.parserErrors.isNotEmpty()
         val rootNode = presentation.root?.toSwingNode() ?: DefaultMutableTreeNode("File")
         tree.model = DefaultTreeModel(rootNode)
         TreeUtil.expandAll(tree)
+        parserErrorsArea.text = parserErrorReportBuilder.formatForDisplay(presentation.parserErrors)
         tree.emptyText.text = if (presentation.root == null) {
             "No AST to display."
         } else {
@@ -288,6 +453,12 @@ class XbAstPanel {
         val root = latestPresentation?.root ?: return
         val text = textFormatter.format(root)
         CopyPasteManager.getInstance().setContents(StringSelection(text))
+    }
+
+    private fun copyErrorsJsonToClipboard() {
+        val errors = latestPresentation?.parserErrors ?: return
+        val json = parserErrorReportBuilder.toPrettyJson(errors)
+        CopyPasteManager.getInstance().setContents(StringSelection(json))
     }
 
     private fun XbAstTreeNode.toSwingNode(): DefaultMutableTreeNode {
