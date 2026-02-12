@@ -79,7 +79,7 @@ class XbLexer(
                     current == '{' && isCodeblockStart() -> {
                         lexCodeblock()
                     }
-                    current == '#' -> {
+                    current == '#' && peek(1)?.let { it.isLetterOrDigit() || it == '_' } == true -> {
                         lexSymbol()
                     }
                     current.isDigit() || (current == '.' && peek(1)?.isDigit() == true) -> {
@@ -348,7 +348,7 @@ class XbLexer(
         }
 
         companion object {
-            private val OPERATORS = setOf('+', '-', '*', '/', '=', '<', '>', '!', '^', '%', '?', '&', '|', '$')
+            private val OPERATORS = setOf('+', '-', '*', '/', '=', '<', '>', '!', '^', '%', '?', '&', '|', '$', '#')
             private val PUNCTUATION = setOf('(', ')', '{', '}', '[', ']', ';', ',', ':', '.', '@')
         }
 

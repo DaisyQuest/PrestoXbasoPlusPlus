@@ -112,4 +112,32 @@ class XbLexerTokenizationTest {
         assertThat(tokens).anyMatch { it.type == XbTokenType.STRING && it.text == "\"x\"\"y\"" }
         assertThat(tokens).anyMatch { it.type == XbTokenType.COMMENT && it.text.trim() == "// comment after string" }
     }
+
+    @Test
+    fun `tokenizes hash as not equal operator in expressions`() {
+        val source = "IF valtype(soSaveDlgSize) # \"L\""
+
+        val result = XbLexer().lex(source)
+        val tokens = result.tokens.filter { it.type != XbTokenType.EOF }
+
+        assertThat(result.errors).isEmpty()
+        assertThat(tokens.map { it.type }).containsExactly(
+            XbTokenType.KEYWORD,
+            XbTokenType.IDENTIFIER,
+            XbTokenType.PUNCTUATION,
+            XbTokenType.IDENTIFIER,
+            XbTokenType.PUNCTUATION,
+            XbTokenType.OPERATOR,
+            XbTokenType.STRING,
+        )
+        assertThat(tokens[5].text).isEqualTo("#")
+    }
+
+    @Test
+    fun `keeps hash-prefixed identifiers as symbol literals`() {
+        val result = XbLexer().lex("local sym := #name")
+
+        assertThat(result.errors).isEmpty()
+        assertThat(result.tokens).anyMatch { it.type == XbTokenType.SYMBOL && it.text == "#name" }
+    }
 }
