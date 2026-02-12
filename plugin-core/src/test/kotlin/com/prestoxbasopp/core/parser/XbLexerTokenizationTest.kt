@@ -51,12 +51,25 @@ class XbLexerTokenizationTest {
     }
 
     @Test
-    fun `reports error token for bare exclamation mark`() {
+    fun `tokenizes bare exclamation mark as unary not operator`() {
         val tokens = XbLexer("!").lex().filter { it.type != TokenType.EOF }
 
         val token = tokens.single()
-        assertThat(token.type).isEqualTo(TokenType.ERROR)
-        assertThat(token.lexeme).isEqualTo("!")
+        assertThat(token.type).isEqualTo(TokenType.NOT)
+        assertThat(token.lexeme).isEqualTo("not")
+    }
+
+    @Test
+    fun `tokenizes index command keywords`() {
+        val tokens = XbLexer("INDEX on KIND to CDRCODES").lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.INDEX,
+            TokenType.ON,
+            TokenType.IDENTIFIER,
+            TokenType.TO,
+            TokenType.IDENTIFIER,
+        )
     }
 
     @Test

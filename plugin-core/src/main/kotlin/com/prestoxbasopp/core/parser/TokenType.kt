@@ -34,6 +34,8 @@ enum class TokenType {
     SAY,
     GET,
     VALID,
+    ON,
+    INDEX,
     QUESTION,
     AND,
     OR,
