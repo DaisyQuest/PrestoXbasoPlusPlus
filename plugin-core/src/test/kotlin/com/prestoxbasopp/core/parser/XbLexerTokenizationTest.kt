@@ -314,4 +314,44 @@ class XbLexerTokenizationTest {
         assertThat(tokens).anyMatch { it.type == TokenType.STRING && it.lexeme == "data\\" }
     }
 
+    @Test
+    fun `tokenizes bracket literal containing only a backslash as string`() {
+        val source = """IF lAddBS .AND. Rat([\],cTemp)<>len(cTemp) ; cTemp := cTemp+[\] ; ENDIF"""
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.none { it.type == TokenType.ERROR }).isTrue()
+        assertThat(tokens.filter { it.type == TokenType.STRING }.map { it.lexeme }).containsExactly("\\", "\\")
+    }
+
+
+
+    @Test
+    fun `does not coerce bracket expression without backslash into string literal`() {
+        val source = """Rat([abc], cTemp)"""
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.none { it.type == TokenType.ERROR }).isTrue()
+        assertThat(tokens.map { it.type }).containsSequence(
+            TokenType.IDENTIFIER,
+            TokenType.LPAREN,
+            TokenType.LBRACKET,
+            TokenType.IDENTIFIER,
+            TokenType.RBRACKET,
+            TokenType.COMMA,
+            TokenType.IDENTIFIER,
+            TokenType.RPAREN,
+        )
+    }
+
+    @Test
+    fun `does not coerce multiline bracket literal with backslash into string literal`() {
+        val source = """memo := [line1\
+line2]"""
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens).anyMatch { it.type == TokenType.ERROR && it.lexeme == "\\" }
+        assertThat(tokens.none { it.type == TokenType.STRING && it.lexeme.contains("line1") }).isTrue()
+        assertThat(tokens).anyMatch { it.type == TokenType.LBRACKET }
+    }
+
 }

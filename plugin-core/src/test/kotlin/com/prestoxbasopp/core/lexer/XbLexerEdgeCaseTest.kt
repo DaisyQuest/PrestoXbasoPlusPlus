@@ -101,6 +101,46 @@ class XbLexerEdgeCaseTest {
     }
 
 
+
+    @Test
+    fun `lexes bracket backslash literal as string to avoid unexpected character errors`() {
+        val source = """
+            IF lAddBS .AND. Rat([\],cTemp)<>len(cTemp)
+               cTemp := cTemp+[\]
+            ENDIF
+        """.trimIndent()
+
+        val result = XbLexer().lex(source)
+
+        assertThat(result.errors).isEmpty()
+        val stringTexts = result.tokens.filter { it.type == XbTokenType.STRING }.map { it.text }
+        assertThat(stringTexts).containsExactly("[\\]", "[\\]")
+    }
+
+    @Test
+    fun `keeps bracket expressions without backslash as punctuation tokens`() {
+        val source = """Rat([abc], cTemp)"""
+
+        val result = XbLexer().lex(source)
+
+        assertThat(result.errors).isEmpty()
+        assertThat(result.tokens).anyMatch { it.type == XbTokenType.PUNCTUATION && it.text == "[" }
+        assertThat(result.tokens).anyMatch { it.type == XbTokenType.PUNCTUATION && it.text == "]" }
+        assertThat(result.tokens).noneMatch { it.type == XbTokenType.STRING && it.text == "[abc]" }
+    }
+
+    @Test
+    fun `does not treat multiline bracket content with backslash as string literal`() {
+        val source = """memo := [line1\
+line2]"""
+
+        val result = XbLexer().lex(source)
+
+        assertThat(result.tokens).anyMatch { it.type == XbTokenType.PUNCTUATION && it.text == "[" }
+        assertThat(result.tokens).anyMatch { it.type == XbTokenType.PUNCTUATION && it.text == "]" }
+        assertThat(result.tokens).noneMatch { it.type == XbTokenType.STRING && it.text.contains("line1") }
+    }
+
     @Test
     fun `supports escaped double quotes inside double quoted strings`() {
         val source = "cText := \"hello \\\"world\\\"!\""
