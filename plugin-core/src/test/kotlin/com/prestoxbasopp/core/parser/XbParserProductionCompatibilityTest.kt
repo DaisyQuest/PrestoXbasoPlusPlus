@@ -363,7 +363,103 @@ class XbParserProductionCompatibilityTest {
         val function = result.program!!.statements.single() as XbFunctionDeclaration
         val callStmt = function.body.statements[0] as XbExpressionStatement
         val scopedCall = callStmt.expression as XbIdentifierExpression
-        assertThat(scopedCall.name).isEqualTo("CLIENT->(<expr>)")
+        assertThat(scopedCall.name).isEqualTo("CLIENT->(dbCommit())")
+    }
+
+
+    @Test
+    fun `parses arrow alias usage in replace and commit expression without cascaded endif errors`() {
+        val source = """
+            FUNCTION NextCase(temp_no, old_area)
+            IF substr(temp_no,6,4) == "0000" .OR. Len(temp_no)<>9
+              AppQuit("Now")
+            ELSE
+              dbSelectArea("CLIENT")
+              replace CLIENT->N_INDEX_NO with temp_no
+              CLIENT->(dbCommit())
+              USE
+            ENDIF
+            USE
+            IF !empty(old_area)
+              SELE &old_area
+            ENDIF
+            RETURN temp_no
+            ENDFUNCTION
+        """.trimIndent()
+
+        val result = XbParser.parse(source)
+
+        assertThat(result.errors).isEmpty()
+        val function = result.program!!.statements.single() as XbFunctionDeclaration
+        assertThat(function.body.statements).isNotEmpty()
+    }
+
+    @Test
+    fun `parses printthread style class methods including inline terminate assignment`() {
+        val source = """
+            CLASS PrintThread FROM Thread
+               INLINE METHOD init
+                  ::Thread:init()
+                  Sleep(5)
+                  ::terminated  := .F.
+                  ::workCounter := 0
+               RETURN self
+
+               INLINE METHOD terminate
+               RETURN ( ::terminated := .T. )
+
+               METHOD execute, checkTermination, atEnd
+            ENDCLASS
+
+            METHOD PrintThread:execute
+               DO WHILE ::workCounter < 10000000
+                  ::checkTermination()
+               ENDDO
+               RETURN
+        """.trimIndent()
+
+        val result = XbParser.parse(source)
+
+        assertThat(result.errors).isEmpty()
+        assertThat(result.program!!.statements).isNotEmpty()
+    }
+
+    @Test
+    fun `parses string-join for loop with endif and next terminators`() {
+        val source = """
+            FUNCTION JoinStrings(p_acStrings)
+              LOCAL i, pr_nCount := 0, cRet := "", cJoinerWord := " and ", acFullStrings := {}
+              FOR i:= 1 TO Len(p_acStrings)
+                IF !empty(p_acStrings[i])
+                  AAdd(acFullStrings, p_acStrings[i])
+                ENDIF
+              NEXT
+
+              pr_nCount := Len(acFullStrings)
+              IF Len(acFullStrings) == 0
+              ELSEIF Len(acFullStrings) == 1
+                cRet := acFullStrings[1]
+              ELSEIF Len(acFullStrings) == 2
+                cRet := acFullStrings[1] + cJoinerWord + acFullStrings[2]
+              ELSE
+                FOR i:= 1 TO pr_nCount
+                  cRet += acFullStrings[i]
+                  IF i < pr_nCount - 1
+                    cRet += ", "
+                  ELSEIF i == pr_nCount - 1
+                    cRet += ","+cJoinerWord
+                  ENDIF
+                NEXT
+              ENDIF
+              RETURN cRet
+            ENDFUNCTION
+        """.trimIndent()
+
+        val result = XbParser.parse(source)
+
+        assertThat(result.errors).isEmpty()
+        val function = result.program!!.statements.single() as XbFunctionDeclaration
+        assertThat(function.body.statements).isNotEmpty()
     }
 
 }
