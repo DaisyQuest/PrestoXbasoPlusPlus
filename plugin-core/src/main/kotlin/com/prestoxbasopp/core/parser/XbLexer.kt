@@ -123,8 +123,15 @@ class XbLexer(
 
     private fun readString(start: Int, delimiter: Char): Token {
         val builder = StringBuilder()
+        val supportsBackslashEscapes = delimiter == '"'
+        var escaped = false
         while (!isAtEnd()) {
             val next = peek()
+            if (escaped) {
+                builder.append(advance())
+                escaped = false
+                continue
+            }
             if (next == delimiter) {
                 if (peekNext() == delimiter) {
                     advance()
@@ -137,6 +144,11 @@ class XbLexer(
             if (next == '\n') {
                 break
             }
+            if (supportsBackslashEscapes && shouldStartBackslashEscape(index, delimiter)) {
+                escaped = true
+                advance()
+                continue
+            }
             builder.append(advance())
         }
         if (isAtEnd() || peek() != delimiter) {
@@ -145,6 +157,42 @@ class XbLexer(
         }
         advance()
         return token(TokenType.STRING, builder.toString(), start, index)
+    }
+
+    private fun shouldStartBackslashEscape(position: Int, delimiter: Char): Boolean {
+        if (source[position] != '\\' || peekAt(position + 1) != delimiter) {
+            return false
+        }
+        val continuationStart = position + 2
+        if (!isLikelyStringContinuation(continuationStart)) {
+            return false
+        }
+        val nextDelimiter = source.indexOf(delimiter, continuationStart)
+        if (nextDelimiter == -1) {
+            return false
+        }
+        val nextLineBreak = nextLineBreakIndex(continuationStart)
+        return nextLineBreak == -1 || nextDelimiter < nextLineBreak
+    }
+
+    private fun nextLineBreakIndex(start: Int): Int {
+        val nextLf = source.indexOf('\n', start)
+        val nextCr = source.indexOf('\r', start)
+        return when {
+            nextLf == -1 -> nextCr
+            nextCr == -1 -> nextLf
+            else -> minOf(nextLf, nextCr)
+        }
+    }
+
+    private fun isLikelyStringContinuation(start: Int): Boolean {
+        if (start >= source.length) {
+            return false
+        }
+        return when (source[start]) {
+            ' ', '\t', '\n', '\r', ';', ',', ')', ']', '}', '+', '-', '*', '/', '%', '=' -> false
+            else -> true
+        }
     }
 
     private fun readBracketLiteralOrLBracket(start: Int): Token {
@@ -313,6 +361,8 @@ class XbLexer(
     private fun peek(): Char = source[index]
 
     private fun peekNext(): Char = if (index + 1 >= source.length) '\u0000' else source[index + 1]
+
+    private fun peekAt(position: Int): Char? = if (position in source.indices) source[position] else null
 
     private fun advance(): Char = source[index++]
 

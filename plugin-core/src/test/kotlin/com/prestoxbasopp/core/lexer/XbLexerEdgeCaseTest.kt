@@ -2,6 +2,8 @@ package com.prestoxbasopp.core.lexer
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertTimeoutPreemptively
+import java.time.Duration
 
 class XbLexerEdgeCaseTest {
     @Test
@@ -97,6 +99,36 @@ class XbLexerEdgeCaseTest {
         assertThat(result.tokens).anyMatch { it.type == XbTokenType.STRING && it.text == "'~OK'" }
         assertThat(result.tokens).anyMatch { it.type == XbTokenType.STRING && it.text == "'\\\\'" }
     }
+
+
+    @Test
+    fun `supports escaped double quotes inside double quoted strings`() {
+        val source = "cText := \"hello \\\"world\\\"!\""
+        val result = XbLexer().lex(source)
+
+        assertThat(result.errors).isEmpty()
+        assertThat(result.tokens).anyMatch { it.type == XbTokenType.STRING && it.text == "\"hello \\\"world\\\"!\"" }
+    }
+
+    @Test
+    fun `lexes large input with escaped double quotes within timeout`() {
+        val source = buildString {
+            appendLine("FUNCTION Heavy()")
+            repeat(5_000) { index ->
+                appendLine("LOCAL c$index := \"value \\\"$index\\\"\"")
+            }
+            appendLine("RETURN NIL")
+            appendLine("ENDFUNCTION")
+        }
+
+        val result = assertTimeoutPreemptively(Duration.ofSeconds(4)) {
+            XbLexer().lex(source)
+        }
+
+        assertThat(result.errors).isEmpty()
+        assertThat(result.tokens.count { it.type == XbTokenType.STRING }).isEqualTo(5_000)
+    }
+
 
     @Test
     fun `reports unterminated date literals`() {

@@ -2,6 +2,8 @@ package com.prestoxbasopp.core.parser
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertTimeoutPreemptively
+import java.time.Duration
 
 class XbLexerTokenizationTest {
     @Test
@@ -179,6 +181,45 @@ class XbLexerTokenizationTest {
     }
 
     @Test
+    fun `tokenizes double quoted escaped quotes without terminating string`() {
+        val source = "cText := \"hello \\\"world\\\"!\""
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.ASSIGN,
+            TokenType.STRING,
+        )
+        assertThat(tokens.last().lexeme).isEqualTo("hello \"world\"!")
+        assertThat(tokens.none { it.type == TokenType.ERROR }).isTrue()
+    }
+
+    @Test
+    fun `treats trailing backslash without escaped quote as unterminated string`() {
+        val source = "cText := \"C:\\\\"
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.ASSIGN,
+            TokenType.ERROR,
+        )
+        assertThat(tokens.last().lexeme).isEqualTo("\"C:\\\\")
+    }
+
+    @Test
+    fun `does not treat backslash quote as escape across line breaks`() {
+        val source = "\"line1\\\"\nline2\""
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.STRING,
+            TokenType.IDENTIFIER,
+            TokenType.ERROR,
+        )
+    }
+
+    @Test
     fun `keeps doubled quote escape behavior for regular double quoted strings`() {
         val source = "cText := \"a\"\"b\""
         val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
@@ -242,6 +283,27 @@ class XbLexerTokenizationTest {
             ".tmw",
         )
     }
+
+
+    @Test
+    fun `lexes large source with many escaped quotes within timeout`() {
+        val source = buildString {
+            appendLine("FUNCTION Heavy()")
+            repeat(5_000) { index ->
+                appendLine("LOCAL c$index := \"value \\\"$index\\\"\"")
+            }
+            appendLine("RETURN NIL")
+            appendLine("ENDFUNCTION")
+        }
+
+        val tokens = assertTimeoutPreemptively(Duration.ofSeconds(4)) {
+            XbLexer(source).lex().filter { it.type != TokenType.EOF }
+        }
+
+        assertThat(tokens.count { it.type == TokenType.STRING }).isEqualTo(5_000)
+        assertThat(tokens.none { it.type == TokenType.ERROR }).isTrue()
+    }
+
 
     @Test
     fun `tokenizes bracket path literal with backslash as string`() {
