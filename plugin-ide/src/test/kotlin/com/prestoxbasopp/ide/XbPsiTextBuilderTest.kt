@@ -60,4 +60,64 @@ class XbPsiTextBuilderTest {
         val expectedEnd = source.indexOf("endfunction") + "endfunction".length
         assertThat(function.textRange.endOffset).isEqualTo(expectedEnd)
     }
+
+    @Test
+    fun `function range is implicitly terminated by next declaration keyword`() {
+        val source = """
+            function AllFilesExist(aFiles)
+               return .t.
+
+            function CenterPos(aSize, aRefSize)
+               return 1
+            endfunction
+        """.trimIndent()
+
+        val root = XbPsiTextBuilder().build(source)
+        val functions = root.children.filterIsInstance<XbPsiFunctionDeclaration>()
+
+        assertThat(functions).hasSize(2)
+        val firstFunctionEndExpected = source.indexOf("function CenterPos") - 2
+        assertThat(functions[0].symbolName).isEqualTo("AllFilesExist")
+        assertThat(functions[0].textRange.endOffset).isEqualTo(firstFunctionEndExpected)
+        assertThat(functions[0].text.trimEnd()).endsWith("return .t.")
+        assertThat(functions[1].symbolName).isEqualTo("CenterPos")
+    }
+
+    @Test
+    fun `procedure range is implicitly terminated by next declaration keyword`() {
+        val source = """
+            procedure ChangePos(oXbp, aDistance)
+               return
+
+            function Ok2SaveDlgSize(lSaveSize)
+               return .t.
+            endfunction
+        """.trimIndent()
+
+        val root = XbPsiTextBuilder().build(source)
+        val declarations = root.children.filterIsInstance<XbPsiFunctionDeclaration>()
+
+        assertThat(declarations.map { it.symbolName }).containsExactly("ChangePos", "Ok2SaveDlgSize")
+        val firstDeclarationEndExpected = source.indexOf("function Ok2SaveDlgSize") - 2
+        assertThat(declarations[0].textRange.endOffset).isEqualTo(firstDeclarationEndExpected)
+        assertThat(declarations[0].text.trimEnd()).endsWith("return")
+    }
+
+    @Test
+    fun `declaration ranges close on explicit end markers even when mismatched`() {
+        val source = """
+            function Main()
+               return 1
+            endproc
+            local afterMain
+        """.trimIndent()
+
+        val root = XbPsiTextBuilder().build(source)
+        val function = root.children.filterIsInstance<XbPsiFunctionDeclaration>().first()
+        val afterMain = root.children.filterIsInstance<XbPsiVariableDeclaration>().first { it.symbolName == "afterMain" }
+
+        assertThat(function.symbolName).isEqualTo("Main")
+        assertThat(function.textRange.endOffset).isLessThan(afterMain.textRange.startOffset)
+        assertThat(function.text.trimEnd()).endsWith("endproc")
+    }
 }

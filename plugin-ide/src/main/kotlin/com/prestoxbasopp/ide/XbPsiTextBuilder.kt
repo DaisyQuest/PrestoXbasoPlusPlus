@@ -16,7 +16,13 @@ import kotlin.math.min
 
 class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
     private val functionKeywords = setOf("function", "procedure", "method")
-    private val functionEndKeywords = setOf("endfunction", "endprocedure", "endproc", "endmethod")
+    private val declarationBoundaryKeywords = functionKeywords
+    private val declarationEndKeywordsByStartKeyword = mapOf(
+        "function" to setOf("endfunction", "endfunc"),
+        "procedure" to setOf("endprocedure", "endproc"),
+        "method" to setOf("endmethod"),
+    )
+    private val allDeclarationEndKeywords = declarationEndKeywordsByStartKeyword.values.flatten().toSet()
     private val variableKeywords = setOf("local", "static", "public", "private", "global")
 
     fun build(source: String, fileName: String = "file"): XbPsiFile {
@@ -59,7 +65,12 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
                         val (parameters, endIndex) = parseParameters(tokens, index + 2)
                         val declaredEndOffset = tokens.getOrNull(endIndex)?.range?.endOffset
                             ?: nameToken.range.endOffset
-                        val endOffset = findFunctionEndOffset(tokens, endIndex + 1, declaredEndOffset)
+                        val endOffset = findDeclarationEndOffset(
+                            tokens = tokens,
+                            startKeyword = keyword,
+                            searchStartIndex = endIndex + 1,
+                            fallbackEndOffset = declaredEndOffset,
+                        )
                         elements += XbPsiFunctionDeclaration(
                             symbolName = nameToken.text,
                             parameters = parameters,
@@ -155,15 +166,34 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
         return parameters to (tokens.lastIndex)
     }
 
-    private fun findFunctionEndOffset(tokens: List<XbToken>, startIndex: Int, fallbackEndOffset: Int): Int {
-        if (startIndex < 0) {
+    private fun findDeclarationEndOffset(
+        tokens: List<XbToken>,
+        startKeyword: String,
+        searchStartIndex: Int,
+        fallbackEndOffset: Int,
+    ): Int {
+        if (searchStartIndex < 0) {
             return fallbackEndOffset
         }
-        for (index in startIndex until tokens.size) {
+        val declarationEndKeywords = declarationEndKeywordsByStartKeyword[startKeyword].orEmpty()
+        var lastBodyTokenEndOffset = fallbackEndOffset
+        for (index in searchStartIndex until tokens.size) {
             val token = tokens[index]
-            if (token.type == XbTokenType.KEYWORD && token.text.lowercase() in functionEndKeywords) {
+            if (token.type != XbTokenType.KEYWORD) {
+                lastBodyTokenEndOffset = token.range.endOffset
+                continue
+            }
+            val keyword = token.text.lowercase()
+            if (keyword in declarationEndKeywords) {
                 return token.range.endOffset
             }
+            if (keyword in allDeclarationEndKeywords) {
+                return token.range.endOffset
+            }
+            if (keyword in declarationBoundaryKeywords) {
+                return lastBodyTokenEndOffset
+            }
+            lastBodyTokenEndOffset = token.range.endOffset
         }
         return fallbackEndOffset
     }
