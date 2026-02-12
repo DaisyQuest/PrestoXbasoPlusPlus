@@ -163,6 +163,22 @@ class XbIdeRegistrationTest {
         assertThat(startupActivity).isEqualTo("com.prestoxbasopp.ide.modules.XbModuleStartupActivity")
     }
 
+
+    @Test
+    fun `plugin xml registers xbase debugger run configuration type`() {
+        val pluginXmlUrl: URL? = javaClass.classLoader.getResource("META-INF/plugin.xml")
+        assertThat(pluginXmlUrl).withFailMessage("Expected plugin.xml to be on the test classpath.").isNotNull()
+
+        val pluginXml = pluginXmlUrl!!.readText()
+        val configurationTypeClass =
+            Regex("""<configurationType\s+[^>]*implementation="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
+
+        assertThat(configurationTypeClass).isEqualTo("com.prestoxbasopp.ide.debug.XbDebuggerRunConfigurationType")
+    }
+
     @Test
     fun `syntax highlighter maps known tokens to attributes`() {
         val highlighter = XbSyntaxHighlighterAdapter()
