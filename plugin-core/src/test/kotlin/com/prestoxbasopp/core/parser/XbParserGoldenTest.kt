@@ -215,6 +215,107 @@ class XbParserGoldenTest {
                 """.trimIndent(),
             ),
             GoldenTestCase(
+                id = "fexists-windows-path-concatenation-parses-without-backslash-errors",
+                source = """
+                    IF cXX=="D" .AND. lOK
+                      lOK := .F.
+                      z3+="Load"
+                      z3+="Files"
+                      IF cuSpecial == TMDC(date()+33) .AND. ;
+                            cuPassword = "##NONE##" .AND. GetLevel(1)='P' .AND. ;
+                            DoesUpLoadFileExist() .AND. ;
+                            fExists("C:\"+y2+"s"+x1+"Place\"+z3+".tmw")
+                        lOK := .T.
+                      ENDIF
+                    ENDIF
+                    RETURN lOK
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Stmt.If
+                        Expr.Binary.And
+                          Expr.Binary.Equal
+                            Expr.Identifier[name=cXX]
+                            Expr.Literal.String[value=D]
+                          Expr.Identifier[name=lOK]
+                        Block[branch=then]
+                          Stmt.Assignment
+                            Expr.Identifier[name=lOK]
+                            Expr.Literal.Boolean[value=false]
+                          Stmt.Assignment
+                            Expr.Identifier[name=z3]
+                            Expr.Binary.Add
+                              Expr.Identifier[name=z3]
+                              Expr.Literal.String[value=Load]
+                          Stmt.Assignment
+                            Expr.Identifier[name=z3]
+                            Expr.Binary.Add
+                              Expr.Identifier[name=z3]
+                              Expr.Literal.String[value=Files]
+                          Stmt.If
+                            Expr.Binary.And
+                              Expr.Binary.And
+                                Expr.Binary.And
+                                  Expr.Binary.And
+                                    Expr.Binary.Equal
+                                      Expr.Identifier[name=cuSpecial]
+                                      Expr.Call
+                                        Expr.Identifier[name=TMDC]
+                                        Expr.Binary.Add
+                                          Expr.Call
+                                            Expr.Identifier[name=date]
+                                          Expr.Literal.Number[value=33]
+                                    Expr.Binary[op="="]
+                                      Expr.Identifier[name=cuPassword]
+                                      Expr.Literal.String[value="##NONE##"]
+                                  Expr.Binary[op="="]
+                                    Expr.Call
+                                      Expr.Identifier[name=GetLevel]
+                                      Expr.Literal.Number[value=1]
+                                    Expr.Literal.String[value=P]
+                                Expr.Call
+                                  Expr.Identifier[name=DoesUpLoadFileExist]
+                              Expr.Call
+                                Expr.Identifier[name=fExists]
+                                Expr.Binary.Add
+                                  Expr.Binary.Add
+                                    Expr.Binary.Add
+                                      Expr.Binary.Add
+                                        Expr.Binary.Add
+                                          Expr.Binary.Add
+                                            Expr.Literal.String[value="C:\\"]
+                                            Expr.Identifier[name=y2]
+                                          Expr.Literal.String[value=s]
+                                        Expr.Identifier[name=x1]
+                                      Expr.Literal.String[value="Place\\"]
+                                    Expr.Identifier[name=z3]
+                                  Expr.Literal.String[value=.tmw]
+                            Block[branch=then]
+                              Stmt.Assignment
+                                Expr.Identifier[name=lOK]
+                                Expr.Literal.Boolean[value=true]
+                            Block[branch=else]
+                        Block[branch=else]
+                      Stmt.Return
+                        Expr.Identifier[name=lOK]
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "file2sei-bracket-path-literal-parses-as-string-argument",
+                source = "File2SEi(rootPath()+datExport,[data\\],\"NO\")",
+                expectedAst = """
+                    File
+                      Expr.Call
+                        Expr.Identifier[name=File2SEi]
+                        Expr.Binary.Add
+                          Expr.Call
+                            Expr.Identifier[name=rootPath]
+                          Expr.Identifier[name=datExport]
+                        Expr.Literal.String[value="data\\"]
+                        Expr.Literal.String[value=NO]
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
                 id = "compound-assignment-missing-right-hand-side-reports-error",
                 source = "total +=",
                 expectedAst = """
