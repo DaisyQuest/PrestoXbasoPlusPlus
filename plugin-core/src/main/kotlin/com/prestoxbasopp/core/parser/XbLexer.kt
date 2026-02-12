@@ -36,7 +36,13 @@ class XbLexer(
             current.isDigit() -> readNumber(start)
             current == '"' || current == '\'' -> readString(start, current)
             current == '+' -> token(TokenType.PLUS, "+", start, index)
-            current == '-' -> token(TokenType.MINUS, "-", start, index)
+            current == '-' -> {
+                if (match('>')) {
+                    token(TokenType.ARROW, "->", start, index)
+                } else {
+                    token(TokenType.MINUS, "-", start, index)
+                }
+            }
             current == '*' -> token(TokenType.STAR, "*", start, index)
             current == '/' -> token(TokenType.SLASH, "/", start, index)
             current == '%' -> token(TokenType.PERCENT, "%", start, index)
@@ -67,6 +73,13 @@ class XbLexer(
             current == ':' -> {
                 if (match('=')) {
                     token(TokenType.ASSIGN, ":=", start, index)
+                } else if (match(':')) {
+                    val scopeStart = index
+                    while (!isAtEnd() && (peek().isLetterOrDigit() || peek() == '_')) {
+                        advance()
+                    }
+                    val member = source.substring(scopeStart, index)
+                    token(TokenType.IDENTIFIER, "::" + member, start, index)
                 } else {
                     token(TokenType.COLON, ":", start, index)
                 }
@@ -239,6 +252,7 @@ class XbLexer(
             "endproc" -> TokenType.ENDPROC
             "endprocedure" -> TokenType.ENDPROC
             "local" -> TokenType.LOCAL
+            "static" -> TokenType.LOCAL
             "for" -> TokenType.FOR
             "to" -> TokenType.TO
             "step" -> TokenType.STEP
@@ -296,8 +310,29 @@ class XbLexer(
                 }
                 continue
             }
+            if (peek() == '*' && isAsteriskComment(index)) {
+                while (!isAtEnd() && peek() != '\n') {
+                    index++
+                }
+                continue
+            }
             return null
         }
+    }
+
+    private fun isAsteriskComment(position: Int): Boolean {
+        var cursor = position - 1
+        while (cursor >= 0) {
+            val char = source[cursor]
+            if (char == '\n' || char == '\r') {
+                return true
+            }
+            if (!char.isWhitespace()) {
+                return false
+            }
+            cursor--
+        }
+        return true
     }
 
     private fun readDotKeyword(start: Int): Token {
@@ -326,6 +361,13 @@ class XbLexer(
         var cursor = startIndex + 1
         while (cursor < source.length) {
             val char = source[cursor]
+            if (char == '/' && cursor + 1 < source.length && source[cursor + 1] == '/') {
+                cursor += 2
+                while (cursor < source.length && source[cursor] != '\n') {
+                    cursor++
+                }
+                continue
+            }
             if (char == '\n') {
                 return !isBlankLine(cursor + 1)
             }

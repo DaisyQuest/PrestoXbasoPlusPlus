@@ -35,6 +35,20 @@ class XbLexerTokenizationTest {
         assertThat(tokens.first().lexeme).isEqualTo("@")
     }
 
+
+    @Test
+    fun `tokenizes colon member assignment sequence`() {
+        val tokens = XbLexer("oLogo:type := XBPSTATIC_TYPE_BITMAP").lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.COLON,
+            TokenType.IDENTIFIER,
+            TokenType.ASSIGN,
+            TokenType.IDENTIFIER,
+        )
+    }
+
     @Test
     fun `tokenizes colon for object method dispatch`() {
         val tokens = XbLexer("p_IniFile:ReadSectionValues()")
@@ -57,6 +71,59 @@ class XbLexerTokenizationTest {
         val token = tokens.single()
         assertThat(token.type).isEqualTo(TokenType.NOT)
         assertThat(token.lexeme).isEqualTo("not")
+    }
+
+
+    @Test
+    fun `tokenizes scoped instance variable identifier with double colon`() {
+        val tokens = XbLexer("::isOpened := .T.").lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.ASSIGN,
+            TokenType.TRUE,
+        )
+        assertThat(tokens.first().lexeme).isEqualTo("::isOpened")
+    }
+
+    @Test
+    fun `tokenizes db-alias arrow operator`() {
+        val tokens = XbLexer("charges->orig_statu").lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.ARROW,
+            TokenType.IDENTIFIER,
+        )
+        assertThat(tokens[1].lexeme).isEqualTo("->")
+    }
+
+    @Test
+    fun `tokenizes static as local keyword for declaration parsing`() {
+        val tokens = XbLexer("STATIC sFlag := .T.").lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.LOCAL,
+            TokenType.IDENTIFIER,
+            TokenType.ASSIGN,
+            TokenType.TRUE,
+        )
+    }
+
+    @Test
+    fun `skips xbase asterisk comments at start of line`() {
+        val source = """
+            * comment line
+            value := 1
+        """.trimIndent()
+
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.ASSIGN,
+            TokenType.NUMBER,
+        )
     }
 
     @Test
@@ -179,6 +246,29 @@ class XbLexerTokenizationTest {
             TokenType.PERCENT,
             TokenType.EQ,
             TokenType.NUMBER,
+        )
+    }
+
+    @Test
+    fun `treats semicolon plus trailing comment as line continuation`() {
+        val source = """
+            IF ready() ; // keep evaluating on the next line
+               .OR. retry()
+              result := .T.
+            ENDIF
+        """.trimIndent()
+
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsSequence(
+            TokenType.IF,
+            TokenType.IDENTIFIER,
+            TokenType.LPAREN,
+            TokenType.RPAREN,
+            TokenType.OR,
+            TokenType.IDENTIFIER,
+            TokenType.LPAREN,
+            TokenType.RPAREN,
         )
     }
 

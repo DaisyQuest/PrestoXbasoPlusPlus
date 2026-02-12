@@ -123,6 +123,10 @@ class XbParser(private val tokens: List<Token>) {
                     parseParametersStatement()
                 } else if (isIdentifierKeyword(peek(), "set")) {
                     parseSetCommandStatement()
+                } else if (isIdentifierKeyword(peek(), "default")) {
+                    parseDefaultCommandStatement()
+                } else if (isIdentifierKeyword(peek(), "alertbox")) {
+                    parseAlertBoxStatement()
                 } else if (isAssignmentStatementStart()) {
                     parseAssignmentStatement()
                 } else {
@@ -170,6 +174,46 @@ class XbParser(private val tokens: List<Token>) {
         }
         val endToken = if (match(TokenType.SEMICOLON)) previous() else lastTokenFrom(expr.range)
         return XbExpressionStatement(expr, rangeFromOffset(expr.range.startOffset, endToken.endOffset))
+    }
+
+    private fun parseDefaultCommandStatement(): XbStatement {
+        val defaultToken = advance()
+        while (!isAtEnd() && !isDefaultCommandBoundary(peek())) {
+            val tokenType = peek().type
+            if (tokenType == TokenType.COMMA || tokenType == TokenType.TO || tokenType == TokenType.EQ || tokenType == TokenType.ASSIGN) {
+                advance()
+                continue
+            }
+            if (canStartExpression(tokenType)) {
+                parseExpression(0)
+            } else {
+                advance()
+            }
+        }
+        val endToken = previousOr(defaultToken)
+        return XbExpressionStatement(
+            expression = XbIdentifierExpression(defaultToken.lexeme, rangeFrom(defaultToken, defaultToken)),
+            range = rangeFrom(defaultToken, endToken),
+        )
+    }
+
+    private fun parseAlertBoxStatement(): XbStatement {
+        val alertToken = advance()
+        while (!isAtEnd() && !isTerminatorToken(peek())) {
+            if (match(TokenType.SEMICOLON) || match(TokenType.COMMA)) {
+                continue
+            }
+            if (canStartExpression(peek().type)) {
+                parseExpression(0)
+            } else {
+                advance()
+            }
+        }
+        val endToken = previousOr(alertToken)
+        return XbExpressionStatement(
+            expression = XbIdentifierExpression(alertToken.lexeme, rangeFrom(alertToken, alertToken)),
+            range = rangeFrom(alertToken, endToken),
+        )
     }
 
     private fun parseSetCommandStatement(): XbStatement {
@@ -588,7 +632,7 @@ class XbParser(private val tokens: List<Token>) {
                 range = rangeFrom(forToken, previousOr(forToken)),
             )
         }
-        if (!match(TokenType.ASSIGN)) {
+        if (!match(TokenType.ASSIGN) && !match(TokenType.EQ)) {
             recordError("Expected ':=' after FOR iterator at ${peek().startOffset}")
         }
         val startExpr = parseExpression(0) ?: run {
@@ -931,6 +975,22 @@ class XbParser(private val tokens: List<Token>) {
                         range = rangeFromOffsets(currentExpression.range.startOffset, endToken.endOffset),
                     )
                 }
+                TokenType.ARROW -> {
+                    if (peekNext().type != TokenType.IDENTIFIER) {
+                        return currentExpression
+                    }
+                    advance()
+                    val memberToken = if (match(TokenType.IDENTIFIER)) previous() else null
+                    if (memberToken == null) {
+                        recordError("Expected member name after '->' at ${peek().startOffset}")
+                        currentExpression
+                    } else {
+                        XbIdentifierExpression(
+                            name = "${renderExpression(currentExpression)}->${memberToken.lexeme}",
+                            range = rangeFromOffsets(currentExpression.range.startOffset, memberToken.endOffset),
+                        )
+                    }
+                }
                 else -> return currentExpression
             }
         }
@@ -939,6 +999,33 @@ class XbParser(private val tokens: List<Token>) {
     private fun parseAssignmentTarget(): XbExpression? {
         val targetToken = matchNameToken() ?: return null
         var target: XbExpression = XbIdentifierExpression(targetToken.lexeme, rangeFrom(targetToken, targetToken))
+        while (true) {
+            if (match(TokenType.ARROW)) {
+                val memberToken = if (match(TokenType.IDENTIFIER)) previous() else null
+                if (memberToken == null) {
+                    recordError("Expected member name after '->' at ${peek().startOffset}")
+                    return target
+                }
+                target = XbIdentifierExpression(
+                    name = "${renderExpression(target)}->${memberToken.lexeme}",
+                    range = rangeFromOffsets(target.range.startOffset, memberToken.endOffset),
+                )
+                continue
+            }
+            if (match(TokenType.COLON)) {
+                val memberToken = if (match(TokenType.IDENTIFIER)) previous() else null
+                if (memberToken == null) {
+                    recordError("Expected member name after ':' at ${peek().startOffset}")
+                    return target
+                }
+                target = XbIdentifierExpression(
+                    name = "${renderExpression(target)}:${memberToken.lexeme}",
+                    range = rangeFromOffsets(target.range.startOffset, memberToken.endOffset),
+                )
+                continue
+            }
+            break
+        }
         while (match(TokenType.LBRACKET)) {
             val indexExpressions = mutableListOf<XbExpression>()
             parseExpression(0)?.let { indexExpressions += it } ?: run {
@@ -963,6 +1050,13 @@ class XbParser(private val tokens: List<Token>) {
             }
         }
         return target
+    }
+
+    private fun renderExpression(expression: XbExpression): String {
+        return when (expression) {
+            is XbIdentifierExpression -> expression.name
+            else -> "<expr>"
+        }
     }
 
     private fun infixPrecedence(type: TokenType): Int? {
@@ -1007,31 +1101,38 @@ class XbParser(private val tokens: List<Token>) {
     private fun isAssignmentStatementStart(): Boolean {
         if (!check(TokenType.IDENTIFIER) && !check(TokenType.INDEX)) return false
         var index = current + 1
-        if (index >= tokens.size) return false
-        if (isAssignmentOperatorAt(index)) {
-            return true
-        }
-        while (index < tokens.size && tokens[index].type == TokenType.LBRACKET) {
-            var depth = 0
-            while (index < tokens.size) {
-                val type = tokens[index].type
-                if (type == TokenType.LBRACKET) {
-                    depth++
-                } else if (type == TokenType.RBRACKET) {
-                    depth--
-                    if (depth == 0) {
-                        index++
-                        break
-                    }
-                }
-                index++
-            }
-            if (depth != 0 || index >= tokens.size) {
-                return false
-            }
+        while (index < tokens.size) {
             if (isAssignmentOperatorAt(index)) {
                 return true
             }
+            if ((tokens[index].type == TokenType.ARROW || tokens[index].type == TokenType.COLON) &&
+                index + 1 < tokens.size &&
+                tokens[index + 1].type == TokenType.IDENTIFIER
+            ) {
+                index += 2
+                continue
+            }
+            if (tokens[index].type == TokenType.LBRACKET) {
+                var depth = 0
+                while (index < tokens.size) {
+                    val type = tokens[index].type
+                    if (type == TokenType.LBRACKET) {
+                        depth++
+                    } else if (type == TokenType.RBRACKET) {
+                        depth--
+                        if (depth == 0) {
+                            index++
+                            break
+                        }
+                    }
+                    index++
+                }
+                if (depth != 0 || index >= tokens.size) {
+                    return false
+                }
+                continue
+            }
+            return false
         }
         return false
     }
@@ -1170,6 +1271,28 @@ class XbParser(private val tokens: List<Token>) {
             isIdentifierKeyword(token, "case") ||
             isIdentifierKeyword(token, "otherwise") ||
             isIdentifierKeyword(token, "endcase")
+    }
+
+    private fun isDefaultCommandBoundary(token: Token): Boolean {
+        if (isTerminatorToken(token)) {
+            return true
+        }
+        return token.type in setOf(
+            TokenType.IF,
+            TokenType.FOR,
+            TokenType.DO,
+            TokenType.WHILE,
+            TokenType.RETURN,
+            TokenType.LOCAL,
+            TokenType.FUNCTION,
+            TokenType.PROCEDURE,
+            TokenType.BEGIN,
+            TokenType.BREAK,
+            TokenType.WAIT,
+            TokenType.EXIT,
+            TokenType.QUESTION,
+            TokenType.AT,
+        )
     }
 
     private fun matchNameToken(): Token? {
