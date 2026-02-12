@@ -48,11 +48,15 @@ class XbLexerLiteralErrorTest {
     }
 
     @Test
-    fun `reports empty symbol literal`() {
+    fun `tokenizes bare hash as operator instead of symbol error`() {
         val source = "a #"
         val result = XbLexer().lex(source)
 
-        assertThat(result.errors.map { it.message }).contains("Empty symbol literal")
-        assertThat(result.tokens).anyMatch { it.type == XbTokenType.UNKNOWN && it.text == "#" }
+        assertThat(result.errors).isEmpty()
+        assertThat(result.tokens.filter { it.type != XbTokenType.EOF }.map { it.type }).containsExactly(
+            XbTokenType.IDENTIFIER,
+            XbTokenType.OPERATOR,
+        )
+        assertThat(result.tokens).anyMatch { it.type == XbTokenType.OPERATOR && it.text == "#" }
     }
 }
