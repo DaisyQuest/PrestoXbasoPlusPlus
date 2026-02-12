@@ -72,4 +72,37 @@ class XbLexerTokenizationTest {
         )
         assertThat(tokens[5].lexeme).isEqualTo("!=")
     }
+
+    @Test
+    fun `tokenizes slash as division operator when not part of comment`() {
+        val tokens = XbLexer("a / b").lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.SLASH,
+            TokenType.IDENTIFIER,
+        )
+        assertThat(tokens[1].lexeme).isEqualTo("/")
+    }
+
+    @Test
+    fun `skips slash comments without producing slash token`() {
+        val tokens = XbLexer("a // trailing comment\n/ b").lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.SLASH,
+            TokenType.IDENTIFIER,
+        )
+        assertThat(tokens[1].lexeme).isEqualTo("/")
+    }
+
+    @Test
+    fun `returns error token for unterminated block comment that starts with slash`() {
+        val token = XbLexer("/* unterminated").lex().first { it.type != TokenType.EOF }
+
+        assertThat(token.type).isEqualTo(TokenType.ERROR)
+        assertThat(token.lexeme).isEqualTo("/* unterminated")
+    }
+
 }

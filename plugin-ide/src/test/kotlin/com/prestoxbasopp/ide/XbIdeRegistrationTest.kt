@@ -263,4 +263,35 @@ class XbIdeRegistrationTest {
         lexer.advance()
         assertThat(lexer.tokenType).isNull()
     }
+
+    @Test
+    fun `lexer adapter handles very large buffers and retains slash operators`() {
+        val lexer = XbLexerAdapter()
+        val body = buildString {
+            repeat(10_000) { index ->
+                append("value")
+                append(index)
+                append(" := ")
+                append(index + 10)
+                append(" / 2\n")
+            }
+        }
+        lexer.start(body, 0, body.length, 0)
+
+        var slashTokenCount = 0
+        var sawAnyToken = false
+        while (lexer.tokenType != null) {
+            sawAnyToken = true
+            if (lexer.tokenType == XbHighlighterTokenSet.forToken(CoreTokenType.OPERATOR) &&
+                body.substring(lexer.tokenStart, lexer.tokenEnd) == "/"
+            ) {
+                slashTokenCount++
+            }
+            lexer.advance()
+        }
+
+        assertThat(sawAnyToken).isTrue()
+        assertThat(slashTokenCount).isEqualTo(10_000)
+    }
+
 }
