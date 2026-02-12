@@ -940,6 +940,84 @@ class XbParserGoldenTest {
                             Expr.Literal.String[value=outside]
                 """.trimIndent(),
             ),
+            GoldenTestCase(
+                id = "do-case-with-set-order",
+                source = """
+                    DO CASE
+                      CASE cArea = 'G'
+                        set order to cOrder
+                        IF upper(alias())<>'DMV_XFER' .OR. IndexOrd()<>cOrder
+                          ReportDataError("DMV_XFER")
+                        ENDIF
+                      OTHERWISE
+                        RETURN
+                    ENDCASE
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Block
+                        Stmt.Expression
+                          Expr.Identifier[name=set]
+                        Stmt.If
+                          Expr.Binary.Or
+                            Expr.Binary.NotEqual
+                              Expr.Call
+                                Expr.Identifier[name=upper]
+                                Expr.Call
+                                  Expr.Identifier[name=alias]
+                              Expr.Literal.String[value=DMV_XFER]
+                            Expr.Binary.NotEqual
+                              Expr.Call
+                                Expr.Identifier[name=IndexOrd]
+                              Expr.Identifier[name=cOrder]
+                          Block[branch=then]
+                            Stmt.Expression
+                              Expr.Call
+                                Expr.Identifier[name=ReportDataError]
+                                Expr.Literal.String[value=DMV_XFER]
+                          Block[branch=else]
+                        Stmt.Return
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "parameters-statement-legacy-form",
+                source = """
+                    FUNCTION AddCourtLogo()
+                    PARAMETERS bgColor, aLogoSize
+                    RETURN NIL
+                    ENDFUNC
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Decl.Function[name=AddCourtLogo]
+                        Params
+                        Block
+                          Stmt.Local
+                            Local.Binding[name=bgColor]
+                            Local.Binding[name=aLogoSize]
+                          Stmt.Return
+                            Expr.Literal.Nil
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "double-comma-call-argument-list",
+                source = "oLogo := XbpStatic():new( RootWindow():drawingarea,, aLogoSize)",
+                expectedAst = """
+                    File
+                      Stmt.Assignment
+                        Expr.Identifier[name=oLogo]
+                        Expr.Call
+                          Expr.Identifier[name=new]
+                          Expr.Call
+                            Expr.Identifier[name=XbpStatic]
+                          Expr.Call
+                            Expr.Identifier[name=drawingarea]
+                            Expr.Call
+                              Expr.Identifier[name=RootWindow]
+                          Expr.Literal.Nil
+                          Expr.Identifier[name=aLogoSize]
+                """.trimIndent(),
+            ),
         )
 
         GoldenTestHarness.assertCases(cases, ::parseSource, ::dumpProgram)
