@@ -50,5 +50,6 @@
                                  displayName="xbase++ Settings"
                                  instance="com.prestoxbasopp.ide.XbSettingsConfigurable" />
         <startupActivity implementation="com.prestoxbasopp.ide.modules.XbModuleStartupActivity" />
+        <configurationType implementation="com.prestoxbasopp.ide.debug.XbDebuggerRunConfigurationType" />
     </extensions>
 </idea-plugin>
