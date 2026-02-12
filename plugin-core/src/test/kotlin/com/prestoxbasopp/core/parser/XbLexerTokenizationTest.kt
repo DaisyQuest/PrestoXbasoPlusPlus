@@ -165,6 +165,34 @@ class XbLexerTokenizationTest {
     }
 
     @Test
+    fun `tokenizes double quoted trailing backslash as complete string literal`() {
+        val source = "cCleanString := \"\\\""
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.ASSIGN,
+            TokenType.STRING,
+        )
+        assertThat(tokens.last().lexeme).isEqualTo("\\")
+        assertThat(tokens.none { it.type == TokenType.ERROR }).isTrue()
+    }
+
+    @Test
+    fun `keeps doubled quote escape behavior for regular double quoted strings`() {
+        val source = "cText := \"a\"\"b\""
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.ASSIGN,
+            TokenType.STRING,
+        )
+        assertThat(tokens.last().lexeme).isEqualTo("a\"b")
+        assertThat(tokens.none { it.type == TokenType.ERROR }).isTrue()
+    }
+
+    @Test
     fun `tokenizes backslash question mark inside single quoted string`() {
         val source = """IF cChar$'<>:"/|\?*'"""
         val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }

@@ -106,7 +106,7 @@ class XbLexer(
                 val char = source[index]
                 if (escaped) {
                     escaped = false
-                } else if (supportsBackslashEscapes && char == '\\') {
+                } else if (supportsBackslashEscapes && shouldStartBackslashEscape(index, quote)) {
                     escaped = true
                 } else if (char == quote && peek(1) == quote) {
                     index += 2
@@ -170,7 +170,7 @@ class XbLexer(
                         continue
                     }
                     when {
-                        stringSupportsBackslashEscapes && char == '\\' -> {
+                        stringSupportsBackslashEscapes && shouldStartBackslashEscape(index, stringQuote) -> {
                             escaped = true
                             index++
                         }
@@ -337,8 +337,31 @@ class XbLexer(
             return XbLexerError(message, mapRange(XbTextRange(start, end)))
         }
 
+        private fun shouldStartBackslashEscape(position: Int, quote: Char): Boolean {
+            if (source[position] != '\\' || peekFrom(position, 1) != quote) {
+                return false
+            }
+            var cursor = position + 2
+            while (cursor < source.length) {
+                val current = source[cursor]
+                if (current == '\n' || current == '\r') {
+                    return false
+                }
+                if (current == quote) {
+                    return true
+                }
+                cursor++
+            }
+            return false
+        }
+
         private fun peek(offset: Int): Char? {
             val target = index + offset
+            return if (target in source.indices) source[target] else null
+        }
+
+        private fun peekFrom(position: Int, offset: Int): Char? {
+            val target = position + offset
             return if (target in source.indices) source[target] else null
         }
 
