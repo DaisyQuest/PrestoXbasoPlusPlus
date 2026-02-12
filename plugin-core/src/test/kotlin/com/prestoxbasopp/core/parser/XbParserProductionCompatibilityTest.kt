@@ -327,4 +327,43 @@ class XbParserProductionCompatibilityTest {
         assertThat((alertStmt.expression as XbIdentifierExpression).name).isEqualTo("AlertBox")
     }
 
+
+    @Test
+    fun `parses inline assignment expression inside parenthesized return`() {
+        val source = """
+            FUNCTION TerminateInline()
+            LOCAL terminated := .F.
+            RETURN (terminated := .T.)
+            ENDFUNCTION
+        """.trimIndent()
+
+        val result = XbParser.parse(source)
+
+        assertThat(result.errors).isEmpty()
+        val function = result.program!!.statements.single() as XbFunctionDeclaration
+        val returnStmt = function.body.statements[1] as com.prestoxbasopp.core.ast.XbReturnStatement
+        val assignmentExpr = returnStmt.expression as com.prestoxbasopp.core.ast.XbBinaryExpression
+        assertThat(assignmentExpr.operator).isEqualTo(":=")
+        assertThat((assignmentExpr.left as XbIdentifierExpression).name).isEqualTo("terminated")
+        assertThat(assignmentExpr.right).isInstanceOf(com.prestoxbasopp.core.ast.XbLiteralExpression::class.java)
+    }
+
+    @Test
+    fun `parses db-alias scoped call syntax with arrow parenthesized expression`() {
+        val source = """
+            FUNCTION CommitClient()
+            CLIENT->(dbCommit())
+            RETURN NIL
+            ENDFUNCTION
+        """.trimIndent()
+
+        val result = XbParser.parse(source)
+
+        assertThat(result.errors).isEmpty()
+        val function = result.program!!.statements.single() as XbFunctionDeclaration
+        val callStmt = function.body.statements[0] as XbExpressionStatement
+        val scopedCall = callStmt.expression as XbIdentifierExpression
+        assertThat(scopedCall.name).isEqualTo("CLIENT->(<expr>)")
+    }
+
 }
