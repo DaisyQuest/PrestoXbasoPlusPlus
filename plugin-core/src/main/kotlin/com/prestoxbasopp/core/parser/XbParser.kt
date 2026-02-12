@@ -508,8 +508,8 @@ class XbParser(private val tokens: List<Token>) {
             recordError("Expected function name after FUNCTION at ${peek().startOffset}")
         }
         val parameters = parseParameterList()
-        val body = parseBlock(setOf(TokenType.ENDFUNCTION))
-        if (!match(TokenType.ENDFUNCTION) && !isAtEnd()) {
+        val body = parseBlock(FUNCTION_BLOCK_TERMINATORS)
+        if (!match(TokenType.ENDFUNCTION) && !canImplicitlyTerminateDeclarationBody()) {
             recordError("Expected ENDFUNCTION to close FUNCTION at ${peek().startOffset}")
         }
         val endToken = previousOr(functionToken)
@@ -528,8 +528,8 @@ class XbParser(private val tokens: List<Token>) {
             recordError("Expected procedure name after PROCEDURE at ${peek().startOffset}")
         }
         val parameters = parseParameterList()
-        val body = parseBlock(setOf(TokenType.ENDPROC))
-        if (!match(TokenType.ENDPROC) && !isAtEnd()) {
+        val body = parseBlock(PROCEDURE_BLOCK_TERMINATORS)
+        if (!match(TokenType.ENDPROC) && !canImplicitlyTerminateDeclarationBody()) {
             recordError("Expected ENDPROC to close PROCEDURE at ${peek().startOffset}")
         }
         val endToken = previousOr(procedureToken)
@@ -578,6 +578,12 @@ class XbParser(private val tokens: List<Token>) {
         }
         val end = if (current == startIndex) start else previousOr(start)
         return XbBlock(statements, rangeFrom(start, end))
+    }
+
+
+
+    private fun canImplicitlyTerminateDeclarationBody(): Boolean {
+        return isAtEnd() || peek().type in DECLARATION_START_TOKENS
     }
 
     private fun parseExpression(minPrecedence: Int): XbExpression? {
@@ -986,6 +992,15 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.END,
             TokenType.EOF,
         )
+
+        private val DECLARATION_START_TOKENS = setOf(
+            TokenType.FUNCTION,
+            TokenType.PROCEDURE,
+        )
+
+        private val FUNCTION_BLOCK_TERMINATORS = setOf(TokenType.ENDFUNCTION) + DECLARATION_START_TOKENS
+
+        private val PROCEDURE_BLOCK_TERMINATORS = setOf(TokenType.ENDPROC) + DECLARATION_START_TOKENS
 
         fun parse(source: String): XbParseResult {
             val preprocess = com.prestoxbasopp.core.lexer.XbPreprocessor.preprocess(source)
