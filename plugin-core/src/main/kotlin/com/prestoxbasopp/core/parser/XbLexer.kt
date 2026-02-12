@@ -81,6 +81,8 @@ class XbLexer(
             current == '<' -> {
                 if (match('=')) {
                     token(TokenType.LTE, "<=", start, index)
+                } else if (match('>')) {
+                    token(TokenType.NEQ, "!=", start, index)
                 } else {
                     token(TokenType.LT, "<", start, index)
                 }
