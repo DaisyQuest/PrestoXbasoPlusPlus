@@ -150,6 +150,7 @@ class XbLexer(
             "if" -> TokenType.IF
             "then" -> TokenType.THEN
             "else" -> TokenType.ELSE
+            "elseif" -> TokenType.ELSEIF
             "endif" -> TokenType.ENDIF
             "while" -> TokenType.WHILE
             "do" -> TokenType.DO

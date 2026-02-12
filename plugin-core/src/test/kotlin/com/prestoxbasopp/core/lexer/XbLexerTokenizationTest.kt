@@ -73,6 +73,29 @@ class XbLexerTokenizationTest {
         assertThat(keywordTexts).contains("endfunction", "endfunc", "endproc", "endprocedure")
     }
 
+
+    @Test
+    fun `recognizes extended control-flow keywords`() {
+        val source = "then to step begin sequence recover using break end say get valid"
+        val result = XbLexer().lex(source)
+
+        val keywordTexts = result.tokens.filter { it.type == XbTokenType.KEYWORD }.map { it.text.lowercase() }
+        assertThat(keywordTexts).containsExactly(
+            "then",
+            "to",
+            "step",
+            "begin",
+            "sequence",
+            "recover",
+            "using",
+            "break",
+            "end",
+            "say",
+            "get",
+            "valid",
+        )
+    }
+
     @Test
     fun `handles doubled quotes inside strings without swallowing comments`() {
         val source = """

@@ -17,6 +17,7 @@ enum class TokenType {
     IF,
     THEN,
     ELSE,
+    ELSEIF,
     ENDIF,
     WHILE,
     DO,
