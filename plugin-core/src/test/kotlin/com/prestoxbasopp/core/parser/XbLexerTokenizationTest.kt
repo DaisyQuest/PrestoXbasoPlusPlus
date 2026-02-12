@@ -36,6 +36,21 @@ class XbLexerTokenizationTest {
     }
 
     @Test
+    fun `tokenizes colon for object method dispatch`() {
+        val tokens = XbLexer("p_IniFile:ReadSectionValues()")
+            .lex()
+            .filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.COLON,
+            TokenType.IDENTIFIER,
+            TokenType.LPAREN,
+            TokenType.RPAREN,
+        )
+    }
+
+    @Test
     fun `reports error token for bare exclamation mark`() {
         val tokens = XbLexer("!").lex().filter { it.type != TokenType.EOF }
 
