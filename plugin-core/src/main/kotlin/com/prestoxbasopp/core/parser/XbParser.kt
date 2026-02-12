@@ -136,16 +136,56 @@ class XbParser(private val tokens: List<Token>) {
             synchronize()
             return null
         }
-        if (!match(TokenType.ASSIGN)) {
-            recordError("Expected ':=' after assignment target at ${peek().startOffset}")
+        val compoundOperator = matchCompoundAssignmentOperator()
+        if (compoundOperator == null && !match(TokenType.ASSIGN)) {
+            recordError("Expected assignment operator after assignment target at ${peek().startOffset}")
         }
-        val value = parseExpression(0) ?: run {
-            recordError("Expected expression after ':=' at ${peek().startOffset}")
+        val rightHandSide = parseExpression(0) ?: run {
+            recordError("Expected expression after assignment operator at ${peek().startOffset}")
             fallbackExpression(targetToken)
+        }
+        val value = if (compoundOperator != null) {
+            XbBinaryExpression(
+                operator = compoundOperator,
+                left = target,
+                right = rightHandSide,
+                range = rangeFromOffsets(target.range.startOffset, rightHandSide.range.endOffset),
+            )
+        } else {
+            rightHandSide
         }
         match(TokenType.SEMICOLON)
         val range = rangeFromOffsets(target.range.startOffset, value.range.endOffset)
         return XbAssignmentStatement(target, value, range)
+    }
+
+    private fun matchCompoundAssignmentOperator(): String? {
+        if (check(TokenType.PLUS) && peekNext().type == TokenType.EQ) {
+            advance()
+            advance()
+            return "+"
+        }
+        if (check(TokenType.MINUS) && peekNext().type == TokenType.EQ) {
+            advance()
+            advance()
+            return "-"
+        }
+        if (check(TokenType.STAR) && peekNext().type == TokenType.EQ) {
+            advance()
+            advance()
+            return "*"
+        }
+        if (check(TokenType.SLASH) && peekNext().type == TokenType.EQ) {
+            advance()
+            advance()
+            return "/"
+        }
+        if (check(TokenType.PERCENT) && peekNext().type == TokenType.EQ) {
+            advance()
+            advance()
+            return "%"
+        }
+        return null
     }
 
     private fun parsePrintStatement(): XbStatement {
@@ -803,7 +843,7 @@ class XbParser(private val tokens: List<Token>) {
         if (!check(TokenType.IDENTIFIER)) return false
         var index = current + 1
         if (index >= tokens.size) return false
-        if (tokens[index].type == TokenType.ASSIGN) {
+        if (isAssignmentOperatorAt(index)) {
             return true
         }
         while (index < tokens.size && tokens[index].type == TokenType.LBRACKET) {
@@ -824,11 +864,28 @@ class XbParser(private val tokens: List<Token>) {
             if (depth != 0 || index >= tokens.size) {
                 return false
             }
-            if (tokens[index].type == TokenType.ASSIGN) {
+            if (isAssignmentOperatorAt(index)) {
                 return true
             }
         }
         return false
+    }
+
+    private fun isAssignmentOperatorAt(index: Int): Boolean {
+        if (index >= tokens.size) return false
+        if (tokens[index].type == TokenType.ASSIGN) {
+            return true
+        }
+        if (index + 1 >= tokens.size) {
+            return false
+        }
+        val operator = tokens[index].type
+        return (operator == TokenType.PLUS ||
+            operator == TokenType.MINUS ||
+            operator == TokenType.STAR ||
+            operator == TokenType.SLASH ||
+            operator == TokenType.PERCENT) &&
+            tokens[index + 1].type == TokenType.EQ
     }
 
     private fun isAtEnd(): Boolean = peek().type == TokenType.EOF

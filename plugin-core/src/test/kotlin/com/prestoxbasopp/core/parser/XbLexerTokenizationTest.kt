@@ -105,4 +105,17 @@ class XbLexerTokenizationTest {
         assertThat(token.lexeme).isEqualTo("/* unterminated")
     }
 
+    @Test
+    fun `tokenizes percent-equals into percent plus equals token pair`() {
+        val source = "value %= 2"
+        val tokens = XbLexer(source).lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.PERCENT,
+            TokenType.EQ,
+            TokenType.NUMBER,
+        )
+    }
+
 }
