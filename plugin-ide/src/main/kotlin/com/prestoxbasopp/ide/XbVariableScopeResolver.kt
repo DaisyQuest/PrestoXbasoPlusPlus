@@ -7,6 +7,7 @@ import com.prestoxbasopp.core.psi.XbPsiFunctionDeclaration
 import com.prestoxbasopp.core.psi.XbPsiSnapshot
 import com.prestoxbasopp.core.psi.XbPsiSymbolReference
 import com.prestoxbasopp.core.psi.XbPsiVariableDeclaration
+import com.prestoxbasopp.core.psi.XbVariableStorageClass
 import kotlin.math.absoluteValue
 
 object XbVariableScopeResolver {
@@ -61,22 +62,21 @@ object XbVariableScopeResolver {
         functions: List<XbPsiFunctionDeclaration>,
     ): XbPsiVariableDeclaration? {
         val referenceFunction = enclosingFunction(functions, referenceRange)
-        val localDeclarations = declarations
+        val functionScopedDeclarations = declarations
             .filter { it.symbolName == name }
+            .filter { it.storageClass in functionScopedStorageClasses }
             .filter { enclosingFunction(functions, it.textRange) == referenceFunction }
             .sortedBy { it.textRange.startOffset }
-        val localMatch = selectDeclaration(localDeclarations, referenceRange)
-        if (localMatch != null) {
-            return localMatch
+        val functionScopedMatch = selectDeclaration(functionScopedDeclarations, referenceRange)
+        if (functionScopedMatch != null) {
+            return functionScopedMatch
         }
-        if (referenceFunction == null) {
-            return null
-        }
-        val fileDeclarations = declarations
+
+        val globalDeclarations = declarations
             .filter { it.symbolName == name }
-            .filter { enclosingFunction(functions, it.textRange) == null }
+            .filter { it.storageClass in globalStorageClasses }
             .sortedBy { it.textRange.startOffset }
-        return selectDeclaration(fileDeclarations, referenceRange)
+        return selectDeclaration(globalDeclarations, referenceRange)
     }
 
     private fun resolveDeclaration(
@@ -86,22 +86,21 @@ object XbVariableScopeResolver {
         functions: List<XbPsiSnapshot>,
     ): XbPsiSnapshot? {
         val referenceFunction = enclosingFunction(functions, referenceRange)
-        val localDeclarations = declarations
+        val functionScopedDeclarations = declarations
             .filter { it.name == name }
+            .filter { (it.storageClass ?: XbVariableStorageClass.LOCAL) in functionScopedStorageClasses }
             .filter { enclosingFunction(functions, it.textRange) == referenceFunction }
             .sortedBy { it.textRange.startOffset }
-        val localMatch = selectDeclaration(localDeclarations, referenceRange)
-        if (localMatch != null) {
-            return localMatch
+        val functionScopedMatch = selectDeclaration(functionScopedDeclarations, referenceRange)
+        if (functionScopedMatch != null) {
+            return functionScopedMatch
         }
-        if (referenceFunction == null) {
-            return null
-        }
-        val fileDeclarations = declarations
+
+        val globalDeclarations = declarations
             .filter { it.name == name }
-            .filter { enclosingFunction(functions, it.textRange) == null }
+            .filter { (it.storageClass ?: XbVariableStorageClass.LOCAL) in globalStorageClasses }
             .sortedBy { it.textRange.startOffset }
-        return selectDeclaration(fileDeclarations, referenceRange)
+        return selectDeclaration(globalDeclarations, referenceRange)
     }
 
     private fun selectDeclaration(
@@ -145,6 +144,18 @@ object XbVariableScopeResolver {
             .filter { containsRange(it.textRange, range) }
             .minByOrNull { it.textRange.endOffset - it.textRange.startOffset }
     }
+
+
+    private val functionScopedStorageClasses = setOf(
+        XbVariableStorageClass.LOCAL,
+        XbVariableStorageClass.STATIC,
+        XbVariableStorageClass.PRIVATE,
+    )
+
+    private val globalStorageClasses = setOf(
+        XbVariableStorageClass.PUBLIC,
+        XbVariableStorageClass.GLOBAL,
+    )
 
     private fun containsRange(container: XbTextRange, range: XbTextRange): Boolean {
         return range.startOffset >= container.startOffset && range.endOffset <= container.endOffset

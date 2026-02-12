@@ -3,6 +3,7 @@ package com.prestoxbasopp.ide
 import com.prestoxbasopp.core.psi.XbPsiFunctionDeclaration
 import com.prestoxbasopp.core.psi.XbPsiSymbolReference
 import com.prestoxbasopp.core.psi.XbPsiVariableDeclaration
+import com.prestoxbasopp.core.psi.XbVariableStorageClass
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -25,7 +26,7 @@ class XbPsiTextBuilderTest {
 
         assertThat(functions.map { it.symbolName }).containsExactly("Main")
         assertThat(functions.first().parameters).containsExactly("user", "mode")
-        assertThat(variables.map { it.symbolName }).containsExactlyInAnyOrder("count", "total")
+        assertThat(variables.map { it.symbolName }).containsExactlyInAnyOrder("user", "mode", "count", "total")
         assertThat(references.map { it.symbolName }).contains("total", "count", "Main", "user", "mode")
     }
 
@@ -120,4 +121,31 @@ class XbPsiTextBuilderTest {
         assertThat(function.textRange.endOffset).isLessThan(afterMain.textRange.startOffset)
         assertThat(function.text.trimEnd()).endsWith("endproc")
     }
+
+    @Test
+    fun `assigns storage classes for variable declarations`() {
+        val source = """
+            function Main(param)
+               local localVar
+               static staticVar
+               private privateVar
+               public publicVar
+               global globalVar
+               return param + localVar + staticVar + privateVar + publicVar + globalVar
+            endfunction
+        """.trimIndent()
+
+        val declarations = XbPsiTextBuilder().build(source)
+            .children
+            .filterIsInstance<XbPsiVariableDeclaration>()
+            .associateBy { it.symbolName }
+
+        assertThat(declarations["param"]?.storageClass).isEqualTo(XbVariableStorageClass.LOCAL)
+        assertThat(declarations["localVar"]?.storageClass).isEqualTo(XbVariableStorageClass.LOCAL)
+        assertThat(declarations["staticVar"]?.storageClass).isEqualTo(XbVariableStorageClass.STATIC)
+        assertThat(declarations["privateVar"]?.storageClass).isEqualTo(XbVariableStorageClass.PRIVATE)
+        assertThat(declarations["publicVar"]?.storageClass).isEqualTo(XbVariableStorageClass.PUBLIC)
+        assertThat(declarations["globalVar"]?.storageClass).isEqualTo(XbVariableStorageClass.GLOBAL)
+    }
+
 }

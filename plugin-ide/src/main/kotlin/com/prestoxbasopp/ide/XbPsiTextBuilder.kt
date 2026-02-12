@@ -11,6 +11,7 @@ import com.prestoxbasopp.core.psi.XbPsiSnapshot
 import com.prestoxbasopp.core.psi.XbPsiSymbol
 import com.prestoxbasopp.core.psi.XbPsiSymbolReference
 import com.prestoxbasopp.core.psi.XbPsiVariableDeclaration
+import com.prestoxbasopp.core.psi.XbVariableStorageClass
 import kotlin.math.max
 import kotlin.math.min
 
@@ -24,6 +25,13 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
     )
     private val allDeclarationEndKeywords = declarationEndKeywordsByStartKeyword.values.flatten().toSet()
     private val variableKeywords = setOf("local", "static", "public", "private", "global")
+    private val storageClassByKeyword = mapOf(
+        "local" to XbVariableStorageClass.LOCAL,
+        "static" to XbVariableStorageClass.STATIC,
+        "private" to XbVariableStorageClass.PRIVATE,
+        "public" to XbVariableStorageClass.PUBLIC,
+        "global" to XbVariableStorageClass.GLOBAL,
+    )
 
     fun build(source: String, fileName: String = "file"): XbPsiFile {
         val tokens = lexer.lex(source).tokens.filter { it.type != XbTokenType.EOF }
@@ -62,7 +70,8 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
                     val nameToken = tokens.getOrNull(index + 1)?.takeIf { it.type == XbTokenType.IDENTIFIER }
                     if (nameToken != null) {
                         declaredOffsets += nameToken.range.startOffset
-                        val (parameters, endIndex) = parseParameters(tokens, index + 2)
+                        val (parameterTokens, endIndex) = parseParameters(tokens, index + 2)
+                        val parameters = parameterTokens.map { it.text }
                         val declaredEndOffset = tokens.getOrNull(endIndex)?.range?.endOffset
                             ?: nameToken.range.endOffset
                         val endOffset = findDeclarationEndOffset(
@@ -77,6 +86,16 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
                             textRange = XbTextRange(token.range.startOffset, endOffset),
                             text = slice(source, token.range.startOffset, endOffset),
                         )
+                        parameterTokens.forEach { parameterToken ->
+                            declaredOffsets += parameterToken.range.startOffset
+                            elements += XbPsiVariableDeclaration(
+                                symbolName = parameterToken.text,
+                                isMutable = true,
+                                storageClass = XbVariableStorageClass.LOCAL,
+                                textRange = parameterToken.range,
+                                text = slice(source, parameterToken.range.startOffset, parameterToken.range.endOffset),
+                            )
+                        }
                     }
                 }
                 if (keyword in variableKeywords) {
@@ -97,6 +116,7 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
     ): Int {
         var index = startIndex + 1
         val isMutable = keyword != "static"
+        val storageClass = storageClassByKeyword[keyword] ?: XbVariableStorageClass.LOCAL
         while (index < tokens.size) {
             val token = tokens[index]
             when (token.type) {
@@ -105,6 +125,7 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
                     elements += XbPsiVariableDeclaration(
                         symbolName = token.text,
                         isMutable = isMutable,
+                        storageClass = storageClass,
                         textRange = token.range,
                         text = slice(source, token.range.startOffset, token.range.endOffset),
                     )
@@ -145,8 +166,8 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
         }
     }
 
-    private fun parseParameters(tokens: List<XbToken>, startIndex: Int): Pair<List<String>, Int> {
-        val parameters = mutableListOf<String>()
+    private fun parseParameters(tokens: List<XbToken>, startIndex: Int): Pair<List<XbToken>, Int> {
+        val parameters = mutableListOf<XbToken>()
         val openParen = tokens.getOrNull(startIndex) ?: return parameters to (startIndex - 1)
         if (openParen.text != "(") {
             return parameters to (startIndex - 1)
@@ -155,7 +176,7 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
         while (index < tokens.size) {
             val token = tokens[index]
             when (token.type) {
-                XbTokenType.IDENTIFIER -> parameters += token.text
+                XbTokenType.IDENTIFIER -> parameters += token
                 XbTokenType.PUNCTUATION -> if (token.text == ")") {
                     return parameters to index
                 }
