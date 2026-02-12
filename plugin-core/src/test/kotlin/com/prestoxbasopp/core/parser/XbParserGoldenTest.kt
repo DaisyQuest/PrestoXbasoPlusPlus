@@ -890,6 +890,56 @@ class XbParserGoldenTest {
                 """.trimIndent(),
                 expectedErrors = listOf("Unexpected ENDIF at 0"),
             ),
+            GoldenTestCase(
+                id = "function-implicitly-terminated-by-next-function-declaration",
+                source = """
+                    FUNCTION AllFilesExist(aFiles)
+                       LOCAL lExist := .T.
+                       RETURN lExist
+
+                    FUNCTION CenterPos(aSize, aRefSize)
+                       RETURN 1
+                    ENDFUNCTION
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Decl.Function[name=AllFilesExist]
+                        Params
+                          Expr.Identifier[name=aFiles]
+                        Block
+                          Stmt.Local
+                            Local.Binding[name=lExist]
+                              Expr.Literal.Boolean[value=true]
+                          Stmt.Return
+                            Expr.Identifier[name=lExist]
+                      Decl.Function[name=CenterPos]
+                        Params
+                          Expr.Identifier[name=aSize]
+                          Expr.Identifier[name=aRefSize]
+                        Block
+                          Stmt.Return
+                            Expr.Literal.Number[value=1]
+                """.trimIndent(),
+            ),
+            GoldenTestCase(
+                id = "function-without-endfunction-at-eof-is-tolerated",
+                source = """
+                    FUNCTION Broken(a)
+                       RETURN a
+                    ? "outside"
+                """.trimIndent(),
+                expectedAst = """
+                    File
+                      Decl.Function[name=Broken]
+                        Params
+                          Expr.Identifier[name=a]
+                        Block
+                          Stmt.Return
+                            Expr.Identifier[name=a]
+                          Stmt.Print
+                            Expr.Literal.String[value=outside]
+                """.trimIndent(),
+            ),
         )
 
         GoldenTestHarness.assertCases(cases, ::parseSource, ::dumpProgram)
