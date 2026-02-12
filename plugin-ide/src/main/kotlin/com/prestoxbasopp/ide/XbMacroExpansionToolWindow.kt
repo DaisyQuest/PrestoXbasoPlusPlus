@@ -73,8 +73,9 @@ private class XbMacroExpansionToolWindowController(
     private fun buildPresentation(file: VirtualFile?, editor: Editor?): XbMacroExpansionPresentation {
         return ApplicationManager.getApplication().runReadAction<XbMacroExpansionPresentation> {
             val fileName = file?.name
+            val filePath = file?.path
             val text = editor?.document?.text
-            presenter.present(fileName, text)
+            presenter.present(fileName, filePath, text, project.basePath)
         }
     }
 }

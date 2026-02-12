@@ -60,3 +60,4 @@
 - Parser golden coverage for macro stress sample with block literals, hash literals, macro operators, and sequence recovery.
 - Parser golden coverage for macro stress user variant with trailing line continuation and sequence recovery.
 - Lexer coverage for codeblock literals with nested braces, comments, and string content.
+- Header insight tab coverage for include resolution, missing headers, conflict detection, presenter fallbacks, and all table model branches.
