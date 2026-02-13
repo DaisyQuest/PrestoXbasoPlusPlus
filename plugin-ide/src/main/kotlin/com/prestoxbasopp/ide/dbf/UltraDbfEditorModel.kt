@@ -41,5 +41,31 @@ class UltraDbfEditorModel(private val table: DbfTable) {
             .sortedBy { it.length }
     }
 
+    fun filteredRecords(includeDeleted: Boolean, filters: Map<String, String>): List<DbfRecord> {
+        val normalized = filters
+            .mapValues { (_, value) -> value.trim() }
+            .filterValues { it.isNotEmpty() }
+        if (normalized.isEmpty()) {
+            return records(includeDeleted)
+        }
+        return records(includeDeleted).filter { record ->
+            normalized.all { (fieldName, expected) ->
+                record.values[fieldName]
+                    ?.contains(expected, ignoreCase = true)
+                    ?: false
+            }
+        }
+    }
+
+    fun visibleRecordIndex(
+        includeDeleted: Boolean,
+        filters: Map<String, String>,
+        pageIndex: Int,
+    ): Int {
+        val records = filteredRecords(includeDeleted, filters)
+        if (records.isEmpty()) return -1
+        return pageIndex.coerceIn(0, records.lastIndex)
+    }
+
     fun snapshot(): DbfTable = table.copy(records = table.records.map { it.copy(values = it.values.toMutableMap()) }.toMutableList())
 }

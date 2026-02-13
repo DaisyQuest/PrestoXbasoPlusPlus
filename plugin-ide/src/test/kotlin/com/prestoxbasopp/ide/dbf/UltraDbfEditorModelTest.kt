@@ -53,6 +53,33 @@ class UltraDbfEditorModelTest {
         assertThat(model.records(true)[0].values["NAME"]).isEqualTo("ALICE")
     }
 
+    @Test
+    fun `supports record filtering and card index bounds`() {
+        val model = UltraDbfEditorModel(baseTable())
+
+        val filtered = model.filteredRecords(
+            includeDeleted = true,
+            filters = mapOf("NAME" to "bo", "TOTAL" to "7"),
+        )
+
+        assertThat(filtered).hasSize(1)
+        assertThat(filtered.single().values["NAME"]).isEqualTo("BOB")
+        assertThat(model.visibleRecordIndex(includeDeleted = true, filters = mapOf("NAME" to "bo"), pageIndex = 5)).isEqualTo(0)
+        assertThat(model.visibleRecordIndex(includeDeleted = true, filters = mapOf("NAME" to "missing"), pageIndex = 0)).isEqualTo(-1)
+    }
+
+    @Test
+    fun `filtering excludes deleted rows when configured`() {
+        val model = UltraDbfEditorModel(baseTable())
+
+        val filtered = model.filteredRecords(
+            includeDeleted = false,
+            filters = mapOf("NAME" to "BO"),
+        )
+
+        assertThat(filtered).isEmpty()
+    }
+
     private fun baseTable(): DbfTable = DbfTable(
         header = DbfHeader(3, 124, 1, 1, 2, 97, 20, 0, 0, false, 0),
         fields = listOf(
