@@ -120,6 +120,12 @@ class ReverseEngineeringModelTest {
         assertThat(dog.methods.mapNotNull { it.alias }).contains("l", "f", "i", "u", "us", "d")
         assertThat(dog.macros).contains("#define DOG_METHOD_INSERT \"insert\"", "#define DOG_ALIAS_INSERT \"i\"")
         assertThat(dog.source).contains("VAR NAME // alias: n")
+        assertThat(dog.source).contains("CLASS METHOD load(...)")
+        assertThat(dog.source).contains("METHOD getName() INLINE ::NAME")
+        assertThat(dog.source).contains("METHOD setName(value) INLINE (::NAME := value)")
+        assertThat(dog.source).contains("METHOD save() INLINE Dog.upsert(Self)")
+        assertThat(dog.source).contains("METHOD remove() INLINE Dog.delete(Self)")
+        assertThat(dog.source).contains("METHOD Dog:init(data)")
         assertThat(dog.source).contains("#define DOG_FIELD_NAME \"NAME\"")
         assertThat(dog.source).doesNotContain("VAR ID")
 
@@ -127,6 +133,9 @@ class ReverseEngineeringModelTest {
         assertThat(cat.methods.map { it.methodName }).containsExactly("load", "findBy")
         assertThat(cat.methods.mapNotNull { it.alias }).containsExactly("l", "f")
         assertThat(cat.source).contains("#define CAT_ALIAS_LOAD \"l\"", "#define CAT_METHOD_FINDBY \"findBy\"")
+        assertThat(cat.source).contains("METHOD refresh() INLINE Cat.load(::ID)")
+        assertThat(cat.source).doesNotContain("METHOD save()")
+        assertThat(cat.source).doesNotContain("METHOD remove()")
     }
 
     @Test
@@ -169,7 +178,46 @@ class ReverseEngineeringModelTest {
         assertThat(artifacts.single().className).isEqualTo("Dog")
         assertThat(artifacts.single().methods.map { it.alias }).doesNotContainAnyElementsOf(listOf("l", "f", "i"))
         assertThat(artifacts.single().macros.joinToString("\n")).doesNotContain("ALIAS")
+        assertThat(artifacts.single().source).contains("CLASS METHOD load(...)")
+        assertThat(artifacts.single().source).doesNotContain("METHOD l(...)")
         assertThat(report.warnings.single()).contains("Skipped table 'BAD'")
+    }
+
+    @Test
+    fun `generate includes relation instance helpers inferred from metadata and carries schema version`() {
+        val metadata = ReverseEngineeringWorkflow.toBundle(
+            DbfTableMetadata(
+                tableName = "DOG",
+                sourcePath = "fixtures/dog.dbf",
+                checksum = "abc",
+                fields = listOf(
+                    DbfFieldMetadata("ID", DbfFieldType.Numeric, 8, 0, false, null, "PRIMARY"),
+                    DbfFieldMetadata("OWNER_ID", DbfFieldType.Numeric, 8, 0, false, null, "FOREIGN_KEY"),
+                ),
+                candidatePrimaryKey = "ID",
+                candidateForeignKeys = listOf(
+                    DbfRelationMetadata("DOG", "OWNER", listOf("OWNER_ID"), listOf("ID"), RelationCardinality.MANY_TO_ONE, null),
+                ),
+                warnings = emptyList(),
+            ),
+        )
+        val config = ReverseEngineerConfig(
+            schemaVersion = "2.5.0",
+            engineVersion = "1.0.0",
+            profile = ApiProfile.FULL,
+            outputDir = "out",
+            generateMethodAliases = true,
+            relations = listOf(
+                DbfRelationMetadata("DOG", "OWNER", listOf("OWNER_ID"), listOf("ID"), RelationCardinality.MANY_TO_ONE, null),
+            ),
+            tableConfigs = emptyList(),
+        )
+
+        val (artifacts, report) = ReverseEngineeringWorkflow.generate(metadata, config)
+
+        assertThat(report.schemaVersion).isEqualTo("2.5.0")
+        assertThat(artifacts.single().source).contains("METHOD bindOwner(target) INLINE (::OWNER_ID := target:ID)")
+        assertThat(artifacts.single().source).contains("METHOD unbindOwner() INLINE (::OWNER_ID := NIL)")
     }
 
     private fun table(fields: List<DbfFieldDescriptor>, records: MutableList<DbfRecord>) = DbfTable(
