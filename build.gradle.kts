@@ -1,8 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 plugins {
-    kotlin("jvm") version "1.9.24" apply false
-    id("org.jetbrains.intellij") version "1.17.2" apply false
+    kotlin("jvm") version "2.2.0" apply false
+    id("org.jetbrains.intellij.platform") version "2.11.0" apply false
 }
 
 allprojects {
