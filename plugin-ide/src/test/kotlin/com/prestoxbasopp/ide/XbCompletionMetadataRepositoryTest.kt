@@ -1,5 +1,6 @@
 package com.prestoxbasopp.ide
 
+import com.prestoxbasopp.ide.dbf.XbDbfModuleCatalogService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -31,5 +32,34 @@ class XbCompletionMetadataRepositoryTest {
 
         assertThat(metadata.commands).hasSize(1)
         assertThat(metadata.commands.first().attributes.first().name).isEqualTo("SAYSIZE")
+    }
+
+    @Test
+    fun `merges dbf module catalog tables into completion metadata`() {
+        val catalogService = XbDbfModuleCatalogService(catalogFileName = "catalog.json")
+        tempDir.resolve("catalog.json").toFile().writeText(
+            """
+                {
+                  "Billing": [
+                    {
+                      "tableName": "charges",
+                      "fields": [
+                        { "name": "index_no", "type": "NUMERIC", "length": 10 }
+                      ]
+                    }
+                  ]
+                }
+            """.trimIndent(),
+        )
+
+        val repository = XbCompletionMetadataRepository(dbfCatalogService = catalogService)
+        val metadata = repository.load(tempDir)
+
+        assertThat(metadata.tables).anySatisfy { table ->
+            assertThat(table.name).isEqualTo("charges")
+            assertThat(table.columns).anySatisfy { column ->
+                assertThat(column.name).isEqualTo("index_no")
+            }
+        }
     }
 }

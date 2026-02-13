@@ -5,16 +5,23 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.components.JBTabbedPane
 import com.intellij.ui.content.ContentFactory
 import java.awt.BorderLayout
+import java.awt.GridLayout
 import java.io.File
 import javax.swing.JButton
 import javax.swing.JCheckBox
+import javax.swing.JComboBox
 import javax.swing.JDialog
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.JRadioButton
 import javax.swing.JTable
 import javax.swing.JTextField
+import javax.swing.SwingConstants
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 import javax.swing.table.AbstractTableModel
 
 class UltraDbfMasterToolWindowFactory : ToolWindowFactory {
@@ -30,6 +37,13 @@ class UltraDbfMasterPanel(private val project: Project) : JPanel(BorderLayout())
     private val tableView = JTable()
     private val status = JLabel("Import a Level-5 DBF file to begin.")
     private val showDeletedToggle = JCheckBox("Show deleted records", true)
+    private val tabs = JBTabbedPane()
+    private val cardPanel = JPanel(BorderLayout())
+    private val cardForm = JPanel(GridLayout(0, 2, 8, 8))
+    private val filterPanel = JPanel(GridLayout(0, 2, 8, 8))
+    private val filterInputs = linkedMapOf<String, JTextField>()
+    private val cardPageLabel = JLabel("Record 0 / 0", SwingConstants.CENTER)
+    private var cardPage = 0
     private var importedFile: File? = null
     private var model: UltraDbfEditorModel? = null
 
@@ -47,8 +61,22 @@ class UltraDbfMasterPanel(private val project: Project) : JPanel(BorderLayout())
             add(JButton("Fullscreen").apply { addActionListener { openFullscreenDialog() } })
         }
 
+        cardPanel.add(cardPageLabel, BorderLayout.NORTH)
+        cardPanel.add(JBScrollPane(cardForm), BorderLayout.CENTER)
+        cardPanel.add(
+            JPanel().apply {
+                add(JButton("Prev").apply { addActionListener { moveCardPage(-1) } })
+                add(JButton("Next").apply { addActionListener { moveCardPage(1) } })
+            },
+            BorderLayout.SOUTH,
+        )
+
+        tabs.addTab("Table View", JBScrollPane(tableView))
+        tabs.addTab("Card View", cardPanel)
+        tabs.addTab("Filter View", JBScrollPane(filterPanel))
+
         add(controls, BorderLayout.NORTH)
-        add(JBScrollPane(tableView), BorderLayout.CENTER)
+        add(tabs, BorderLayout.CENTER)
         add(JPanel(BorderLayout()).apply {
             add(actions, BorderLayout.NORTH)
             add(status, BorderLayout.SOUTH)
@@ -62,6 +90,8 @@ class UltraDbfMasterPanel(private val project: Project) : JPanel(BorderLayout())
             val parsed = UltraDbfCodec.parse(file.readBytes())
             importedFile = file
             model = UltraDbfEditorModel(parsed)
+            XbDbfModuleCatalogService().registerImport(project, file.toPath(), parsed)
+            cardPage = 0
             refreshTable()
             status.text = "Loaded ${parsed.records.size} records and ${parsed.fields.size} fields from ${file.name}."
         } catch (ex: Exception) {
@@ -73,6 +103,7 @@ class UltraDbfMasterPanel(private val project: Project) : JPanel(BorderLayout())
     private fun addRow() {
         val editorModel = model ?: return
         editorModel.addRecord()
+        cardPage = editorModel.records(showDeletedToggle.isSelected).lastIndex.coerceAtLeast(0)
         refreshTable()
         status.text = "Added a new row."
     }
@@ -81,7 +112,7 @@ class UltraDbfMasterPanel(private val project: Project) : JPanel(BorderLayout())
         val selectedRow = tableView.selectedRow
         val editorModel = model ?: return
         if (selectedRow !in 0 until tableView.rowCount) return
-        val sourceRows = editorModel.records(showDeletedToggle.isSelected)
+        val sourceRows = editorModel.filteredRecords(showDeletedToggle.isSelected, activeFilters())
         val record = sourceRows[selectedRow]
         val absoluteIndex = editorModel.records(true).indexOf(record)
         if (absoluteIndex >= 0) {
@@ -92,8 +123,111 @@ class UltraDbfMasterPanel(private val project: Project) : JPanel(BorderLayout())
 
     private fun refreshTable() {
         val editorModel = model ?: return
-        tableView.model = UltraDbfTableModel(editorModel, showDeletedToggle.isSelected)
+        val filters = activeFilters()
+        tableView.model = UltraDbfTableModel(editorModel, showDeletedToggle.isSelected, filters)
+        refreshFilterView(editorModel)
+        refreshCardView(editorModel, filters)
     }
+
+    private fun refreshCardView(editorModel: UltraDbfEditorModel, filters: Map<String, String>) {
+        cardForm.removeAll()
+        val visibleRecords = editorModel.filteredRecords(showDeletedToggle.isSelected, filters)
+        val visibleIndex = editorModel.visibleRecordIndex(showDeletedToggle.isSelected, filters, cardPage)
+        if (visibleIndex < 0) {
+            cardPage = 0
+            cardPageLabel.text = "Record 0 / 0"
+            cardForm.revalidate()
+            cardForm.repaint()
+            return
+        }
+        val absoluteRecord = editorModel.records(true).indexOf(visibleRecords[visibleIndex])
+        val record = visibleRecords[visibleIndex]
+        cardPage = visibleIndex
+        cardPageLabel.text = "Record ${visibleIndex + 1} / ${visibleRecords.size}"
+        editorModel.fields().forEach { field ->
+            cardForm.add(JLabel(field.name))
+            cardForm.add(createEditorComponent(field, record.values[field.name].orEmpty(), absoluteRecord))
+        }
+        cardForm.revalidate()
+        cardForm.repaint()
+    }
+
+    private fun createEditorComponent(field: DbfFieldDescriptor, value: String, absoluteRecord: Int): JPanel {
+        val wrapper = JPanel(BorderLayout())
+        when (field.type) {
+            DbfFieldType.Logical -> {
+                val combo = JComboBox(arrayOf("", "Y", "N", "T", "F", "?"))
+                combo.selectedItem = value
+                combo.addActionListener {
+                    model?.updateValue(absoluteRecord, field.name, combo.selectedItem?.toString().orEmpty())
+                    refreshTable()
+                }
+                wrapper.add(combo, BorderLayout.CENTER)
+            }
+
+            DbfFieldType.Memo -> {
+                val unknown = JRadioButton("External memo pointer")
+                unknown.isSelected = value.isNotBlank()
+                unknown.addActionListener {
+                    val next = if (unknown.isSelected) "0000000001" else ""
+                    model?.updateValue(absoluteRecord, field.name, next)
+                    refreshTable()
+                }
+                wrapper.add(unknown, BorderLayout.CENTER)
+            }
+
+            else -> {
+                val textField = JTextField(value)
+                textField.document.addDocumentListener(object : DocumentListener {
+                    override fun insertUpdate(e: DocumentEvent?) = sync()
+                    override fun removeUpdate(e: DocumentEvent?) = sync()
+                    override fun changedUpdate(e: DocumentEvent?) = sync()
+                    private fun sync() {
+                        model?.updateValue(absoluteRecord, field.name, textField.text)
+                    }
+                })
+                wrapper.add(textField, BorderLayout.CENTER)
+            }
+        }
+        return wrapper
+    }
+
+    private fun refreshFilterView(editorModel: UltraDbfEditorModel) {
+        if (filterInputs.keys == editorModel.fields().map { it.name }) return
+        filterPanel.removeAll()
+        filterInputs.clear()
+        editorModel.fields().forEach { field ->
+            val input = JTextField()
+            filterInputs[field.name] = input
+            filterPanel.add(JLabel("${field.name} contains"))
+            filterPanel.add(input)
+        }
+        filterPanel.add(JLabel())
+        filterPanel.add(
+            JPanel().apply {
+                add(JButton("Apply").apply { addActionListener { cardPage = 0; refreshTable() } })
+                add(JButton("Clear").apply {
+                    addActionListener {
+                        filterInputs.values.forEach { it.text = "" }
+                        cardPage = 0
+                        refreshTable()
+                    }
+                })
+            },
+        )
+        filterPanel.revalidate()
+        filterPanel.repaint()
+    }
+
+    private fun moveCardPage(delta: Int) {
+        val editorModel = model ?: return
+        val visible = editorModel.filteredRecords(showDeletedToggle.isSelected, activeFilters())
+        if (visible.isEmpty()) return
+        cardPage = (cardPage + delta).coerceIn(0, visible.lastIndex)
+        refreshTable()
+    }
+
+    private fun activeFilters(): Map<String, String> = filterInputs.mapValues { it.value.text }
 
     private fun saveChanges() {
         val file = importedFile ?: return
@@ -138,8 +272,9 @@ class UltraDbfMasterPanel(private val project: Project) : JPanel(BorderLayout())
 private class UltraDbfTableModel(
     private val editorModel: UltraDbfEditorModel,
     private val includeDeleted: Boolean,
+    filters: Map<String, String>,
 ) : AbstractTableModel() {
-    private val visibleRecords = editorModel.records(includeDeleted)
+    private val visibleRecords = editorModel.filteredRecords(includeDeleted, filters)
     private val fields = editorModel.fields()
 
     override fun getRowCount(): Int = visibleRecords.size
