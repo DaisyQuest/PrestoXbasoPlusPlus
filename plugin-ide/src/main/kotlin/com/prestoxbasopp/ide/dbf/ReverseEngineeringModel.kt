@@ -144,9 +144,11 @@ object ReverseEngineeringWorkflow {
             val methods = methodsForProfile(effectiveProfile, table, config.generateMethodAliases, config.relations)
             val selectedFields = override?.includeFields?.ifEmpty { table.fields.map { it.originalFieldName }.toSet() }
                 ?: table.fields.map { it.originalFieldName }.toSet()
+            val requiredPersistenceFields = setOfNotNull(table.candidatePrimaryKey)
+            val effectiveFields = selectedFields + requiredPersistenceFields
             val aliasByField = override?.aliasByField.orEmpty()
-            val macros = buildMacros(className, selectedFields, methods)
-            val source = renderClass(className, table, effectiveProfile, selectedFields, aliasByField, methods, macros)
+            val macros = buildMacros(className, effectiveFields, methods)
+            val source = renderClass(className, table, effectiveProfile, effectiveFields, aliasByField, methods, macros)
             GeneratedClassArtifact(className, source, methods, macros)
         }
         return generated to DbfGenerationReport(
@@ -245,12 +247,14 @@ object ReverseEngineeringWorkflow {
         methods: List<GeneratedMethod>,
         macros: List<String>,
     ): String {
+        val primaryKey = table.candidatePrimaryKey
+        val fieldMetadataByName = table.fields.associateBy { it.originalFieldName }
         val macrosSection = macros.joinToString("\n")
         val fieldsSection = includedFields.sorted().joinToString("\n") { field ->
             val aliasComment = aliasByField[field]?.let { " // alias: $it" }.orEmpty()
             "    VAR $field$aliasComment"
         }
-        val classMethodsSection = methods.joinToString("\n") { method ->
+        val classMethodsSection = methods.filter { it.methodName in setOf("load", "findBy", "insert", "update", "upsert", "delete") }.joinToString("\n") { method ->
             val aliasLine = method.alias?.let { "\n    METHOD $it(...) INLINE ::${method.methodName}(...)" }.orEmpty()
             "    CLASS METHOD ${method.methodName}(...)$aliasLine"
         }
@@ -263,13 +267,16 @@ object ReverseEngineeringWorkflow {
         }
         val persistenceInstanceMethods = if (profile == ApiProfile.READ_ONLY) {
             """
-    METHOD refresh() INLINE ${className}.load(::ID)
+    METHOD refresh()
+    METHOD getPrimaryKeyValue()
 """.trimIndent()
         } else {
             """
-    METHOD save() INLINE ${className}.upsert(Self)
-    METHOD remove() INLINE ${className}.delete(Self)
-    METHOD refresh() INLINE ${className}.load(::ID)
+    METHOD save()
+    METHOD remove()
+    METHOD refresh()
+    METHOD getPrimaryKeyValue()
+    METHOD normalizeForPersistence()
 """.trimIndent()
         }
         val relationMethods = table.candidateForeignKeys.joinToString("\n") { relation ->
@@ -295,6 +302,102 @@ METHOD $className:init(data)
     LOCAL payload := iif(ValType(data) == "H", data, {=>})
 ${includedFields.sorted().joinToString("\n") { "    ::$it := iif(HHasKey(payload, \"$it\"), payload[\"$it\"], NIL)" }}
 RETURN Self
+
+METHOD $className:getPrimaryKeyValue()
+${if (primaryKey != null) "    RETURN ::$primaryKey" else "    RETURN NIL"}
+
+METHOD $className:refresh()
+    LOCAL key := ::getPrimaryKeyValue()
+    IF Empty(key)
+        RETURN NIL
+    ENDIF
+    RETURN ${className}.load(key, {=>})
+
+${if (profile != ApiProfile.READ_ONLY) {
+            """
+METHOD $className:save()
+    RETURN ${className}.upsert(::normalizeForPersistence(), {=>})
+
+METHOD $className:remove()
+    RETURN ${className}.delete(::getPrimaryKeyValue(), {=>})
+
+METHOD $className:normalizeForPersistence()
+    LOCAL payload := {=>}
+${includedFields.sorted().joinToString("\n") { field ->
+                val metadata = fieldMetadataByName[field]
+                val converter = when (metadata?.inferredType) {
+                    DbfFieldType.Numeric, DbfFieldType.FloatingPoint -> "Val"
+                    DbfFieldType.Logical -> "iif(Upper(AllTrim(value)) == \"T\" .OR. Upper(AllTrim(value)) == \"Y\" .OR. value == .T., .T., .F.)"
+                    DbfFieldType.Date -> "CToD"
+                    else -> "AllTrim"
+                }
+                val nullableClause = if (metadata?.nullableHint == true) {
+                    "        payload[\"$field\"] := iif(Empty(value), NIL, $converter(value))"
+                } else {
+                    "        payload[\"$field\"] := $converter(value)"
+                }
+                """
+    DO CASE
+    CASE HHasKey(Self, \"$field\")
+        LOCAL value := ::$field
+$nullableClause
+    ENDCASE
+""".trimIndent()
+            }}
+    RETURN payload
+
+CLASS METHOD $className:insert(entity, options)
+    LOCAL repo := ::openRepository(options)
+    LOCAL payload := iif(ValType(entity) == \"O\", entity:normalizeForPersistence(), entity)
+    RETURN repo:insert(::tableName(), payload)
+
+CLASS METHOD $className:update(entity, options)
+    LOCAL repo := ::openRepository(options)
+    LOCAL payload := iif(ValType(entity) == \"O\", entity:normalizeForPersistence(), entity)
+    LOCAL key := iif(ValType(entity) == \"O\", entity:getPrimaryKeyValue(), NIL)
+    RETURN repo:update(::tableName(), key, payload)
+
+CLASS METHOD $className:upsert(entity, options)
+    LOCAL key := iif(ValType(entity) == \"O\", entity:getPrimaryKeyValue(), NIL)
+    IF Empty(key)
+        RETURN ::insert(entity, options)
+    ENDIF
+    RETURN ::update(entity, options)
+
+CLASS METHOD $className:delete(entityOrKey, options)
+    LOCAL repo := ::openRepository(options)
+    LOCAL key := iif(ValType(entityOrKey) == \"O\", entityOrKey:getPrimaryKeyValue(), entityOrKey)
+    IF Empty(key)
+        RETURN .F.
+    ENDIF
+    RETURN repo:delete(::tableName(), key)
+""".trimIndent()
+        } else ""}
+
+CLASS METHOD $className:load(id, options)
+    LOCAL repo := ::openRepository(options)
+    LOCAL raw := repo:load(::tableName(), id)
+    IF Empty(raw)
+        RETURN NIL
+    ENDIF
+    RETURN $className():init(raw)
+
+CLASS METHOD $className:findBy(criteria, options)
+    LOCAL repo := ::openRepository(options)
+    LOCAL rows := repo:findBy(::tableName(), iif(ValType(criteria) == "H", criteria, {=>}), options)
+    LOCAL entities := {}
+    AEval(rows, {|row| AAdd(entities, $className():init(row)) })
+    RETURN entities
+
+CLASS METHOD $className:tableName()
+    RETURN "${table.tableName}"
+
+CLASS METHOD $className:openRepository(options)
+    LOCAL provider := iif(ValType(options) == "H" .AND. HHasKey(options, "repository"), options["repository"], NIL)
+    IF provider == NIL
+        provider := DaoRepositoryProvider():default()
+    ENDIF
+    RETURN provider
 """.trim()
     }
 
