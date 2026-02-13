@@ -311,15 +311,15 @@ METHOD $className:refresh()
     IF Empty(key)
         RETURN NIL
     ENDIF
-    RETURN ${className}.load(key, {=>})
+    RETURN ${className}:load(key, {=>})
 
 ${if (profile != ApiProfile.READ_ONLY) {
             """
 METHOD $className:save()
-    RETURN ${className}.upsert(::normalizeForPersistence(), {=>})
+    RETURN ${className}:upsert(::normalizeForPersistence(), {=>})
 
 METHOD $className:remove()
-    RETURN ${className}.delete(::getPrimaryKeyValue(), {=>})
+    RETURN ${className}:delete(::getPrimaryKeyValue(), {=>})
 
 METHOD $className:normalizeForPersistence()
     LOCAL payload := {=>}
@@ -338,7 +338,7 @@ ${includedFields.sorted().joinToString("\n") { field ->
                 }
                 """
     DO CASE
-    CASE HHasKey(Self, \"$field\")
+    CASE HHasKey(Self, "$field")
         LOCAL value := ::$field
 $nullableClause
     ENDCASE
@@ -348,17 +348,17 @@ $nullableClause
 
 CLASS METHOD $className:insert(entity, options)
     LOCAL repo := ::openRepository(options)
-    LOCAL payload := iif(ValType(entity) == \"O\", entity:normalizeForPersistence(), entity)
+    LOCAL payload := iif(ValType(entity) == "O", entity:normalizeForPersistence(), entity)
     RETURN repo:insert(::tableName(), payload)
 
 CLASS METHOD $className:update(entity, options)
     LOCAL repo := ::openRepository(options)
-    LOCAL payload := iif(ValType(entity) == \"O\", entity:normalizeForPersistence(), entity)
-    LOCAL key := iif(ValType(entity) == \"O\", entity:getPrimaryKeyValue(), NIL)
+    LOCAL payload := iif(ValType(entity) == "O", entity:normalizeForPersistence(), entity)
+    LOCAL key := iif(ValType(entity) == "O", entity:getPrimaryKeyValue(), NIL)
     RETURN repo:update(::tableName(), key, payload)
 
 CLASS METHOD $className:upsert(entity, options)
-    LOCAL key := iif(ValType(entity) == \"O\", entity:getPrimaryKeyValue(), NIL)
+    LOCAL key := iif(ValType(entity) == "O", entity:getPrimaryKeyValue(), NIL)
     IF Empty(key)
         RETURN ::insert(entity, options)
     ENDIF
@@ -366,7 +366,7 @@ CLASS METHOD $className:upsert(entity, options)
 
 CLASS METHOD $className:delete(entityOrKey, options)
     LOCAL repo := ::openRepository(options)
-    LOCAL key := iif(ValType(entityOrKey) == \"O\", entityOrKey:getPrimaryKeyValue(), entityOrKey)
+    LOCAL key := iif(ValType(entityOrKey) == "O", entityOrKey:getPrimaryKeyValue(), entityOrKey)
     IF Empty(key)
         RETURN .F.
     ENDIF

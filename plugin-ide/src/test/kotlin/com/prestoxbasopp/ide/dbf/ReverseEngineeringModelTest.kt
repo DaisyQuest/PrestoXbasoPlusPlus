@@ -1,5 +1,6 @@
 package com.prestoxbasopp.ide.dbf
 
+import com.prestoxbasopp.core.parser.XbParser
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -136,6 +137,11 @@ class ReverseEngineeringModelTest {
         assertThat(dog.source).contains("METHOD Dog:init(data)")
         assertThat(dog.source).contains("#define DOG_FIELD_NAME \"NAME\"")
         assertThat(dog.source).contains("VAR ID")
+        assertThat(dog.source).contains("RETURN Dog:load(key, {=>})")
+        assertThat(dog.source).contains("RETURN Dog:upsert(::normalizeForPersistence(), {=>})")
+        assertThat(dog.source).contains("RETURN Dog:delete(::getPrimaryKeyValue(), {=>})")
+        assertThat(dog.source).doesNotContain("\\\"")
+        assertThat(XbParser.parse(dog.source).errors).isEmpty()
 
         val cat = artifacts.single { it.className == "Cat" }
         assertThat(cat.methods.map { it.methodName }).containsExactly("load", "findBy")
@@ -185,6 +191,9 @@ class ReverseEngineeringModelTest {
         assertThat(artifact.source).contains("payload[\"NOTE\"] := iif(Empty(value), NIL, AllTrim(value))")
         assertThat(artifact.source).contains("provider := DaoRepositoryProvider():default()")
         assertThat(artifact.source).contains("LOCAL rows := repo:findBy(::tableName(), iif(ValType(criteria) == \"H\", criteria, {=>}), options)")
+        assertThat(artifact.source).contains("ValType(entity) == \"O\"")
+        assertThat(artifact.source).doesNotContain("\\\"")
+        assertThat(XbParser.parse(artifact.source).errors).isEmpty()
     }
 
     @Test
