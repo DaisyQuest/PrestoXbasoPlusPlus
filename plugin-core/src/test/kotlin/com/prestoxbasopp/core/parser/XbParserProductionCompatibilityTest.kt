@@ -237,6 +237,43 @@ class XbParserProductionCompatibilityTest {
     }
 
     @Test
+    fun `accepts parameters after local declarations`() {
+        val source = """
+            FUNCTION LegacyParamsOk()
+            LOCAL cString
+            PARAMETERS p1, p2
+            RETURN p1
+            ENDFUNCTION
+        """.trimIndent()
+
+        val result = XbParser.parse(source)
+
+        assertThat(result.errors).isEmpty()
+        val function = result.program!!.statements.single() as XbFunctionDeclaration
+        assertThat(function.body.statements[0]).isInstanceOf(XbLocalDeclarationStatement::class.java)
+        val parametersAsLocals = function.body.statements[1] as XbLocalDeclarationStatement
+        assertThat(parametersAsLocals.bindings.map { it.name }).containsExactly("p1", "p2")
+    }
+
+    @Test
+    fun `reports error when parameters precedes local declarations`() {
+        val source = """
+            FUNCTION LegacyParamsOrderError()
+            PARAMETERS p1, p2
+            LOCAL cString
+            RETURN p1
+            ENDFUNCTION
+        """.trimIndent()
+
+        val result = XbParser.parse(source)
+
+        assertThat(result.errors).anyMatch { it.contains("PARAMETERS must appear after LOCAL/STATIC declarations") }
+        val function = result.program!!.statements.single() as XbFunctionDeclaration
+        assertThat(function.body.statements[0]).isInstanceOf(XbLocalDeclarationStatement::class.java)
+        assertThat(function.body.statements[1]).isInstanceOf(XbLocalDeclarationStatement::class.java)
+    }
+
+    @Test
     fun `parses class banner asterisk comments without emitting star-token errors`() {
         val source = """
             FUNCTION BannerSafe()

@@ -40,6 +40,7 @@ data class XbParseResult(
 class XbParser(private val tokens: List<Token>) {
     private var current = 0
     private val errors = mutableListOf<String>()
+    private val blockContexts = ArrayDeque<BlockContext>()
 
     fun parseProgram(): XbParseResult {
         val start = peek()
@@ -282,6 +283,7 @@ class XbParser(private val tokens: List<Token>) {
 
     private fun parseParametersStatement(): XbStatement {
         val parametersToken = advance()
+        currentBlockContext()?.seenParameters = true
         val bindings = mutableListOf<XbLocalBinding>()
         while (!isAtEnd() && !isTerminatorToken(peek())) {
             val bindingToken = matchNameToken()
@@ -514,6 +516,11 @@ class XbParser(private val tokens: List<Token>) {
 
     private fun parseLocalDeclaration(): XbStatement {
         val localToken = advance()
+        currentBlockContext()?.let { context ->
+            if (context.seenParameters) {
+                recordError("PARAMETERS must appear after LOCAL/STATIC declarations at ${localToken.startOffset}")
+            }
+        }
         val bindings = mutableListOf<XbLocalBinding>()
         do {
             val nameToken = matchNameToken()
@@ -772,6 +779,7 @@ class XbParser(private val tokens: List<Token>) {
         val start = peek()
         val startIndex = current
         val statements = mutableListOf<XbStatement>()
+        blockContexts.addLast(BlockContext())
         while (!isAtEnd() && peek().type !in terminators) {
             val before = current
             val statement = parseStatement()
@@ -781,9 +789,16 @@ class XbParser(private val tokens: List<Token>) {
                 advance()
             }
         }
+        blockContexts.removeLast()
         val end = if (current == startIndex) start else previousOr(start)
         return XbBlock(statements, rangeFrom(start, end))
     }
+
+    private fun currentBlockContext(): BlockContext? = blockContexts.lastOrNull()
+
+    private data class BlockContext(
+        var seenParameters: Boolean = false,
+    )
 
 
 
