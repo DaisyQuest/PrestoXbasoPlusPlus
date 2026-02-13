@@ -117,6 +117,99 @@ class XbInspectionEngineTest {
     }
 
     @Test
+    fun `detects god class tiers with expected severities`() {
+        val tier1Source = makeLineSource(3001)
+        val tier2Source = makeLineSource(5001)
+        val tier3Source = makeLineSource(10001)
+
+        val tier1Findings = engine.inspect(tier1Source)
+        val tier2Findings = engine.inspect(tier2Source)
+        val tier3Findings = engine.inspect(tier3Source)
+
+        assertThat(tier1Findings.single { it.id == "XB260" }.severity).isEqualTo(XbInspectionSeverity.WARNING)
+        assertThat(tier1Findings.none { it.id == "XB261" || it.id == "XB262" }).isTrue()
+
+        assertThat(tier2Findings.single { it.id == "XB261" }.severity).isEqualTo(XbInspectionSeverity.ERROR)
+        assertThat(tier2Findings.none { it.id == "XB260" || it.id == "XB262" }).isTrue()
+
+        assertThat(tier3Findings.single { it.id == "XB262" }.severity).isEqualTo(XbInspectionSeverity.ERROR)
+        assertThat(tier3Findings.none { it.id == "XB260" || it.id == "XB261" }).isTrue()
+    }
+
+    @Test
+    fun `flags index zero and for loop from zero to len`() {
+        val source = """
+            local a := {1,2,3}
+            ? a[0]
+            for i := 0 to Len(a)
+                ? a[i]
+            next
+        """.trimIndent()
+
+        val findings = engine.inspect(source)
+
+        assertThat(findings.count { it.id == "XB270" }).isEqualTo(2)
+    }
+
+    @Test
+    fun `does not flag array access rule for non zero indexes`() {
+        val source = """
+            local a := {1,2,3}
+            ? a[1]
+            for i := 1 to Len(a)
+                ? a[i]
+            next
+        """.trimIndent()
+
+        val findings = engine.inspect(source)
+
+        assertThat(findings.none { it.id == "XB270" }).isTrue()
+    }
+
+    @Test
+    fun `warns when function has no explicit return and does not warn when return exists`() {
+        val withoutReturn = "function Foo()\nlocal x := 1\nendfunction"
+        val withReturn = "function Bar()\nreturn 1\nendfunction"
+
+        val withoutReturnFindings = engine.inspect(withoutReturn)
+        val withReturnFindings = engine.inspect(withReturn)
+
+        assertThat(withoutReturnFindings.any { it.id == "XB271" }).isTrue()
+        assertThat(withReturnFindings.none { it.id == "XB271" }).isTrue()
+    }
+
+    @Test
+    fun `warns when procedure returns a value only`() {
+        val withValueReturn = "procedure Test()\nreturn 5\nendprocedure"
+        val bareReturn = "procedure Test2()\nreturn\nendprocedure"
+
+        val withValueReturnFindings = engine.inspect(withValueReturn)
+        val bareReturnFindings = engine.inspect(bareReturn)
+
+        assertThat(withValueReturnFindings.any { it.id == "XB272" }).isTrue()
+        assertThat(bareReturnFindings.none { it.id == "XB272" }).isTrue()
+    }
+
+    @Test
+    fun `flags while true loop without exit and allows loop with exit`() {
+        val noExit = "while .T.\n? 1\nenddo"
+        val withExit = "while .T.\nexit\nenddo"
+
+        val noExitFindings = engine.inspect(noExit)
+        val withExitFindings = engine.inspect(withExit)
+
+        assertThat(noExitFindings.any { it.id == "XB273" }).isTrue()
+        assertThat(withExitFindings.none { it.id == "XB273" }).isTrue()
+    }
+
+    @Test
+    fun `flags public and private declarations`() {
+        val findings = engine.inspect("public x\nprivate y\nlocal z")
+
+        assertThat(findings.count { it.id == "XB274" }).isEqualTo(2)
+    }
+
+    @Test
     fun `uses lex-only context for oversized sources`() {
         val policy = XbInspectionPerformancePolicy(maxSourceLengthForFullInspection = 64)
         val engine = XbInspectionEngine(XbStandardInspections.all, policy)
@@ -141,4 +234,13 @@ class XbInspectionEngineTest {
         assertThat(findings.any { it.id == "XB220" }).isTrue()
     }
 
+    private fun makeLineSource(lines: Int): String = buildString {
+        repeat(lines) { index ->
+            append("? ")
+            append(index + 1)
+            if (index < lines - 1) {
+                append('\n')
+            }
+        }
+    }
 }

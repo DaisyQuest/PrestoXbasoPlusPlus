@@ -3,10 +3,14 @@ package com.prestoxbasopp.ide.inspections
 import com.prestoxbasopp.core.ast.XbBinaryExpression
 import com.prestoxbasopp.core.ast.XbCallExpression
 import com.prestoxbasopp.core.ast.XbExpression
+import com.prestoxbasopp.core.ast.XbForStatement
+import com.prestoxbasopp.core.ast.XbFunctionDeclaration
 import com.prestoxbasopp.core.ast.XbIdentifierExpression
 import com.prestoxbasopp.core.ast.XbIfStatement
 import com.prestoxbasopp.core.ast.XbIndexExpression
 import com.prestoxbasopp.core.ast.XbLiteralExpression
+import com.prestoxbasopp.core.ast.XbLiteralKind
+import com.prestoxbasopp.core.ast.XbProcedureDeclaration
 import com.prestoxbasopp.core.ast.XbReturnStatement
 import com.prestoxbasopp.core.ast.XbUnaryExpression
 import com.prestoxbasopp.core.ast.XbWhileStatement
@@ -216,7 +220,116 @@ object XbStandardInspections {
                         if (suggestion != null) {
                             emitter.report(token.range, "Did you mean \"$suggestion\"?")
                         }
+                }
+            }
+        },
+        xbInspection(
+            id = "XB260",
+            title = "GOD CLASS DETECTED - TIER 1",
+        ) {
+            description = "Warns when a source file exceeds 3000 lines."
+            severity = XbInspectionSeverity.WARNING
+            onTokens { _, emitter, context ->
+                val lines = lineCount(context.source)
+                if (lines > 3000 && lines <= 5000) {
+                    emitter.report(fileRange(context.source), "GOD CLASS DETECTED - TIER 1: file has $lines lines (>3000).")
+                }
+            }
+        },
+        xbInspection(
+            id = "XB261",
+            title = "GOD CLASS DETECTED - TIER 2",
+        ) {
+            description = "Reports files exceeding 5000 lines as low-level errors."
+            severity = XbInspectionSeverity.ERROR
+            onTokens { _, emitter, context ->
+                val lines = lineCount(context.source)
+                if (lines > 5000 && lines <= 10000) {
+                    emitter.report(fileRange(context.source), "GOD CLASS DETECTED - TIER 2: file has $lines lines (>5000).")
+                }
+            }
+        },
+        xbInspection(
+            id = "XB262",
+            title = "GOD CLASS DETECTED - TIER 3",
+        ) {
+            description = "Reports files exceeding 10000 lines as low-level errors."
+            severity = XbInspectionSeverity.ERROR
+            onTokens { _, emitter, context ->
+                val lines = lineCount(context.source)
+                if (lines > 10000) {
+                    emitter.report(fileRange(context.source), "GOD CLASS DETECTED - TIER 3: file has $lines lines (>10000).")
+                }
+            }
+        },
+        xbInspection(
+            id = "XB270",
+            title = "1-based array access misuse",
+        ) {
+            description = "Flags index 0 usage and FOR loops that start at 0 and iterate to Len(array)."
+            severity = XbInspectionSeverity.WARNING
+            onExpressions { expression, emitter, _ ->
+                if (expression is XbIndexExpression && expression.index.isNumericLiteral("0")) {
+                    emitter.report(expression.index.range, "Arrays in Xbase++ are 1-based. Index 0 is invalid.")
+                }
+            }
+            onStatements { statement, emitter, _ ->
+                if (statement is XbForStatement && statement.start.isNumericLiteral("0") && statement.end.isLenCall()) {
+                    emitter.report(statement.range, "Arrays in Xbase++ are 1-based. FOR loops over arrays should start at 1.")
+                }
+            }
+        },
+        xbInspection(
+            id = "XB271",
+            title = "Function without explicit RETURN",
+        ) {
+            description = "Warns when FUNCTION declarations have no explicit RETURN statement."
+            severity = XbInspectionSeverity.WARNING
+            onStatements { statement, emitter, _ ->
+                if (statement is XbFunctionDeclaration && !containsReturn(statement.body.statements)) {
+                    emitter.report(statement.range, "FUNCTION '${statement.name}' has no explicit RETURN statement.")
+                }
+            }
+        },
+        xbInspection(
+            id = "XB272",
+            title = "Procedure returning value",
+        ) {
+            description = "Warns when PROCEDURE returns a value expression."
+            severity = XbInspectionSeverity.WARNING
+            onStatements { statement, emitter, _ ->
+                if (statement is XbProcedureDeclaration) {
+                    findProcedureValueReturns(statement.body.statements).forEach { valueReturn ->
+                        emitter.report(valueReturn.range, "Procedures should not return values.")
                     }
+                }
+            }
+        },
+        xbInspection(
+            id = "XB273",
+            title = "DO WHILE infinite loop risk",
+        ) {
+            description = "Flags WHILE .T. loops that do not contain EXIT."
+            severity = XbInspectionSeverity.WARNING
+            onStatements { statement, emitter, _ ->
+                if (statement is XbWhileStatement && statement.condition.isBooleanTrueLiteral() && !containsExit(statement.body.statements)) {
+                    emitter.report(statement.range, "DO WHILE .T. loop without EXIT may be infinite.")
+                }
+            }
+        },
+        xbInspection(
+            id = "XB274",
+            title = "PUBLIC or PRIVATE overuse",
+        ) {
+            description = "Flags PUBLIC/PRIVATE declarations and recommends LOCAL/STATIC."
+            severity = XbInspectionSeverity.WARNING
+            onTokens { tokens, emitter, _ ->
+                tokens.forEach { token ->
+                    val keyword = token.text.lowercase()
+                    if (token.type == XbTokenType.KEYWORD && keyword in setOf("public", "private")) {
+                        emitter.report(token.range, "Avoid $keyword variables; prefer LOCAL or STATIC for safer scope.")
+                    }
+                }
             }
         },
     )
@@ -243,6 +356,90 @@ private fun isEmptyStatement(tokens: List<com.prestoxbasopp.core.lexer.XbToken>,
         next == null ||
         (next.type == XbTokenType.PUNCTUATION && next.text == ";") ||
         nextKeyword in setOf("endif", "enddo", "else")
+}
+
+private fun fileRange(source: String): com.prestoxbasopp.core.api.XbTextRange {
+    return com.prestoxbasopp.core.api.XbTextRange(0, source.length)
+}
+
+private fun lineCount(source: String): Int {
+    if (source.isEmpty()) return 0
+    var lines = 1
+    source.forEach { char ->
+        if (char == '\n') {
+            lines++
+        }
+    }
+    return lines
+}
+
+private fun XbExpression.isNumericLiteral(value: String): Boolean {
+    return this is XbLiteralExpression && kind == XbLiteralKind.NUMBER && this.value == value
+}
+
+private fun XbExpression.isLenCall(): Boolean {
+    if (this !is XbCallExpression) return false
+    val calleeName = (callee as? XbIdentifierExpression)?.name?.lowercase() ?: return false
+    return calleeName == "len" && arguments.size == 1
+}
+
+private fun XbExpression.isBooleanTrueLiteral(): Boolean {
+    return this is XbLiteralExpression && kind == XbLiteralKind.BOOLEAN &&
+        (value.equals(".T.", ignoreCase = true) || value.equals("true", ignoreCase = true))
+}
+
+private fun containsReturn(statements: List<com.prestoxbasopp.core.ast.XbStatement>): Boolean {
+    return statements.any { statement ->
+        when (statement) {
+            is XbReturnStatement -> true
+            is com.prestoxbasopp.core.ast.XbIfStatement ->
+                containsReturn(statement.thenBlock.statements) || containsReturn(statement.elseBlock?.statements.orEmpty())
+            is com.prestoxbasopp.core.ast.XbWhileStatement -> containsReturn(statement.body.statements)
+            is com.prestoxbasopp.core.ast.XbForStatement -> containsReturn(statement.body.statements)
+            is com.prestoxbasopp.core.ast.XbSequenceStatement ->
+                containsReturn(statement.body.statements) || containsReturn(statement.recoverBlock?.statements.orEmpty())
+            is com.prestoxbasopp.core.ast.XbBlock -> containsReturn(statement.statements)
+            else -> false
+        }
+    }
+}
+
+private fun findProcedureValueReturns(statements: List<com.prestoxbasopp.core.ast.XbStatement>): List<XbReturnStatement> {
+    val findings = mutableListOf<XbReturnStatement>()
+    statements.forEach { statement ->
+        when (statement) {
+            is XbReturnStatement -> if (statement.expression != null) findings += statement
+            is com.prestoxbasopp.core.ast.XbIfStatement -> {
+                findings += findProcedureValueReturns(statement.thenBlock.statements)
+                findings += findProcedureValueReturns(statement.elseBlock?.statements.orEmpty())
+            }
+            is com.prestoxbasopp.core.ast.XbWhileStatement -> findings += findProcedureValueReturns(statement.body.statements)
+            is com.prestoxbasopp.core.ast.XbForStatement -> findings += findProcedureValueReturns(statement.body.statements)
+            is com.prestoxbasopp.core.ast.XbSequenceStatement -> {
+                findings += findProcedureValueReturns(statement.body.statements)
+                findings += findProcedureValueReturns(statement.recoverBlock?.statements.orEmpty())
+            }
+            is com.prestoxbasopp.core.ast.XbBlock -> findings += findProcedureValueReturns(statement.statements)
+            else -> Unit
+        }
+    }
+    return findings
+}
+
+private fun containsExit(statements: List<com.prestoxbasopp.core.ast.XbStatement>): Boolean {
+    return statements.any { statement ->
+        when (statement) {
+            is com.prestoxbasopp.core.ast.XbExitStatement -> true
+            is com.prestoxbasopp.core.ast.XbIfStatement ->
+                containsExit(statement.thenBlock.statements) || containsExit(statement.elseBlock?.statements.orEmpty())
+            is com.prestoxbasopp.core.ast.XbWhileStatement -> containsExit(statement.body.statements)
+            is com.prestoxbasopp.core.ast.XbForStatement -> containsExit(statement.body.statements)
+            is com.prestoxbasopp.core.ast.XbSequenceStatement ->
+                containsExit(statement.body.statements) || containsExit(statement.recoverBlock?.statements.orEmpty())
+            is com.prestoxbasopp.core.ast.XbBlock -> containsExit(statement.statements)
+            else -> false
+        }
+    }
 }
 
 private class XbLineIndex(source: String) {
