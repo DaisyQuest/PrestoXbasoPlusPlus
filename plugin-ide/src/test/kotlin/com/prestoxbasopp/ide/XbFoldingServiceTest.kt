@@ -142,10 +142,30 @@ class XbFoldingServiceTest {
         val snapshot = XbPsiTextBuilder().buildSnapshot(source)
         val ranges = XbFoldingService().foldingRanges(snapshot)
 
-        val loadRange = ranges.first { it.placeholder == "load(...)" }
+        val loadRange = ranges.first { it.placeholder == "METHOD {...}" }
         val nextClassOffset = source.indexOf("CLASS METHOD findBy")
         assertThat(loadRange.textRange.endOffset).isLessThanOrEqualTo(nextClassOffset)
     }
 
+    @Test
+    fun `method declarations use method placeholder while functions keep function placeholder`() {
+        val source = """
+            CLASS DbaseF5
+                CLASS METHOD delete(entityOrKey, options)
+                    LOCAL key := entityOrKey
+                    RETURN key
+            ENDCLASS
+            FUNCTION utilMain()
+                RETURN .T.
+            ENDFUNCTION
+        """.trimIndent()
 
+        val snapshot = XbPsiTextBuilder().buildSnapshot(source)
+        val ranges = XbFoldingService().foldingRanges(snapshot)
+
+        assertThat(ranges.map { it.placeholder }).contains("METHOD {...}")
+        assertThat(ranges.map { it.placeholder }).contains("utilMain(...)")
+        assertThat(ranges.map { it.placeholder }).doesNotContain("delete(...)")
+    }
 }
+

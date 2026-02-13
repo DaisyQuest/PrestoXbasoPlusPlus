@@ -40,9 +40,19 @@ class XbFoldingService {
     private fun placeholderFor(snapshot: XbPsiSnapshot): String {
         return when (snapshot.elementType) {
             XbPsiElementType.BLOCK -> "{...}"
-            XbPsiElementType.FUNCTION_DECLARATION -> "${snapshot.name.orEmpty()}(...)"
+            XbPsiElementType.FUNCTION_DECLARATION -> {
+                if (isMethodDeclaration(snapshot.text)) {
+                    "METHOD {...}"
+                } else {
+                    "${snapshot.name.orEmpty()}(...)"
+                }
+            }
             else -> "..."
         }
+    }
+
+    private fun isMethodDeclaration(text: String): Boolean {
+        return text.trimStart().startsWith("METHOD ", ignoreCase = true)
     }
 
     private fun collectAstRanges(source: String, ranges: MutableList<XbFoldingRange>) {
