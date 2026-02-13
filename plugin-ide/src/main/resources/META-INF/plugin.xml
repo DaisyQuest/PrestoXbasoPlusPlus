@@ -20,7 +20,12 @@
                   language="Xbase++"
                   extensions="xpj"
                   implementationClass="com.prestoxbasopp.ide.xpj.XpjFileType" />
+        <fileType name="DBF File"
+                  language="TEXT"
+                  extensions="dbf"
+                  implementationClass="com.prestoxbasopp.ide.dbf.DbfFileType" />
         <fileEditorProvider implementation="com.prestoxbasopp.ide.xpj.XpjProjectFileEditorProvider" />
+        <fileEditorProvider implementation="com.prestoxbasopp.ide.dbf.DbfFileEditorProvider" />
         <lang.parserDefinition language="Xbase++"
                                implementationClass="com.prestoxbasopp.ide.XbParserDefinition" />
         <lang.syntaxHighlighterFactory language="Xbase++"
@@ -67,6 +72,8 @@
                 text="Reverse Engineer DBF"
                 description="Open Ultra DBF Master reverse-engineering workflow">
             <add-to-group group-id="ToolsMenu" anchor="last" />
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last" />
+            <add-to-group group-id="EditorPopupMenu" anchor="last" />
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift R" />
         </action>
     </actions>

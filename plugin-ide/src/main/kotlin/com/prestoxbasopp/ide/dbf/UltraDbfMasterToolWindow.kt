@@ -32,7 +32,10 @@ class UltraDbfMasterToolWindowFactory : ToolWindowFactory {
     }
 }
 
-class UltraDbfMasterPanel(private val project: Project) : JPanel(BorderLayout()) {
+class UltraDbfMasterPanel(
+    private val project: Project,
+    initialDbfPath: String? = null,
+) : JPanel(BorderLayout()) {
     private val pathField = JTextField()
     private val tableView = JTable()
     private val status = JLabel("Import a Level-5 DBF file to begin.")
@@ -81,6 +84,11 @@ class UltraDbfMasterPanel(private val project: Project) : JPanel(BorderLayout())
             add(actions, BorderLayout.NORTH)
             add(status, BorderLayout.SOUTH)
         }, BorderLayout.SOUTH)
+
+        if (!initialDbfPath.isNullOrBlank()) {
+            pathField.text = initialDbfPath
+            importFromPath()
+        }
     }
 
     private fun importFromPath() {
