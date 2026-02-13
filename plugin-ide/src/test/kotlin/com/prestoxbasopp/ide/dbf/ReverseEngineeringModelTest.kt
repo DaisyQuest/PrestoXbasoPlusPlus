@@ -185,7 +185,7 @@ class ReverseEngineeringModelTest {
 
         val artifact = ReverseEngineeringWorkflow.generate(metadata, config).first.single()
 
-        assertThat(artifact.source).contains("payload[\"AMOUNT\"] := Val(value)")
+        assertThat(artifact.source).contains("payload[\"AMOUNT\"] := iif(Empty(value), NIL, Val(value))")
         assertThat(artifact.source).contains("payload[\"PAID\"] := iif(Upper(AllTrim(value)) == \"T\"")
         assertThat(artifact.source).contains("CASE ValType(value) == \"D\"")
         assertThat(artifact.source).contains("payload[\"DUE_DATE\"] := CToD(value)")
@@ -231,10 +231,47 @@ class ReverseEngineeringModelTest {
         assertThat(artifact.source).contains("METHOD Dbasef5:getPrimaryKeyValue()")
         assertThat(artifact.source).contains("RETURN ::NF")
         assertThat(artifact.source).contains("RETURN Dbasef5:upsert(Self, {=>})")
-        assertThat(artifact.source).contains("LOCAL value := ::ARXB")
+        assertThat(artifact.source).contains("LOCAL value")
+        assertThat(artifact.source).contains("value := ::ARXB")
+        assertThat(artifact.source).contains("LOCAL repo := ::openRepository(options)")
+        assertThat(artifact.source).contains("RETURN repo:insert(::tableName(), payload)")
+        assertThat(artifact.source).contains("RETURN repo:update(::tableName(), key, payload)")
         assertThat(artifact.source).doesNotContain("HHasKey(Self")
         assertThat(artifact.source).contains("ELSEIF HHasKey(payload, \"NF\")")
         assertThat(artifact.source).contains("key := payload[\"NF\"]")
+        assertThat(XbParser.parse(artifact.source).errors).isEmpty()
+    }
+
+    @Test
+    fun `generate infers primary key from indexing hint when candidate primary key is missing`() {
+        val metadata = ReverseEngineeringWorkflow.toBundle(
+            DbfTableMetadata(
+                tableName = "DbaseF5",
+                sourcePath = "fixtures/dbasef5.dbf",
+                checksum = "hintpk",
+                fields = listOf(
+                    DbfFieldMetadata("NF", DbfFieldType.Character, 12, 0, false, null, "PRIMARY"),
+                    DbfFieldMetadata("ARXB", DbfFieldType.Character, 12, 0, true, null, null),
+                ),
+                candidatePrimaryKey = null,
+                candidateForeignKeys = emptyList(),
+                warnings = emptyList(),
+            ),
+        )
+        val config = ReverseEngineerConfig(
+            schemaVersion = "1.0.0",
+            engineVersion = "1.0.0",
+            profile = ApiProfile.FULL,
+            outputDir = "out",
+            generateMethodAliases = false,
+            relations = emptyList(),
+            tableConfigs = emptyList(),
+        )
+
+        val artifact = ReverseEngineeringWorkflow.generate(metadata, config).first.single()
+
+        assertThat(artifact.source).contains("METHOD Dbasef5:getPrimaryKeyValue()")
+        assertThat(artifact.source).contains("RETURN ::NF")
         assertThat(XbParser.parse(artifact.source).errors).isEmpty()
     }
 
