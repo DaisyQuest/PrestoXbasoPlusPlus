@@ -17,7 +17,7 @@
                   extensions="xb;prg;ch"
                   implementationClass="com.prestoxbasopp.ide.XbFileType" />
         <fileType name="XPJ Project"
-                  language="Xbase++"
+                  language="TEXT"
                   extensions="xpj"
                   implementationClass="com.prestoxbasopp.ide.xpj.XpjFileType" />
         <fileType name="DBF File"
