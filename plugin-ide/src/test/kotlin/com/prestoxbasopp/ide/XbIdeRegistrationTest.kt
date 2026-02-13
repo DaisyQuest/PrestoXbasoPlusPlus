@@ -42,6 +42,22 @@ class XbIdeRegistrationTest {
         assertThat(DbfFileType.icon).isNull()
     }
 
+
+    @Test
+    fun `plugin xml registers xpj file type name consistently`() {
+        val pluginXmlUrl: URL? = javaClass.classLoader.getResource("META-INF/plugin.xml")
+        assertThat(pluginXmlUrl).withFailMessage("Expected plugin.xml to be on the test classpath.").isNotNull()
+
+        val pluginXml = pluginXmlUrl!!.readText()
+        val xpjFileType =
+            Regex(
+                """<fileType\s+[^>]*name="([^"]+)"[^>]*extensions="xpj"[^>]*implementationClass="com\.prestoxbasopp\.ide\.xpj\.XpjFileType"""",
+            ).find(pluginXml)
+
+        assertThat(xpjFileType).isNotNull
+        assertThat(xpjFileType!!.groupValues[1]).isEqualTo("XPJ Project")
+    }
+
     @Test
     fun `plugin xml registers dbf file association and editor provider`() {
         val pluginXmlUrl: URL? = javaClass.classLoader.getResource("META-INF/plugin.xml")

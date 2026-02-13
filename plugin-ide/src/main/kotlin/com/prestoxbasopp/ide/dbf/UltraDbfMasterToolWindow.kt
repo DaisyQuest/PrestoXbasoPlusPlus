@@ -18,6 +18,7 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JRadioButton
 import javax.swing.JTable
+import javax.swing.JTextArea
 import javax.swing.JTextField
 import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
@@ -77,6 +78,7 @@ class UltraDbfMasterPanel(
         tabs.addTab("Table View", JBScrollPane(tableView))
         tabs.addTab("Card View", cardPanel)
         tabs.addTab("Filter View", JBScrollPane(filterPanel))
+        tabs.addTab("Reverse Engineering", ReverseEngineeringWorkspacePanel())
 
         add(controls, BorderLayout.NORTH)
         add(tabs, BorderLayout.CENTER)
@@ -308,5 +310,27 @@ private class UltraDbfTableModel(
         val field = fields[columnIndex - 1]
         editorModel.updateValue(absoluteRow, field.name, aValue?.toString().orEmpty())
         fireTableCellUpdated(rowIndex, columnIndex)
+    }
+}
+
+
+private class ReverseEngineeringWorkspacePanel : JPanel(BorderLayout()) {
+    private val summary = JTextArea().apply {
+        isEditable = false
+        text = buildSummary()
+    }
+
+    init {
+        add(JBScrollPane(summary), BorderLayout.CENTER)
+    }
+
+    private fun buildSummary(): String = buildString {
+        appendLine("Reverse Engineering Workflow")
+        appendLine("This first-class tab hosts the DBF reverse-engineering wizard stages.")
+        appendLine()
+        appendLine("Stages:")
+        ReverseEngineeringWorkflow.defaultTabs().forEachIndexed { index, tab ->
+            appendLine("${index + 1}. ${tab.title}")
+        }
     }
 }
