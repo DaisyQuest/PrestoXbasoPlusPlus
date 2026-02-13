@@ -13,7 +13,7 @@ class XpjProjectParser {
         }
 
         text.lineSequence().forEach { rawLine ->
-            val lineWithoutComment = rawLine.substringBefore("//").trim()
+            val lineWithoutComment = stripComments(rawLine).trim()
             if (lineWithoutComment.isBlank()) {
                 return@forEach
             }
@@ -41,5 +41,27 @@ class XpjProjectParser {
 
         flushSection()
         return XpjProjectFile(sections)
+    }
+
+    private fun stripComments(rawLine: String): String {
+        var inSingleQuotes = false
+        var inDoubleQuotes = false
+        var index = 0
+        while (index < rawLine.length - 1) {
+            when (rawLine[index]) {
+                '\'' -> if (!inDoubleQuotes) inSingleQuotes = !inSingleQuotes
+                '"' -> if (!inSingleQuotes) inDoubleQuotes = !inDoubleQuotes
+                '/' -> {
+                    if (!inSingleQuotes && !inDoubleQuotes && rawLine[index + 1] == '/') {
+                        val hasWhitespaceBeforeComment = index == 0 || rawLine[index - 1].isWhitespace()
+                        if (hasWhitespaceBeforeComment) {
+                            return rawLine.substring(0, index)
+                        }
+                    }
+                }
+            }
+            index++
+        }
+        return rawLine
     }
 }
