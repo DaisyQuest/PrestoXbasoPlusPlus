@@ -60,4 +60,15 @@
         <startupActivity implementation="com.prestoxbasopp.ide.modules.XbModuleStartupActivity" />
         <configurationType implementation="com.prestoxbasopp.ide.debug.XbDebuggerRunConfigurationType" />
     </extensions>
+
+    <actions>
+        <action id="com.prestoxbasopp.ide.dbf.ReverseEngineerDbfAction"
+                class="com.prestoxbasopp.ide.dbf.ReverseEngineerDbfAction"
+                text="Reverse Engineer DBF"
+                description="Open Ultra DBF Master reverse-engineering workflow">
+            <add-to-group group-id="ToolsMenu" anchor="last" />
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift R" />
+        </action>
+    </actions>
+
 </idea-plugin>

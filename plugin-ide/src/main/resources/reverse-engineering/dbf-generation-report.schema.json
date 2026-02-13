@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "com.prestoxbasopp.dbf-generation-report.schema.json",
+  "title": "DBF Generation Report",
+  "type": "object",
+  "required": ["schemaVersion", "engineVersion", "generatedFileCount", "warnings"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "engineVersion": { "type": "string" },
+    "generatedFileCount": { "type": "integer", "minimum": 0 },
+    "warnings": { "type": "array", "items": { "type": "string" } }
+  }
+}

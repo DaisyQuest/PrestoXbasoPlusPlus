@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "com.prestoxbasopp.dbf-metadata.schema.json",
+  "title": "DBF Metadata Bundle",
+  "type": "object",
+  "required": ["schemaVersion", "engineVersion", "tables"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "engineVersion": { "type": "string" },
+    "tables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tableName", "sourcePath", "checksum", "fields", "warnings"],
+        "properties": {
+          "tableName": { "type": "string" },
+          "sourcePath": { "type": "string" },
+          "checksum": { "type": "string" },
+          "candidatePrimaryKey": { "type": ["string", "null"] },
+          "candidateForeignKeys": { "type": "array" },
+          "warnings": { "type": "array", "items": { "type": "string" } },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["originalFieldName", "inferredType", "width", "precision", "nullableHint"],
+              "properties": {
+                "originalFieldName": { "type": "string" },
+                "inferredType": { "type": "string" },
+                "width": { "type": "integer" },
+                "precision": { "type": "integer" },
+                "nullableHint": { "type": "boolean" },
+                "defaultValueHint": { "type": ["string", "null"] },
+                "indexingHint": { "type": ["string", "null"] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

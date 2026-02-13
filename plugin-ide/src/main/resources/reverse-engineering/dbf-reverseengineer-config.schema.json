@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "com.prestoxbasopp.dbf-reverseengineer-config.schema.json",
+  "title": "DBF Reverse Engineer Config",
+  "type": "object",
+  "required": ["schemaVersion", "engineVersion", "profile", "outputDir", "generateMethodAliases"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "engineVersion": { "type": "string" },
+    "profile": { "type": "string", "enum": ["READ_ONLY", "CRUD_BASIC", "CRUD_RELATIONAL", "FULL"] },
+    "outputDir": { "type": "string" },
+    "generateMethodAliases": { "type": "boolean" },
+    "relations": { "type": "array" },
+    "tableConfigs": { "type": "array" }
+  }
+}
