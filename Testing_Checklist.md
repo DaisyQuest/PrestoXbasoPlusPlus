@@ -70,3 +70,4 @@
 - IDE syntax highlighting semantic token coverage for function declaration/call classification, macro directives, and IntelliJ highlighter token mapping branches.
 - DBF editor/provider compatibility coverage for DumbAware + getFile override contracts, and first-class Reverse Engineering tab visibility/workflow-stage rendering.
 - Reverse engineering workspace coverage for Analyze/Generate guards, tab population, relation inference display, and API-profile-driven preview generation.
+- Reverse engineering generation coverage for macro emission, alias-macro toggles, preview rendering, and warning surfacing when invalid class names are skipped.

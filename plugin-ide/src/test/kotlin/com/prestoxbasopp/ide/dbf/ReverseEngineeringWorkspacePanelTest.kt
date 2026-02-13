@@ -85,12 +85,37 @@ class ReverseEngineeringWorkspacePanelTest {
 
         val preview = findAreaContaining(panel, "CLASS DogTable")
         assertThat(preview).isNotNull()
-        assertThat(preview!!.text).contains("METHOD load(...)")
-        assertThat(preview.text).contains("METHOD findBy(...)")
-        assertThat(preview.text).doesNotContain("METHOD insert(...)")
-        assertThat(preview.text).doesNotContain("INLINE")
+        val previewText = preview!!.text
+        assertThat(previewText).contains("#define DOGTABLE_FIELD_ID \"ID\"")
+        assertThat(previewText).contains("METHOD load(...)")
+        assertThat(previewText).contains("METHOD findBy(...)")
+        assertThat(previewText).doesNotContain("METHOD insert(...)")
+        assertThat(previewText).doesNotContain("INLINE")
         assertThat(findAreaContaining(panel, "OK: generation completed without warnings.")).isNotNull()
         assertThat(findAreaContaining(panel, "Generate complete: 1 artifacts into out/reverse.")).isNotNull()
+    }
+
+    @Test
+    fun `generate surfaces non-blocking warnings when generation skips invalid class`() {
+        val table = DbfTable(
+            header = DbfHeader(3, 124, 2, 1, 1, 100, 10, 0, 0, false, 0),
+            fields = listOf(
+                DbfFieldDescriptor("ID", DbfFieldType.Numeric, 8, 0, 0, false),
+            ),
+            records = mutableListOf(
+                DbfRecord(false, mutableMapOf("ID" to "1")),
+            ),
+        )
+        val panel = ReverseEngineeringWorkspacePanel {
+            ReverseEngineeringInput("___", "fixtures/blank.dbf", table)
+        }
+
+        clickButton(panel, "reverse.analyze")
+        clickButton(panel, "reverse.generate")
+
+        assertThat(findAreaContaining(panel, "Non-blocking warnings:")).isNotNull()
+        assertThat(findAreaContaining(panel, "Skipped table '___' due to blank class name.")).isNotNull()
+        assertThat(findAreaContaining(panel, "Generate complete: 0 artifacts into generated.")).isNotNull()
     }
 
     private fun clickButton(panel: ReverseEngineeringWorkspacePanel, name: String) {

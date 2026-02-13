@@ -118,12 +118,15 @@ class ReverseEngineeringModelTest {
         val dog = artifacts.single { it.className == "Dog" }
         assertThat(dog.methods.map { it.methodName }).contains("insert", "update", "upsert", "delete", "getOwner", "addOwner", "removeOwner")
         assertThat(dog.methods.mapNotNull { it.alias }).contains("l", "f", "i", "u", "us", "d")
+        assertThat(dog.macros).contains("#define DOG_METHOD_INSERT \"insert\"", "#define DOG_ALIAS_INSERT \"i\"")
         assertThat(dog.source).contains("VAR NAME // alias: n")
+        assertThat(dog.source).contains("#define DOG_FIELD_NAME \"NAME\"")
         assertThat(dog.source).doesNotContain("VAR ID")
 
         val cat = artifacts.single { it.className == "Cat" }
         assertThat(cat.methods.map { it.methodName }).containsExactly("load", "findBy")
         assertThat(cat.methods.mapNotNull { it.alias }).containsExactly("l", "f")
+        assertThat(cat.source).contains("#define CAT_ALIAS_LOAD \"l\"", "#define CAT_METHOD_FINDBY \"findBy\"")
     }
 
     @Test
@@ -165,6 +168,7 @@ class ReverseEngineeringModelTest {
         assertThat(artifacts).hasSize(1)
         assertThat(artifacts.single().className).isEqualTo("Dog")
         assertThat(artifacts.single().methods.map { it.alias }).doesNotContainAnyElementsOf(listOf("l", "f", "i"))
+        assertThat(artifacts.single().macros.joinToString("\n")).doesNotContain("ALIAS")
         assertThat(report.warnings.single()).contains("Skipped table 'BAD'")
     }
 
