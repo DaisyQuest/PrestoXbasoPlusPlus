@@ -78,7 +78,7 @@ class UltraDbfMasterPanel(
         tabs.addTab("Table View", JBScrollPane(tableView))
         tabs.addTab("Card View", cardPanel)
         tabs.addTab("Filter View", JBScrollPane(filterPanel))
-        tabs.addTab("Reverse Engineering", ReverseEngineeringWorkspacePanel())
+        tabs.addTab("Reverse Engineering", ReverseEngineeringWorkspacePanel(::reverseEngineeringInput))
 
         add(controls, BorderLayout.NORTH)
         add(tabs, BorderLayout.CENTER)
@@ -277,6 +277,16 @@ class UltraDbfMasterPanel(
         }
         dialog.isVisible = true
     }
+
+    private fun reverseEngineeringInput(): ReverseEngineeringInput? {
+        val file = importedFile ?: return null
+        val snapshot = model?.snapshot() ?: return null
+        return ReverseEngineeringInput(
+            tableName = file.nameWithoutExtension,
+            sourcePath = file.path,
+            table = snapshot,
+        )
+    }
 }
 
 private class UltraDbfTableModel(
@@ -310,27 +320,5 @@ private class UltraDbfTableModel(
         val field = fields[columnIndex - 1]
         editorModel.updateValue(absoluteRow, field.name, aValue?.toString().orEmpty())
         fireTableCellUpdated(rowIndex, columnIndex)
-    }
-}
-
-
-private class ReverseEngineeringWorkspacePanel : JPanel(BorderLayout()) {
-    private val summary = JTextArea().apply {
-        isEditable = false
-        text = buildSummary()
-    }
-
-    init {
-        add(JBScrollPane(summary), BorderLayout.CENTER)
-    }
-
-    private fun buildSummary(): String = buildString {
-        appendLine("Reverse Engineering Workflow")
-        appendLine("This first-class tab hosts the DBF reverse-engineering wizard stages.")
-        appendLine()
-        appendLine("Stages:")
-        ReverseEngineeringWorkflow.defaultTabs().forEachIndexed { index, tab ->
-            appendLine("${index + 1}. ${tab.title}")
-        }
     }
 }
