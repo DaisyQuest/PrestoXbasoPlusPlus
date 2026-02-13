@@ -25,6 +25,20 @@ import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.table.AbstractTableModel
 
+
+
+internal object ReverseEngineeringOpenRequestStore {
+    private val requestedPaths = mutableSetOf<String>()
+
+    @Synchronized
+    fun request(path: String) {
+        requestedPaths += path
+    }
+
+    @Synchronized
+    fun consume(path: String): Boolean = requestedPaths.remove(path)
+}
+
 class UltraDbfMasterToolWindowFactory : ToolWindowFactory {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val panel = UltraDbfMasterPanel(project)
@@ -36,6 +50,7 @@ class UltraDbfMasterToolWindowFactory : ToolWindowFactory {
 class UltraDbfMasterPanel(
     private val project: Project,
     initialDbfPath: String? = null,
+    openReverseEngineeringOnLoad: Boolean = false,
 ) : JPanel(BorderLayout()) {
     private val pathField = JTextField()
     private val tableView = JTable()
@@ -50,6 +65,10 @@ class UltraDbfMasterPanel(
     private var cardPage = 0
     private var importedFile: File? = null
     private var model: UltraDbfEditorModel? = null
+
+    private companion object {
+        const val REVERSE_ENGINEERING_TAB_TITLE = "Reverse Engineering"
+    }
 
     init {
         val controls = JPanel(BorderLayout()).apply {
@@ -90,6 +109,9 @@ class UltraDbfMasterPanel(
         if (!initialDbfPath.isNullOrBlank()) {
             pathField.text = initialDbfPath
             importFromPath()
+            if (openReverseEngineeringOnLoad || ReverseEngineeringOpenRequestStore.consume(initialDbfPath)) {
+                openReverseEngineeringTab()
+            }
         }
     }
 
@@ -276,6 +298,11 @@ class UltraDbfMasterPanel(
             setBounds(screen)
         }
         dialog.isVisible = true
+    }
+
+    fun openReverseEngineeringTab() {
+        val index = (0 until tabs.tabCount).firstOrNull { tabs.getTitleAt(it) == REVERSE_ENGINEERING_TAB_TITLE } ?: return
+        tabs.selectedIndex = index
     }
 
     private fun reverseEngineeringInput(): ReverseEngineeringInput? {

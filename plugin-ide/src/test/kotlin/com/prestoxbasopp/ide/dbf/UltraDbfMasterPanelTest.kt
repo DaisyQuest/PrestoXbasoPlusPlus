@@ -40,4 +40,25 @@ class UltraDbfMasterPanelTest {
         val titles = (0 until workflowTabs.tabCount).map { workflowTabs.getTitleAt(it) }
         assertThat(titles).containsExactlyElementsOf(ReverseEngineeringWorkflow.defaultTabs().map { it.title })
     }
+
+    @Test
+    fun `panel can switch to reverse engineering tab programmatically`() {
+        val panel = UltraDbfMasterPanel(project)
+        val tabs = panel.components.filterIsInstance<JBTabbedPane>().single()
+
+        panel.openReverseEngineeringTab()
+
+        assertThat(tabs.getTitleAt(tabs.selectedIndex)).isEqualTo("Reverse Engineering")
+    }
+
+    @Test
+    fun `reverse engineering open request store consumes one shot requests`() {
+        val path = "/tmp/sample.dbf"
+
+        ReverseEngineeringOpenRequestStore.request(path)
+
+        assertThat(ReverseEngineeringOpenRequestStore.consume(path)).isTrue()
+        assertThat(ReverseEngineeringOpenRequestStore.consume(path)).isFalse()
+    }
+
 }

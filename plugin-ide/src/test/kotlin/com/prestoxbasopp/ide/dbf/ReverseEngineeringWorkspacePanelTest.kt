@@ -2,17 +2,20 @@ package com.prestoxbasopp.ide.dbf
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import javax.swing.JButton
 import javax.swing.JCheckBox
 import javax.swing.JComboBox
 import javax.swing.JTabbedPane
 import javax.swing.JTextArea
 import javax.swing.JTextField
+import java.nio.file.Files
+import java.nio.file.Path
 
 class ReverseEngineeringWorkspacePanelTest {
     @Test
     fun `analyze warns when no dbf input is available`() {
-        val panel = ReverseEngineeringWorkspacePanel { null }
+        val panel = ReverseEngineeringWorkspacePanel(inputProvider = { null })
 
         clickButton(panel, "reverse.analyze")
 
@@ -22,7 +25,7 @@ class ReverseEngineeringWorkspacePanelTest {
 
     @Test
     fun `generate warns when analysis has not been run`() {
-        val panel = ReverseEngineeringWorkspacePanel { null }
+        val panel = ReverseEngineeringWorkspacePanel(inputProvider = { null })
 
         clickButton(panel, "reverse.generate")
 
@@ -44,15 +47,18 @@ class ReverseEngineeringWorkspacePanelTest {
                 DbfRecord(false, mutableMapOf("ID" to "2", "OWNER_ID" to "", "NAME" to "DOG")),
             ),
         )
-        val panel = ReverseEngineeringWorkspacePanel {
+        val panel = ReverseEngineeringWorkspacePanel(inputProvider = {
             ReverseEngineeringInput("DOG_TABLE", "fixtures/dog.dbf", table)
-        }
+        })
 
         clickButton(panel, "reverse.analyze")
 
         assertThat(findAreaContaining(panel, "Table: DOG_TABLE")).isNotNull()
         assertThat(findAreaContaining(panel, "Class: DOG_TABLE")).isNotNull()
         assertThat(findAreaContaining(panel, "DOG_TABLE.OWNER_ID -> OWNER.ID (MANY_TO_ONE)")).isNotNull()
+        assertThat(findAreaContaining(panel, "Loaded input table: DOG_TABLE")).isNotNull()
+        assertThat(findAreaContaining(panel, "Profile: READ_ONLY")).isNotNull()
+        assertThat(findAreaContaining(panel, "Awaiting generation. Output directory: generated")).isNotNull()
         assertThat(findAreaContaining(panel, "Analysis complete. Use Generate to render class output.")).isNotNull()
         assertThat(findAreaContaining(panel, "Analyze complete: DOG_TABLE (3 fields, 2 records).")).isNotNull()
 
@@ -61,7 +67,7 @@ class ReverseEngineeringWorkspacePanelTest {
     }
 
     @Test
-    fun `generate renders methods according to selected profile and alias toggle`() {
+    fun `generate renders methods according to selected profile and alias toggle`(@TempDir tempDir: Path) {
         val table = DbfTable(
             header = DbfHeader(3, 124, 2, 1, 1, 100, 10, 0, 0, false, 0),
             fields = listOf(
@@ -72,9 +78,13 @@ class ReverseEngineeringWorkspacePanelTest {
                 DbfRecord(false, mutableMapOf("ID" to "1", "OWNER_ID" to "2")),
             ),
         )
-        val panel = ReverseEngineeringWorkspacePanel {
-            ReverseEngineeringInput("DOG_TABLE", "fixtures/dog.dbf", table)
-        }
+        val dbfPath = tempDir.resolve("fixtures").resolve("dog.dbf")
+        Files.createDirectories(dbfPath.parent)
+        Files.writeString(dbfPath, "placeholder")
+
+        val panel = ReverseEngineeringWorkspacePanel(inputProvider = {
+            ReverseEngineeringInput("DOG_TABLE", dbfPath.toString(), table)
+        })
 
         clickButton(panel, "reverse.analyze")
         selectProfile(panel, ApiProfile.READ_ONLY)
@@ -91,8 +101,17 @@ class ReverseEngineeringWorkspacePanelTest {
         assertThat(previewText).contains("METHOD findBy(...)")
         assertThat(previewText).doesNotContain("METHOD insert(...)")
         assertThat(previewText).doesNotContain("INLINE")
+        assertThat(findAreaContaining(panel, "Profile: READ_ONLY")).isNotNull()
+        assertThat(findAreaContaining(panel, "Method aliases: disabled")).isNotNull()
+        assertThat(findAreaContaining(panel, "Output directory: out/reverse")).isNotNull()
+        assertThat(findAreaContaining(panel, "Artifacts generated: 1")).isNotNull()
+        assertThat(findAreaContaining(panel, "Files written: 1")).isNotNull()
         assertThat(findAreaContaining(panel, "OK: generation completed without warnings.")).isNotNull()
         assertThat(findAreaContaining(panel, "Generate complete: 1 artifacts into out/reverse.")).isNotNull()
+
+        val outputFile = tempDir.resolve("fixtures").resolve("out/reverse/DogTable.prg")
+        assertThat(outputFile).exists()
+        assertThat(Files.readString(outputFile)).contains("CLASS DogTable")
     }
 
     @Test
@@ -106,9 +125,9 @@ class ReverseEngineeringWorkspacePanelTest {
                 DbfRecord(false, mutableMapOf("ID" to "1")),
             ),
         )
-        val panel = ReverseEngineeringWorkspacePanel {
+        val panel = ReverseEngineeringWorkspacePanel(inputProvider = {
             ReverseEngineeringInput("___", "fixtures/blank.dbf", table)
-        }
+        })
 
         clickButton(panel, "reverse.analyze")
         clickButton(panel, "reverse.generate")
