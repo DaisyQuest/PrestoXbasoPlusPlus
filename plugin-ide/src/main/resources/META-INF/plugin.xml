@@ -45,6 +45,9 @@
         <toolWindow id="Xbase++ AST"
                     anchor="left"
                     factoryClass="com.prestoxbasopp.ide.XbAstToolWindowFactory" />
+        <toolWindow id="Ultra DBF Master"
+                    anchor="right"
+                    factoryClass="com.prestoxbasopp.ide.dbf.UltraDbfMasterToolWindowFactory" />
         <gotoDeclarationHandler implementation="com.prestoxbasopp.ide.XbGotoDeclarationHandler" />
         <renameHandler implementation="com.prestoxbasopp.ide.XbRenameHandler" />
         <refactoringSupportProvider language="Xbase++"
