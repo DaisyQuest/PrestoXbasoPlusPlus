@@ -248,6 +248,7 @@ object ReverseEngineeringWorkflow {
         macros: List<String>,
     ): String {
         val primaryKey = table.candidatePrimaryKey
+            ?: table.fields.firstOrNull { it.indexingHint.equals("PRIMARY", ignoreCase = true) }?.originalFieldName
         val fieldMetadataByName = table.fields.associateBy { it.originalFieldName }
         val macrosSection = macros.joinToString("\n")
         val fieldsSection = includedFields.sorted().joinToString("\n") { field ->
@@ -323,6 +324,7 @@ METHOD $className:remove()
 
 METHOD $className:normalizeForPersistence()
     LOCAL payload := {=>}
+    LOCAL value
 ${includedFields.sorted().joinToString("\n") { field ->
                 val metadata = fieldMetadataByName[field]
                 val converter = when (metadata?.inferredType) {
@@ -342,13 +344,15 @@ ${includedFields.sorted().joinToString("\n") { field ->
         payload["$field"] := NIL
     ENDCASE
 """.trimIndent()
+                } else if (metadata?.inferredType == DbfFieldType.Numeric || metadata?.inferredType == DbfFieldType.FloatingPoint) {
+                    "    payload[\"$field\"] := iif(Empty(value), NIL, $converter(value))"
                 } else if (metadata?.nullableHint == true) {
                     "    payload[\"$field\"] := iif(Empty(value), NIL, $converter(value))"
                 } else {
                     "    payload[\"$field\"] := $converter(value)"
                 }
                 """
-    LOCAL value := ::$field
+    value := ::$field
 $assignmentClause
 """.trimIndent()
             }}
@@ -380,6 +384,7 @@ ${if (primaryKey != null) {
 
 CLASS METHOD $className:upsert(entity, options)
     LOCAL payload := iif(ValType(entity) == "O", entity:normalizeForPersistence(), entity)
+    LOCAL repo := ::openRepository(options)
     LOCAL key := NIL
     IF ValType(entity) == "O"
         key := entity:getPrimaryKeyValue()
@@ -392,9 +397,9 @@ ${if (primaryKey != null) {
         ENDIF
     ENDIF
     IF Empty(key)
-        RETURN ::insert(entity, options)
+        RETURN repo:insert(::tableName(), payload)
     ENDIF
-    RETURN ::update(entity, options)
+    RETURN repo:update(::tableName(), key, payload)
 
 CLASS METHOD $className:delete(entityOrKey, options)
     LOCAL repo := ::openRepository(options)
