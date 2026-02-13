@@ -76,3 +76,4 @@
 - Reverse engineering DAO generation coverage now validates production-style persistence output: primary-key-safe refresh logic, repository provider resolution, CRUD class-method implementations, and field-type coercion/nullability branches.
 - Reverse engineering DAO generation coverage now validates deterministic primary-key emission from metadata hints, single-scope persistence normalization locals, NIL-safe numeric coercion, and upsert payload reuse without duplicate normalization paths.
 - Reverse engineering metadata inference coverage now validates `NF` primary-key detection when `ID` is absent, ensuring generated DAO `getPrimaryKeyValue()` paths remain persistence-capable for legacy DBF tables.
+- IntelliJ Platform Gradle Plugin 2.11.0 migration coverage for compatibility validator rules (new `org.jetbrains.intellij.platform` plugin detection, `intellijPlatform/pluginConfiguration/ideaVersion` validation, and legacy plugin-id compatibility guard).

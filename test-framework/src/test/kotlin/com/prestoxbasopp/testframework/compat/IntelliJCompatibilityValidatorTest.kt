@@ -39,7 +39,7 @@ class IntelliJCompatibilityValidatorTest {
             assertThat(message).contains("plugin.xml must include <id>")
         }
         assertThat(report.errors).anySatisfy { message ->
-            assertThat(message).contains("org.jetbrains.intellij")
+            assertThat(message).contains("org.jetbrains.intellij.platform")
         }
     }
 
@@ -52,5 +52,25 @@ class IntelliJCompatibilityValidatorTest {
 
         assertThat(report.isCompatible).isFalse()
         assertThat(report.errors).hasSizeGreaterThan(1)
+    }
+
+    @Test
+    fun `legacy plugin id is accepted to preserve migration compatibility`() {
+        val report = IntelliJCompatibilityValidator.validateText(
+            pluginXmlContent = """
+                <idea-plugin>
+                  <id>test</id>
+                  <name>test</name>
+                  <vendor>vendor</vendor>
+                  <depends>com.intellij.modules.platform</depends>
+                </idea-plugin>
+            """.trimIndent(),
+            gradleContent = """
+                plugins { id("org.jetbrains.intellij") }
+                intellijPlatform { pluginConfiguration { ideaVersion { sinceBuild = "233"; untilBuild = "241.*" } } }
+            """.trimIndent(),
+        )
+
+        assertThat(report.isCompatible).isTrue()
     }
 }

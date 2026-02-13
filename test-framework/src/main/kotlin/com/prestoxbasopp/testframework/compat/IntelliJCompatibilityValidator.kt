@@ -15,6 +15,13 @@ data class IntelliJCompatibilityReport(
 }
 
 object IntelliJCompatibilityValidator {
+    private val intellijPluginRegex = Regex("""id\("org\.jetbrains\.intellij(\.platform)?"\)""")
+    private val intellijPlatformBlockRegex = Regex("""intellijPlatform\s*\{""")
+    private val pluginConfigurationBlockRegex = Regex("""pluginConfiguration\s*\{""")
+    private val ideaVersionBlockRegex = Regex("""ideaVersion\s*\{""")
+    private val sinceBuildRegex = Regex("""sinceBuild\s*=\s*""")
+    private val untilBuildRegex = Regex("""untilBuild\s*=\s*""")
+
     fun validate(inputs: IntelliJCompatibilityInputs): IntelliJCompatibilityReport {
         val pluginXmlContent = Files.readString(inputs.pluginXml)
         val gradleContent = Files.readString(inputs.gradleBuildFile)
@@ -39,26 +46,23 @@ object IntelliJCompatibilityValidator {
             errors.add("plugin.xml must depend on com.intellij.modules.platform.")
         }
 
-        if (!gradleContent.contains("id(\"org.jetbrains.intellij\")")) {
-            errors.add("Gradle build must apply the org.jetbrains.intellij plugin.")
+        if (!intellijPluginRegex.containsMatchIn(gradleContent)) {
+            errors.add("Gradle build must apply the org.jetbrains.intellij.platform plugin.")
         }
-        if (!Regex("intellij\\s*\\{").containsMatchIn(gradleContent)) {
-            errors.add("Gradle build must configure the intellij block.")
+        if (!intellijPlatformBlockRegex.containsMatchIn(gradleContent)) {
+            errors.add("Gradle build must configure the intellijPlatform block.")
         }
-        if (!Regex("version\\.set\\(\"").containsMatchIn(gradleContent)) {
-            errors.add("Gradle intellij block must set a version.")
+        if (!pluginConfigurationBlockRegex.containsMatchIn(gradleContent)) {
+            errors.add("Gradle intellijPlatform block must configure pluginConfiguration.")
         }
-        if (!Regex("type\\.set\\(\"").containsMatchIn(gradleContent)) {
-            errors.add("Gradle intellij block must set a type.")
+        if (!ideaVersionBlockRegex.containsMatchIn(gradleContent)) {
+            errors.add("Gradle pluginConfiguration must configure ideaVersion.")
         }
-        if (!Regex("patchPluginXml\\s*\\{").containsMatchIn(gradleContent)) {
-            errors.add("Gradle build must configure patchPluginXml.")
+        if (!sinceBuildRegex.containsMatchIn(gradleContent)) {
+            errors.add("ideaVersion must set sinceBuild.")
         }
-        if (!Regex("sinceBuild\\.set\\(\"").containsMatchIn(gradleContent)) {
-            errors.add("patchPluginXml must set sinceBuild.")
-        }
-        if (!Regex("untilBuild\\.set\\(\"").containsMatchIn(gradleContent)) {
-            errors.add("patchPluginXml must set untilBuild.")
+        if (!untilBuildRegex.containsMatchIn(gradleContent)) {
+            errors.add("ideaVersion must set untilBuild.")
         }
 
         return IntelliJCompatibilityReport(errors)
