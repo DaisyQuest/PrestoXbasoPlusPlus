@@ -16,12 +16,17 @@ class ReverseEngineerDbfAction : AnAction("Reverse Engineer DBF") {
 
         val virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE)
         if (virtualFile != null && virtualFile.extension.equals("dbf", ignoreCase = true)) {
+            ReverseEngineeringOpenRequestStore.request(virtualFile.path)
             OpenFileDescriptor(project, virtualFile).navigate(true)
         }
     }
 
     override fun update(e: AnActionEvent) {
-        e.presentation.isEnabledAndVisible = e.project != null
+        val project = e.project
+        val virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE)
+        val fromContextMenu = e.place != "ToolsMenu"
+        val visible = project != null && (!fromContextMenu || virtualFile?.extension.equals("dbf", ignoreCase = true))
+        e.presentation.isEnabledAndVisible = visible
     }
 
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT

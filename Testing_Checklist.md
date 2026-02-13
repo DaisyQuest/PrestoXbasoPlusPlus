@@ -71,3 +71,4 @@
 - DBF editor/provider compatibility coverage for DumbAware + getFile override contracts, and first-class Reverse Engineering tab visibility/workflow-stage rendering.
 - Reverse engineering workspace coverage for Analyze/Generate guards, tab population, relation inference display, and API-profile-driven preview generation.
 - Reverse engineering generation coverage for macro emission, alias-macro toggles, preview rendering, and warning surfacing when invalid class names are skipped.
+- Reverse engineering workspace now persists generated artifacts to disk, surfaces Inputs/API/Generation panel details, and validates one-shot right-click open requests for DBF reverse-engineering tab focus.
