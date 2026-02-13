@@ -75,6 +75,29 @@ class XbInspectionEngineTest {
         assertThat(findings.any { it.id == "XB240" }).isFalse()
     }
 
+
+    @Test
+    fun `does not mark method body unreachable because previous method returned`() {
+        val source = """
+            class DbaseF5
+                method init(data)
+                method normalizeForPersistence()
+            endclass
+
+            method DbaseF5:init(data)
+                return Self
+
+            method DbaseF5:normalizeForPersistence()
+                local payload := {=>}
+                payload["NF"] := 1
+                return payload
+        """.trimIndent()
+
+        val findings = engine.inspect(source)
+
+        assertThat(findings.none { it.id == "XB240" }).isTrue()
+    }
+
     @Test
     fun `flags self comparisons`() {
         val findings = engine.inspect("if foo == foo then endif")

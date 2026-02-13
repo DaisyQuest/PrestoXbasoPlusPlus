@@ -159,27 +159,25 @@ object XbStandardInspections {
         ) {
             description = "Flags statements that appear after a RETURN in the same block."
             severity = XbInspectionSeverity.WARNING
-            onAst { program, emitter, context ->
-                val sectionStarts = context.tokens
-                    .filter { token -> token.text.lowercase() in FUNCTION_BOUNDARY_TOKENS }
-                    .map { it.range.startOffset }
-                    .plus(0)
-                    .distinct()
-                    .sorted()
-
-                fun sectionStartFor(offset: Int): Int {
-                    return sectionStarts.lastOrNull { it <= offset } ?: 0
+            onAst { program, emitter, _ ->
+                fun startsNewSection(statement: com.prestoxbasopp.core.ast.XbStatement): Boolean {
+                    return when (statement) {
+                        is com.prestoxbasopp.core.ast.XbFunctionDeclaration,
+                        is com.prestoxbasopp.core.ast.XbProcedureDeclaration,
+                        -> true
+                        is com.prestoxbasopp.core.ast.XbExpressionStatement -> {
+                            val expression = statement.expression
+                            expression is com.prestoxbasopp.core.ast.XbIdentifierExpression &&
+                                expression.name.lowercase() in FUNCTION_BOUNDARY_KEYWORDS
+                        }
+                        else -> false
+                    }
                 }
 
                 fun checkSequence(statements: List<com.prestoxbasopp.core.ast.XbStatement>) {
                     var seenReturn = false
-                    var currentSectionStart = sectionStartFor(
-                        statements.firstOrNull()?.range?.startOffset ?: 0,
-                    )
                     statements.forEach { child ->
-                        val childSectionStart = sectionStartFor(child.range.startOffset)
-                        if (childSectionStart != currentSectionStart) {
-                            currentSectionStart = childSectionStart
+                        if (startsNewSection(child)) {
                             seenReturn = false
                         }
                         if (seenReturn) {
@@ -335,15 +333,16 @@ object XbStandardInspections {
     )
 }
 
-private val FUNCTION_BOUNDARY_TOKENS = setOf(
+
+private val FUNCTION_BOUNDARY_KEYWORDS = setOf(
     "function",
     "procedure",
     "method",
-    "endfunction",
-    "endprocedure",
-    "endproc",
-    "endmethod",
+    "class",
+    "inline",
+    "endclass",
 )
+
 
 private fun isEmptyStatement(tokens: List<com.prestoxbasopp.core.lexer.XbToken>, index: Int): Boolean {
     val previous = tokens.getOrNull(index - 1)

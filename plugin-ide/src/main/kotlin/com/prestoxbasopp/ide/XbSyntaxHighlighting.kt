@@ -99,6 +99,6 @@ internal class XbSemanticTokenClassifier {
     }
 
     private companion object {
-        val DECLARATION_KEYWORDS: Set<String> = setOf("function", "procedure")
+        val DECLARATION_KEYWORDS: Set<String> = setOf("function", "procedure", "method")
     }
 }
