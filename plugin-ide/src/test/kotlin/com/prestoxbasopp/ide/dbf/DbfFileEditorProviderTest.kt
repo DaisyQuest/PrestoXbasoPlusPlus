@@ -1,6 +1,7 @@
 package com.prestoxbasopp.ide.dbf
 
 import com.intellij.openapi.fileEditor.FileEditorPolicy
+import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.testFramework.LightVirtualFile
 import org.assertj.core.api.Assertions.assertThat
@@ -30,4 +31,20 @@ class DbfFileEditorProviderTest {
         assertThat(provider.editorTypeId).isEqualTo("dbf-ultra-master-editor")
         assertThat(provider.policy).isEqualTo(FileEditorPolicy.HIDE_DEFAULT_EDITOR)
     }
+
+    @Test
+    fun `provider is DumbAware for hide default editor policy compatibility`() {
+        val provider = DbfFileEditorProvider()
+
+        assertThat(provider).isInstanceOf(DumbAware::class.java)
+    }
+
+    @Test
+    fun `dbf editor class overrides getFile API contract`() {
+        val editorClass = Class.forName("com.prestoxbasopp.ide.dbf.DbfFileEditor")
+        val getFile = editorClass.getDeclaredMethod("getFile")
+
+        assertThat(getFile.declaringClass.name).isEqualTo("com.prestoxbasopp.ide.dbf.DbfFileEditor")
+    }
+
 }

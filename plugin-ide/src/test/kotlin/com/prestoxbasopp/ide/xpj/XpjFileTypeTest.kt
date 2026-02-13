@@ -10,4 +10,10 @@ class XpjFileTypeTest {
         assertThat(XpjFileType.language).isSameAs(PlainTextLanguage.INSTANCE)
         assertThat(XpjFileType.defaultExtension).isEqualTo("xpj")
     }
+
+    @Test
+    fun `xpj file type name stays aligned with plugin xml contract`() {
+        assertThat(XpjFileType.name).isEqualTo("XPJ Project")
+        assertThat(XpjFileType.description).isEqualTo("Xbase++ Project Builder file")
+    }
 }

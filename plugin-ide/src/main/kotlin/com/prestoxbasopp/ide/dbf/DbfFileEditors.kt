@@ -5,13 +5,14 @@ import com.intellij.openapi.fileEditor.FileEditorLocation
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.openapi.fileEditor.FileEditorProvider
 import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import java.beans.PropertyChangeListener
 import javax.swing.JComponent
 
-class DbfFileEditorProvider : FileEditorProvider {
+class DbfFileEditorProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean = file.extension.equals("dbf", ignoreCase = true)
 
     override fun createEditor(project: Project, file: VirtualFile): FileEditor =
@@ -49,6 +50,8 @@ private class DbfFileEditor(
     override fun removePropertyChangeListener(listener: PropertyChangeListener) = Unit
 
     override fun getCurrentLocation(): FileEditorLocation? = null
+
+    override fun getFile(): VirtualFile = file
 
     override fun dispose() = Unit
 }
