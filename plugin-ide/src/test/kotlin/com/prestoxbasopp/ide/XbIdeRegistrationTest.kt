@@ -156,10 +156,11 @@ class XbIdeRegistrationTest {
     }
 
     @Test
-    fun `inspection tool provides a display name`() {
+    fun `inspection tool provides display and group names`() {
         val inspectionTool = XbInspectionTool()
 
         assertThat(inspectionTool.displayName).isEqualTo("Xbase++ Inspection")
+        assertThat(inspectionTool.groupDisplayName).isEqualTo("Xbase++")
     }
 
     @Test
