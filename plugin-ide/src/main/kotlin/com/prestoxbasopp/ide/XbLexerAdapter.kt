@@ -4,6 +4,7 @@ import com.intellij.lexer.LexerBase
 import com.intellij.psi.TokenType
 import com.intellij.psi.tree.IElementType
 import com.prestoxbasopp.core.lexer.XbLexer
+import com.prestoxbasopp.core.lexer.XbToken
 import com.prestoxbasopp.core.lexer.XbTokenType as XbLexerTokenType
 
 class XbLexerAdapter : LexerBase() {
@@ -60,19 +61,17 @@ class XbLexerAdapter : LexerBase() {
             }
         }
 
+        val tokenStyles = XbSemanticTokenClassifier().classify(coreTokens)
         val expanded = mutableListOf<LexerToken>()
         var cursor = 0
-        for (token in coreTokens) {
+
+        for ((token, style) in coreTokens.zip(tokenStyles)) {
             val start = token.range.startOffset.coerceIn(cursor, source.length)
             val end = token.range.endOffset.coerceIn(start, source.length)
             if (start > cursor) {
                 expanded += LexerToken(TokenType.WHITE_SPACE, cursor, start)
             }
-            val elementType = if (token.type == XbLexerTokenType.PREPROCESSOR && isMacroDefinitionDirective(token.text)) {
-                XbHighlighterTokenSet.MACRO_DEFINITION
-            } else {
-                XbHighlighterTokenSet.forToken(token.type)
-            }
+            val elementType = elementTypeFor(token, style)
             if (end > start) {
                 expanded += LexerToken(
                     elementType,
@@ -86,5 +85,14 @@ class XbLexerAdapter : LexerBase() {
             expanded += LexerToken(TokenType.WHITE_SPACE, cursor, source.length)
         }
         return expanded
+    }
+
+    private fun elementTypeFor(token: XbToken, style: XbHighlightStyle): IElementType {
+        return when (style) {
+            XbHighlightStyle.MACRO_DEFINITION -> XbHighlighterTokenSet.MACRO_DEFINITION
+            XbHighlightStyle.FUNCTION_DECLARATION -> XbHighlighterTokenSet.FUNCTION_DECLARATION
+            XbHighlightStyle.FUNCTION_CALL -> XbHighlighterTokenSet.FUNCTION_CALL
+            else -> XbHighlighterTokenSet.forToken(token.type)
+        }
     }
 }

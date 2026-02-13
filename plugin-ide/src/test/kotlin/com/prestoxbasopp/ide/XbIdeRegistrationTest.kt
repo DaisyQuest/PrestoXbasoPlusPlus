@@ -187,12 +187,16 @@ class XbIdeRegistrationTest {
         val identifier = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.IDENTIFIER))
         val preprocessor = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.PREPROCESSOR))
         val macroDefinition = highlighter.getTokenHighlights(XbHighlighterTokenSet.MACRO_DEFINITION)
+        val functionDeclaration = highlighter.getTokenHighlights(XbHighlighterTokenSet.FUNCTION_DECLARATION)
+        val functionCall = highlighter.getTokenHighlights(XbHighlighterTokenSet.FUNCTION_CALL)
         val error = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.UNKNOWN))
 
         assertThat(keyword).containsExactly(DefaultLanguageHighlighterColors.KEYWORD)
         assertThat(identifier).containsExactly(DefaultLanguageHighlighterColors.IDENTIFIER)
         assertThat(preprocessor).containsExactly(DefaultLanguageHighlighterColors.PREDEFINED_SYMBOL)
         assertThat(macroDefinition).containsExactly(XbSyntaxHighlighterAdapter.MACRO_DEFINITION)
+        assertThat(functionDeclaration).containsExactly(XbSyntaxHighlighterAdapter.FUNCTION_DECLARATION)
+        assertThat(functionCall).containsExactly(XbSyntaxHighlighterAdapter.FUNCTION_CALL)
         assertThat(error).containsExactly(DefaultLanguageHighlighterColors.INVALID_STRING_ESCAPE)
     }
 
@@ -246,9 +250,9 @@ class XbIdeRegistrationTest {
     }
 
     @Test
-    fun `lexer adapter uses macro definition token type for define directives`() {
+    fun `lexer adapter uses semantic token types for directives and functions`() {
         val lexer = XbLexerAdapter()
-        val buffer = "#define FOO 1\n#include \"defs.ch\""
+        val buffer = "#define FOO 1\nfunction Build()\nreturn foo(1)\n#include \"defs.ch\""
         lexer.start(buffer, 0, buffer.length, 0)
 
         val significantTokens = mutableListOf<IElementType>()
@@ -260,8 +264,10 @@ class XbIdeRegistrationTest {
             lexer.advance()
         }
 
-        assertThat(significantTokens).containsExactly(
+        assertThat(significantTokens).contains(
             XbHighlighterTokenSet.MACRO_DEFINITION,
+            XbHighlighterTokenSet.FUNCTION_DECLARATION,
+            XbHighlighterTokenSet.FUNCTION_CALL,
             XbHighlighterTokenSet.forToken(CoreTokenType.PREPROCESSOR),
         )
     }
