@@ -148,4 +148,41 @@ class XbPsiTextBuilderTest {
         assertThat(declarations["globalVar"]?.storageClass).isEqualTo(XbVariableStorageClass.GLOBAL)
     }
 
+    @Test
+    fun `method range is implicitly terminated by following class method declaration`() {
+        val source = """
+            CLASS DbaseF5
+                CLASS METHOD load(...)
+                CLASS METHOD findBy(...)
+            ENDCLASS
+        """.trimIndent()
+
+        val root = XbPsiTextBuilder().build(source)
+        val declarations = root.children.filterIsInstance<XbPsiFunctionDeclaration>()
+
+        assertThat(declarations.map { it.symbolName }).containsExactly("load", "findBy")
+        assertThat(declarations[0].text.trimEnd()).isEqualTo("METHOD load(...)")
+        val secondMethodStart = source.indexOf("CLASS METHOD findBy")
+        assertThat(declarations[0].textRange.endOffset)
+            .isLessThanOrEqualTo(secondMethodStart)
+    }
+
+    @Test
+    fun `method range is implicitly terminated by class terminator`() {
+        val source = """
+            CLASS DbaseF5
+                CLASS METHOD load(...)
+            ENDCLASS
+        """.trimIndent()
+
+        val root = XbPsiTextBuilder().build(source)
+        val declaration = root.children.filterIsInstance<XbPsiFunctionDeclaration>().single()
+
+        assertThat(declaration.symbolName).isEqualTo("load")
+        assertThat(declaration.text.trimEnd()).isEqualTo("METHOD load(...)")
+        assertThat(declaration.textRange.endOffset)
+            .isLessThan(source.indexOf("ENDCLASS"))
+    }
+
+
 }

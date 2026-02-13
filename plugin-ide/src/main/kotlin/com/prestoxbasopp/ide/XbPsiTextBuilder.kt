@@ -17,7 +17,7 @@ import kotlin.math.min
 
 class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
     private val functionKeywords = setOf("function", "procedure", "method")
-    private val declarationBoundaryKeywords = functionKeywords
+    private val declarationBoundaryKeywords = functionKeywords + setOf("class", "endclass")
     private val declarationEndKeywordsByStartKeyword = mapOf(
         "function" to setOf("endfunction", "endfunc"),
         "procedure" to setOf("endprocedure", "endproc"),
