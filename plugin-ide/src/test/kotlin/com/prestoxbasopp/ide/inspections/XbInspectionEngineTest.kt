@@ -95,6 +95,16 @@ class XbInspectionEngineTest {
         assertThat(findings.first().severity).isEqualTo(XbInspectionSeverity.INFO)
     }
 
+
+    @Test
+    fun `respects disabled inspections in profile`() {
+        val profile = XbInspectionProfile(disabledInspections = setOf("XB220"))
+
+        val findings = engine.inspect("if 1 then return 1 endif", profile)
+
+        assertThat(findings.none { it.id == "XB220" }).isTrue()
+    }
+
     @Test
     fun `suggests keywords for likely misspellings`() {
         val findings = engine.inspect("loal count\nfuncion Demo()\nprcedure Sample()")

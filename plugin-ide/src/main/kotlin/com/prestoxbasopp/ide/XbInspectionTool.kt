@@ -25,12 +25,14 @@ class XbInspectionTool(
 
         return findings.map { finding ->
             val range = toTextRange(finding.range, source.length)
+            val quickFixes = quickFixesForFinding(finding, source)
             manager.createProblemDescriptor(
                 file,
                 range,
                 finding.message,
                 toProblemHighlightType(finding.severity),
                 isOnTheFly,
+                *quickFixes,
             )
         }.toTypedArray()
     }
