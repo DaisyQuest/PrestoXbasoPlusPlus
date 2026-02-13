@@ -32,13 +32,12 @@ class UltraDbfMasterPanelTest {
         val reverseEngineeringIndex = (0 until tabs.tabCount).first { tabs.getTitleAt(it) == "Reverse Engineering" }
 
         val reverseEngineeringTab = tabs.getComponentAt(reverseEngineeringIndex) as java.awt.Container
-        val reverseEngineeringScrollPane =
-            reverseEngineeringTab.components.filterIsInstance<JScrollPane>().single()
+        val workflowTabs = reverseEngineeringTab.components.filterIsInstance<JBTabbedPane>().single()
+        val reverseEngineeringScrollPane = workflowTabs.getComponentAt(0) as JScrollPane
         val reverseEngineeringText = (reverseEngineeringScrollPane.viewport.view as JTextArea).text
 
         assertThat(reverseEngineeringText).contains("Reverse Engineering Workflow")
-        ReverseEngineeringWorkflow.defaultTabs().forEach { tab ->
-            assertThat(reverseEngineeringText).contains(tab.title)
-        }
+        val titles = (0 until workflowTabs.tabCount).map { workflowTabs.getTitleAt(it) }
+        assertThat(titles).containsExactlyElementsOf(ReverseEngineeringWorkflow.defaultTabs().map { it.title })
     }
 }

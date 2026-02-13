@@ -1,0 +1,122 @@
+package com.prestoxbasopp.ide.dbf
+
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
+import javax.swing.JButton
+import javax.swing.JCheckBox
+import javax.swing.JComboBox
+import javax.swing.JTabbedPane
+import javax.swing.JTextArea
+import javax.swing.JTextField
+
+class ReverseEngineeringWorkspacePanelTest {
+    @Test
+    fun `analyze warns when no dbf input is available`() {
+        val panel = ReverseEngineeringWorkspacePanel { null }
+
+        clickButton(panel, "reverse.analyze")
+
+        assertThat(findAreaContaining(panel, "Blocking: import a DBF file before running Analyze.")).isNotNull()
+        assertThat(findAreaContaining(panel, "Analyze failed: no DBF input is currently loaded.")).isNotNull()
+    }
+
+    @Test
+    fun `generate warns when analysis has not been run`() {
+        val panel = ReverseEngineeringWorkspacePanel { null }
+
+        clickButton(panel, "reverse.generate")
+
+        assertThat(findAreaContaining(panel, "Blocking: run Analyze before Generate.")).isNotNull()
+        assertThat(findAreaContaining(panel, "Generate failed: metadata is missing. Run Analyze first.")).isNotNull()
+    }
+
+    @Test
+    fun `analyze populates metadata mapping relation tabs and input title`() {
+        val table = DbfTable(
+            header = DbfHeader(3, 124, 2, 1, 2, 100, 10, 0, 0, false, 0),
+            fields = listOf(
+                DbfFieldDescriptor("ID", DbfFieldType.Numeric, 8, 0, 0, false),
+                DbfFieldDescriptor("OWNER_ID", DbfFieldType.Numeric, 8, 0, 0, false),
+                DbfFieldDescriptor("NAME", DbfFieldType.Character, 20, 0, 0, false),
+            ),
+            records = mutableListOf(
+                DbfRecord(false, mutableMapOf("ID" to "1", "OWNER_ID" to "7", "NAME" to "DOG")),
+                DbfRecord(false, mutableMapOf("ID" to "2", "OWNER_ID" to "", "NAME" to "DOG")),
+            ),
+        )
+        val panel = ReverseEngineeringWorkspacePanel {
+            ReverseEngineeringInput("DOG_TABLE", "fixtures/dog.dbf", table)
+        }
+
+        clickButton(panel, "reverse.analyze")
+
+        assertThat(findAreaContaining(panel, "Table: DOG_TABLE")).isNotNull()
+        assertThat(findAreaContaining(panel, "Class: DOG_TABLE")).isNotNull()
+        assertThat(findAreaContaining(panel, "DOG_TABLE.OWNER_ID -> OWNER.ID (MANY_TO_ONE)")).isNotNull()
+        assertThat(findAreaContaining(panel, "Analysis complete. Use Generate to render class output.")).isNotNull()
+        assertThat(findAreaContaining(panel, "Analyze complete: DOG_TABLE (3 fields, 2 records).")).isNotNull()
+
+        val tabs = panel.findByType(JTabbedPane::class.java).first { it.tabCount == ReverseEngineeringTab.entries.size }
+        assertThat(tabs.getTitleAt(1)).contains("Inputs").contains("DOG_TABLE")
+    }
+
+    @Test
+    fun `generate renders methods according to selected profile and alias toggle`() {
+        val table = DbfTable(
+            header = DbfHeader(3, 124, 2, 1, 1, 100, 10, 0, 0, false, 0),
+            fields = listOf(
+                DbfFieldDescriptor("ID", DbfFieldType.Numeric, 8, 0, 0, false),
+                DbfFieldDescriptor("OWNER_ID", DbfFieldType.Numeric, 8, 0, 0, false),
+            ),
+            records = mutableListOf(
+                DbfRecord(false, mutableMapOf("ID" to "1", "OWNER_ID" to "2")),
+            ),
+        )
+        val panel = ReverseEngineeringWorkspacePanel {
+            ReverseEngineeringInput("DOG_TABLE", "fixtures/dog.dbf", table)
+        }
+
+        clickButton(panel, "reverse.analyze")
+        selectProfile(panel, ApiProfile.READ_ONLY)
+        findComponentByName(panel, "reverse.alias", JCheckBox::class.java).isSelected = false
+        findComponentByName(panel, "reverse.outputDir", JTextField::class.java).text = "out/reverse"
+
+        clickButton(panel, "reverse.generate")
+
+        val preview = findAreaContaining(panel, "CLASS DogTable")
+        assertThat(preview).isNotNull()
+        assertThat(preview!!.text).contains("METHOD load(...)")
+        assertThat(preview.text).contains("METHOD findBy(...)")
+        assertThat(preview.text).doesNotContain("METHOD insert(...)")
+        assertThat(preview.text).doesNotContain("INLINE")
+        assertThat(findAreaContaining(panel, "OK: generation completed without warnings.")).isNotNull()
+        assertThat(findAreaContaining(panel, "Generate complete: 1 artifacts into out/reverse.")).isNotNull()
+    }
+
+    private fun clickButton(panel: ReverseEngineeringWorkspacePanel, name: String) {
+        findComponentByName(panel, name, JButton::class.java).doClick()
+    }
+
+    private fun selectProfile(panel: ReverseEngineeringWorkspacePanel, profile: ApiProfile) {
+        @Suppress("UNCHECKED_CAST")
+        val combo = findComponentByName(panel, "reverse.profile", JComboBox::class.java) as JComboBox<ApiProfile>
+        combo.selectedItem = profile
+    }
+
+    private fun findAreaContaining(panel: ReverseEngineeringWorkspacePanel, text: String): JTextArea? =
+        panel.findByType(JTextArea::class.java).firstOrNull { it.text.contains(text) }
+
+    private fun <T : java.awt.Component> findComponentByName(
+        panel: ReverseEngineeringWorkspacePanel,
+        name: String,
+        type: Class<T>,
+    ): T = panel.findByType(type).first { it.name == name }
+
+    private fun <T : java.awt.Component> java.awt.Container.findByType(type: Class<T>): List<T> =
+        components.flatMap { child ->
+            buildList {
+                if (type.isInstance(child)) add(type.cast(child))
+                if (child is java.awt.Container) addAll(child.findByType(type))
+            }
+        }
+}
