@@ -191,6 +191,7 @@ object ReverseEngineeringWorkflow {
     private fun inferPrimaryKey(fields: List<DbfFieldDescriptor>): String? {
         val names = fields.map { it.name }
         return names.firstOrNull { it.equals("ID", ignoreCase = true) }
+            ?: names.firstOrNull { it.equals("NF", ignoreCase = true) }
             ?: names.firstOrNull { it.endsWith("_ID", ignoreCase = true) }
     }
 

@@ -62,6 +62,23 @@ class ReverseEngineeringModelTest {
     }
 
     @Test
+    fun `extract metadata infers NF as primary key when ID is absent`() {
+        val table = table(
+            fields = listOf(
+                DbfFieldDescriptor("NF", DbfFieldType.Numeric, 8, 0, 0, false),
+                DbfFieldDescriptor("ARXB", DbfFieldType.Character, 20, 0, 0, false),
+            ),
+            records = mutableListOf(
+                DbfRecord(false, mutableMapOf("NF" to "1", "ARXB" to "A")),
+            ),
+        )
+
+        val metadata = ReverseEngineeringWorkflow.extractMetadata("DBASEF5", "fixtures/dbasef5.dbf", table)
+
+        assertThat(metadata.candidatePrimaryKey).isEqualTo("NF")
+    }
+
+    @Test
     fun `generate produces read-only and relational method surfaces respecting aliases and table overrides`() {
         val metadata = ReverseEngineeringWorkflow.toBundle(
             DbfTableMetadata(
