@@ -67,3 +67,4 @@
 
 - Scope-resolution coverage for LOCAL parameters plus PRIVATE/PUBLIC/GLOBAL declaration semantics across PSI builder, navigation, and rename services.
 - XPJ visual editor coverage for section parsing/serialization, intelligent file suggestions, glossary rendering, and editor model mutation paths.
+- IDE syntax highlighting semantic token coverage for function declaration/call classification, macro directives, and IntelliJ highlighter token mapping branches.

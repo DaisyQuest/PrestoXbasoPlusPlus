@@ -1,5 +1,8 @@
 package com.prestoxbasopp.ide
 
+import com.prestoxbasopp.core.api.XbTextRange
+import com.prestoxbasopp.core.lexer.XbToken
+import com.prestoxbasopp.core.lexer.XbTokenType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -15,6 +18,7 @@ class XbSyntaxHighlightingTest {
                 local sym := #name
                 local cb := {|a| a + 1|}
                 return foo + 1
+                foo(42)
                 // comment
             end
         """.trimIndent()
@@ -24,6 +28,8 @@ class XbSyntaxHighlightingTest {
         assertThat(styles).contains(
             XbHighlightStyle.KEYWORD,
             XbHighlightStyle.IDENTIFIER,
+            XbHighlightStyle.FUNCTION_DECLARATION,
+            XbHighlightStyle.FUNCTION_CALL,
             XbHighlightStyle.OPERATOR,
             XbHighlightStyle.NUMBER,
             XbHighlightStyle.STRING,
@@ -54,5 +60,33 @@ class XbSyntaxHighlightingTest {
         val source = ""
         val spans = XbSyntaxHighlighter().highlight(source)
         assertThat(spans).isEmpty()
+    }
+
+    @Test
+    fun `semantic classifier handles declaration and fallback branches`() {
+        val classifier = XbSemanticTokenClassifier()
+        val tokens = listOf(
+            XbToken(XbTokenType.KEYWORD, "function", XbTextRange(0, 8)),
+            XbToken(XbTokenType.PUNCTUATION, "(", XbTextRange(9, 10)),
+            XbToken(XbTokenType.IDENTIFIER, "foo", XbTextRange(10, 13)),
+            XbToken(XbTokenType.PUNCTUATION, ")", XbTextRange(13, 14)),
+            XbToken(XbTokenType.KEYWORD, "procedure", XbTextRange(15, 24)),
+            XbToken(XbTokenType.IDENTIFIER, "bar", XbTextRange(25, 28)),
+            XbToken(XbTokenType.IDENTIFIER, "baz", XbTextRange(29, 32)),
+            XbToken(XbTokenType.PUNCTUATION, "(", XbTextRange(32, 33)),
+        )
+
+        val styles = classifier.classify(tokens)
+
+        assertThat(styles).containsExactly(
+            XbHighlightStyle.KEYWORD,
+            XbHighlightStyle.PUNCTUATION,
+            XbHighlightStyle.IDENTIFIER,
+            XbHighlightStyle.PUNCTUATION,
+            XbHighlightStyle.KEYWORD,
+            XbHighlightStyle.FUNCTION_DECLARATION,
+            XbHighlightStyle.FUNCTION_CALL,
+            XbHighlightStyle.PUNCTUATION,
+        )
     }
 }

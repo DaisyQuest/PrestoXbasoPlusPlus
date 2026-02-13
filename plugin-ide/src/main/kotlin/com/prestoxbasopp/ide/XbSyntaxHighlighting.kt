@@ -8,6 +8,8 @@ import com.prestoxbasopp.core.lexer.XbTokenType
 enum class XbHighlightStyle {
     KEYWORD,
     IDENTIFIER,
+    FUNCTION_DECLARATION,
+    FUNCTION_CALL,
     NUMBER,
     STRING,
     DATE,
@@ -27,22 +29,58 @@ data class XbHighlightSpan(
 )
 
 class XbSyntaxHighlighter {
+    private val classifier = XbSemanticTokenClassifier()
     fun highlight(source: String): List<XbHighlightSpan> {
         val lexer = XbLexer()
-        return lexer.lex(source).tokens
-            .asSequence()
-            .filter { it.type != XbTokenType.EOF }
-            .mapNotNull { token ->
-                val style = styleFor(token) ?: return@mapNotNull null
+        val tokens = lexer.lex(source).tokens.filter { it.type != XbTokenType.EOF }
+        val styles = classifier.classify(tokens)
+        return tokens.zip(styles)
+            .map { (token, style) ->
                 XbHighlightSpan(
                     textRange = token.range,
                     style = style,
                 )
             }
-            .toList()
+    }
+}
+
+internal class XbSemanticTokenClassifier {
+    fun classify(tokens: List<XbToken>): List<XbHighlightStyle> {
+        val styles = mutableListOf<XbHighlightStyle>()
+        var expectDeclarationIdentifier = false
+
+        tokens.forEachIndexed { index, token ->
+            val style = when {
+                token.type == XbTokenType.PREPROCESSOR && isMacroDefinitionDirective(token.text) ->
+                    XbHighlightStyle.MACRO_DEFINITION
+                expectDeclarationIdentifier && token.type == XbTokenType.IDENTIFIER ->
+                    XbHighlightStyle.FUNCTION_DECLARATION
+                token.type == XbTokenType.IDENTIFIER && isFunctionCallIdentifier(tokens, index) ->
+                    XbHighlightStyle.FUNCTION_CALL
+                else -> defaultStyleFor(token)
+            }
+            styles += style
+
+            expectDeclarationIdentifier = when {
+                token.type == XbTokenType.KEYWORD && DECLARATION_KEYWORDS.contains(token.text.lowercase()) -> true
+                expectDeclarationIdentifier && token.type == XbTokenType.IDENTIFIER -> false
+                expectDeclarationIdentifier -> false
+                else -> false
+            }
+        }
+
+        return styles
     }
 
-    private fun styleFor(token: XbToken): XbHighlightStyle? {
+    private fun isFunctionCallIdentifier(tokens: List<XbToken>, index: Int): Boolean {
+        if (tokens[index].type != XbTokenType.IDENTIFIER) {
+            return false
+        }
+        val nextToken = tokens.getOrNull(index + 1) ?: return false
+        return nextToken.type == XbTokenType.PUNCTUATION && nextToken.text == "("
+    }
+
+    private fun defaultStyleFor(token: XbToken): XbHighlightStyle {
         return when (token.type) {
             XbTokenType.KEYWORD -> XbHighlightStyle.KEYWORD
             XbTokenType.IDENTIFIER -> XbHighlightStyle.IDENTIFIER
@@ -51,16 +89,16 @@ class XbSyntaxHighlighter {
             XbTokenType.DATE -> XbHighlightStyle.DATE
             XbTokenType.SYMBOL -> XbHighlightStyle.SYMBOL
             XbTokenType.CODEBLOCK -> XbHighlightStyle.CODEBLOCK
-            XbTokenType.PREPROCESSOR -> if (isMacroDefinitionDirective(token.text)) {
-                XbHighlightStyle.MACRO_DEFINITION
-            } else {
-                XbHighlightStyle.PREPROCESSOR
-            }
+            XbTokenType.PREPROCESSOR -> XbHighlightStyle.PREPROCESSOR
             XbTokenType.OPERATOR -> XbHighlightStyle.OPERATOR
             XbTokenType.PUNCTUATION -> XbHighlightStyle.PUNCTUATION
             XbTokenType.COMMENT -> XbHighlightStyle.COMMENT
             XbTokenType.UNKNOWN -> XbHighlightStyle.ERROR
-            XbTokenType.EOF -> null
+            XbTokenType.EOF -> error("EOF should be filtered before classification")
         }
+    }
+
+    private companion object {
+        val DECLARATION_KEYWORDS: Set<String> = setOf("function", "procedure")
     }
 }
