@@ -16,6 +16,11 @@
                   language="Xbase++"
                   extensions="xb;prg;ch"
                   implementationClass="com.prestoxbasopp.ide.XbFileType" />
+        <fileType name="Xbase++ Project File"
+                  language="Xbase++"
+                  extensions="xpj"
+                  implementationClass="com.prestoxbasopp.ide.xpj.XpjFileType" />
+        <fileEditorProvider implementation="com.prestoxbasopp.ide.xpj.XpjProjectFileEditorProvider" />
         <lang.parserDefinition language="Xbase++"
                                implementationClass="com.prestoxbasopp.ide.XbParserDefinition" />
         <lang.syntaxHighlighterFactory language="Xbase++"
