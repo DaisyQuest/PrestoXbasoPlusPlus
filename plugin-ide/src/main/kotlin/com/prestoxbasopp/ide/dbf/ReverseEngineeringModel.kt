@@ -316,7 +316,7 @@ METHOD $className:refresh()
 ${if (profile != ApiProfile.READ_ONLY) {
             """
 METHOD $className:save()
-    RETURN ${className}:upsert(::normalizeForPersistence(), {=>})
+    RETURN ${className}:upsert(Self, {=>})
 
 METHOD $className:remove()
     RETURN ${className}:delete(::getPrimaryKeyValue(), {=>})
@@ -331,17 +331,25 @@ ${includedFields.sorted().joinToString("\n") { field ->
                     DbfFieldType.Date -> "CToD"
                     else -> "AllTrim"
                 }
-                val nullableClause = if (metadata?.nullableHint == true) {
-                    "        payload[\"$field\"] := iif(Empty(value), NIL, $converter(value))"
+                val assignmentClause = if (metadata?.inferredType == DbfFieldType.Date) {
+                    """
+    DO CASE
+    CASE ValType(value) == "D"
+        payload["$field"] := value
+    CASE ValType(value) == "C" .AND. !Empty(value)
+        payload["$field"] := CToD(value)
+    OTHERWISE
+        payload["$field"] := NIL
+    ENDCASE
+""".trimIndent()
+                } else if (metadata?.nullableHint == true) {
+                    "    payload[\"$field\"] := iif(Empty(value), NIL, $converter(value))"
                 } else {
-                    "        payload[\"$field\"] := $converter(value)"
+                    "    payload[\"$field\"] := $converter(value)"
                 }
                 """
-    DO CASE
-    CASE HHasKey(Self, "$field")
-        LOCAL value := ::$field
-$nullableClause
-    ENDCASE
+    LOCAL value := ::$field
+$assignmentClause
 """.trimIndent()
             }}
     RETURN payload
@@ -354,11 +362,35 @@ CLASS METHOD $className:insert(entity, options)
 CLASS METHOD $className:update(entity, options)
     LOCAL repo := ::openRepository(options)
     LOCAL payload := iif(ValType(entity) == "O", entity:normalizeForPersistence(), entity)
-    LOCAL key := iif(ValType(entity) == "O", entity:getPrimaryKeyValue(), NIL)
+    LOCAL key := NIL
+    IF ValType(entity) == "O"
+        key := entity:getPrimaryKeyValue()
+    ELSEIF ValType(entity) == "H"
+        IF ValType(options) == "H" .AND. HHasKey(options, "key")
+            key := options["key"]
+${if (primaryKey != null) {
+                "        ELSEIF HHasKey(payload, \"$primaryKey\")\n            key := payload[\"$primaryKey\"]"
+            } else ""}
+        ENDIF
+    ENDIF
+    IF Empty(key)
+        RETURN .F.
+    ENDIF
     RETURN repo:update(::tableName(), key, payload)
 
 CLASS METHOD $className:upsert(entity, options)
-    LOCAL key := iif(ValType(entity) == "O", entity:getPrimaryKeyValue(), NIL)
+    LOCAL payload := iif(ValType(entity) == "O", entity:normalizeForPersistence(), entity)
+    LOCAL key := NIL
+    IF ValType(entity) == "O"
+        key := entity:getPrimaryKeyValue()
+    ELSEIF ValType(entity) == "H"
+        IF ValType(options) == "H" .AND. HHasKey(options, "key")
+            key := options["key"]
+${if (primaryKey != null) {
+                "        ELSEIF HHasKey(payload, \"$primaryKey\")\n            key := payload[\"$primaryKey\"]"
+            } else ""}
+        ENDIF
+    ENDIF
     IF Empty(key)
         RETURN ::insert(entity, options)
     ENDIF
