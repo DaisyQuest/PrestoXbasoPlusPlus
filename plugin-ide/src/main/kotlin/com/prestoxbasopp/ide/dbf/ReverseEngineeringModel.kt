@@ -146,11 +146,11 @@ object ReverseEngineeringWorkflow {
                 ?: table.fields.map { it.originalFieldName }.toSet()
             val aliasByField = override?.aliasByField.orEmpty()
             val macros = buildMacros(className, selectedFields, methods)
-            val source = renderClass(className, selectedFields, aliasByField, methods, macros)
+            val source = renderClass(className, table, effectiveProfile, selectedFields, aliasByField, methods, macros)
             GeneratedClassArtifact(className, source, methods, macros)
         }
         return generated to DbfGenerationReport(
-            schemaVersion = "1.0.0",
+            schemaVersion = config.schemaVersion,
             engineVersion = config.engineVersion,
             generatedFileCount = generated.size,
             warnings = warnings,
@@ -238,6 +238,8 @@ object ReverseEngineeringWorkflow {
 
     private fun renderClass(
         className: String,
+        table: DbfTableMetadata,
+        profile: ApiProfile,
         includedFields: Set<String>,
         aliasByField: Map<String, String>,
         methods: List<GeneratedMethod>,
@@ -248,17 +250,51 @@ object ReverseEngineeringWorkflow {
             val aliasComment = aliasByField[field]?.let { " // alias: $it" }.orEmpty()
             "    VAR $field$aliasComment"
         }
-        val methodsSection = methods.joinToString("\n") { method ->
+        val classMethodsSection = methods.joinToString("\n") { method ->
             val aliasLine = method.alias?.let { "\n    METHOD $it(...) INLINE ::${method.methodName}(...)" }.orEmpty()
-            "    METHOD ${method.methodName}(...)$aliasLine"
+            "    CLASS METHOD ${method.methodName}(...)$aliasLine"
+        }
+        val fieldHelpersSection = includedFields.sorted().joinToString("\n") { field ->
+            val accessor = field.lowercase().replaceFirstChar { it.titlecase() }
+            """
+    METHOD get$accessor() INLINE ::$field
+    METHOD set$accessor(value) INLINE (::${field} := value)
+""".trimIndent()
+        }
+        val persistenceInstanceMethods = if (profile == ApiProfile.READ_ONLY) {
+            """
+    METHOD refresh() INLINE ${className}.load(::ID)
+""".trimIndent()
+        } else {
+            """
+    METHOD save() INLINE ${className}.upsert(Self)
+    METHOD remove() INLINE ${className}.delete(Self)
+    METHOD refresh() INLINE ${className}.load(::ID)
+""".trimIndent()
+        }
+        val relationMethods = table.candidateForeignKeys.joinToString("\n") { relation ->
+            val targetClass = relation.targetTable.toClassName()
+            """
+    METHOD bind$targetClass(target) INLINE (::${relation.sourceFields.first()} := target:ID)
+    METHOD unbind$targetClass() INLINE (::${relation.sourceFields.first()} := NIL)
+""".trimIndent()
         }
         return """
 $macrosSection
 
 CLASS $className
 $fieldsSection
-$methodsSection
+    METHOD init(data)
+$classMethodsSection
+$fieldHelpersSection
+$persistenceInstanceMethods
+$relationMethods
 ENDCLASS
+
+METHOD $className:init(data)
+    LOCAL payload := iif(ValType(data) == "H", data, {=>})
+${includedFields.sorted().joinToString("\n") { "    ::$it := iif(HHasKey(payload, \"$it\"), payload[\"$it\"], NIL)" }}
+RETURN Self
 """.trim()
     }
 
