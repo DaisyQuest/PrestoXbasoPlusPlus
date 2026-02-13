@@ -56,6 +56,11 @@ class XbIdeRegistrationTest {
 
         assertThat(xpjFileType).isNotNull
         assertThat(xpjFileType!!.groupValues[1]).isEqualTo("XPJ Project")
+        val xpjLanguage =
+            Regex(
+                """<fileType\s+[^>]*name="XPJ Project"[^>]*language="([^"]+)"""",
+            ).find(pluginXml)?.groupValues?.get(1)
+        assertThat(xpjLanguage).isEqualTo("TEXT")
     }
 
     @Test

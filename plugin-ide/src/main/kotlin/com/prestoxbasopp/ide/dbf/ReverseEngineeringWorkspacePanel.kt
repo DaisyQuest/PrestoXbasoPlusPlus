@@ -254,13 +254,15 @@ class ReverseEngineeringWorkspacePanel(
             artifacts: List<GeneratedClassArtifact>,
         ): List<String> {
             if (artifacts.isEmpty()) return emptyList()
-            val inputPath = Paths.get(input.sourcePath)
-            val baseDir = inputPath.parent ?: Paths.get("")
+            val inputPath = Paths.get(input.sourcePath).toAbsolutePath().normalize()
+            val baseDir = if (Files.isDirectory(inputPath)) inputPath else inputPath.parent ?: inputPath
             val outputDir = Paths.get(config.outputDir)
             val resolvedOutput = if (outputDir.isAbsolute) outputDir else baseDir.resolve(outputDir)
-            Files.createDirectories(resolvedOutput)
+            val normalizedOutput = resolvedOutput.toAbsolutePath().normalize()
+            Files.createDirectories(normalizedOutput)
             return artifacts.map { artifact ->
-                val destination = resolvedOutput.resolve("${artifact.className}.prg")
+                val destination = normalizedOutput.resolve("${artifact.className}.prg")
+                Files.createDirectories(destination.parent)
                 Files.writeString(destination, artifact.source)
                 destination.toString()
             }

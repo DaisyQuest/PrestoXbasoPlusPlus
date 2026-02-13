@@ -137,6 +137,55 @@ class ReverseEngineeringWorkspacePanelTest {
         assertThat(findAreaContaining(panel, "Generate complete: 0 artifacts into generated.")).isNotNull()
     }
 
+
+    @Test
+    fun `writeArtifacts creates output under source parent for relative output dir`(@TempDir tempDir: Path) {
+        val sourceFile = tempDir.resolve("input").resolve("Dog.dbf")
+        Files.createDirectories(sourceFile.parent)
+        Files.writeString(sourceFile, "placeholder")
+        val input = ReverseEngineeringInput("DOG", sourceFile.toString(), sampleTable())
+        val config = ReverseEngineerConfig(
+            schemaVersion = "1.0.0",
+            engineVersion = "1.0.0",
+            profile = ApiProfile.READ_ONLY,
+            outputDir = "generated",
+            generateMethodAliases = false,
+            relations = emptyList(),
+            tableConfigs = emptyList(),
+        )
+        val artifacts = listOf(GeneratedClassArtifact("Dog", "CLASS Dog\nENDCLASS\n", emptyList(), emptyList()))
+
+        val written = ReverseEngineeringWorkspacePanel.writeArtifacts(input, config, artifacts)
+
+        val expected = sourceFile.parent.resolve("generated").resolve("Dog.prg")
+        assertThat(written).containsExactly(expected.toString())
+        assertThat(expected).exists()
+        assertThat(Files.readString(expected)).contains("CLASS Dog")
+    }
+
+    @Test
+    fun `writeArtifacts supports source path that is already a directory`(@TempDir tempDir: Path) {
+        val sourceDir = tempDir.resolve("dbf-root")
+        Files.createDirectories(sourceDir)
+        val input = ReverseEngineeringInput("DOG", sourceDir.toString(), sampleTable())
+        val config = ReverseEngineerConfig(
+            schemaVersion = "1.0.0",
+            engineVersion = "1.0.0",
+            profile = ApiProfile.READ_ONLY,
+            outputDir = "nested/out",
+            generateMethodAliases = false,
+            relations = emptyList(),
+            tableConfigs = emptyList(),
+        )
+        val artifacts = listOf(GeneratedClassArtifact("Dog", "CLASS Dog\nENDCLASS\n", emptyList(), emptyList()))
+
+        val written = ReverseEngineeringWorkspacePanel.writeArtifacts(input, config, artifacts)
+
+        val expected = sourceDir.resolve("nested/out").resolve("Dog.prg").toAbsolutePath().normalize()
+        assertThat(written).containsExactly(expected.toString())
+        assertThat(expected).exists()
+    }
+
     private fun clickButton(panel: ReverseEngineeringWorkspacePanel, name: String) {
         findComponentByName(panel, name, JButton::class.java).doClick()
     }
@@ -163,4 +212,10 @@ class ReverseEngineeringWorkspacePanelTest {
                 if (child is java.awt.Container) addAll(child.findByType(type))
             }
         }
+    private fun sampleTable(): DbfTable = DbfTable(
+        header = DbfHeader(3, 124, 2, 1, 1, 100, 10, 0, 0, false, 0),
+        fields = listOf(DbfFieldDescriptor("ID", DbfFieldType.Numeric, 8, 0, 0, false)),
+        records = mutableListOf(DbfRecord(false, mutableMapOf("ID" to "1"))),
+    )
+
 }
