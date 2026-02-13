@@ -130,4 +130,22 @@ class XbFoldingServiceTest {
         val mainRanges = ranges.filter { it.placeholder == "main(...)" }
         assertThat(mainRanges).hasSize(1)
     }
+    @Test
+    fun `class method folds stop before the next class token`() {
+        val source = """
+            CLASS DbaseF5
+                CLASS METHOD load(...)
+                CLASS METHOD findBy(...)
+            ENDCLASS
+        """.trimIndent()
+
+        val snapshot = XbPsiTextBuilder().buildSnapshot(source)
+        val ranges = XbFoldingService().foldingRanges(snapshot)
+
+        val loadRange = ranges.first { it.placeholder == "load(...)" }
+        val nextClassOffset = source.indexOf("CLASS METHOD findBy")
+        assertThat(loadRange.textRange.endOffset).isLessThanOrEqualTo(nextClassOffset)
+    }
+
+
 }
