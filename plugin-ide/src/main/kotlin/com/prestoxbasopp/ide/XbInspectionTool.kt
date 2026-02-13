@@ -10,6 +10,8 @@ class XbInspectionTool(
 ) : LocalInspectionTool() {
     override fun getDisplayName(): String = "Xbase++ Inspection"
 
+    override fun getGroupDisplayName(): String = "Xbase++"
+
     override fun checkFile(
         file: PsiFile,
         manager: InspectionManager,
