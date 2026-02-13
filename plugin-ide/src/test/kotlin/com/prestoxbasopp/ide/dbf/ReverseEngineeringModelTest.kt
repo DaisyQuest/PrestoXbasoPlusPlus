@@ -138,7 +138,7 @@ class ReverseEngineeringModelTest {
         assertThat(dog.source).contains("#define DOG_FIELD_NAME \"NAME\"")
         assertThat(dog.source).contains("VAR ID")
         assertThat(dog.source).contains("RETURN Dog:load(key, {=>})")
-        assertThat(dog.source).contains("RETURN Dog:upsert(::normalizeForPersistence(), {=>})")
+        assertThat(dog.source).contains("RETURN Dog:upsert(Self, {=>})")
         assertThat(dog.source).contains("RETURN Dog:delete(::getPrimaryKeyValue(), {=>})")
         assertThat(dog.source).doesNotContain("\\\"")
         assertThat(XbParser.parse(dog.source).errors).isEmpty()
@@ -187,12 +187,54 @@ class ReverseEngineeringModelTest {
 
         assertThat(artifact.source).contains("payload[\"AMOUNT\"] := Val(value)")
         assertThat(artifact.source).contains("payload[\"PAID\"] := iif(Upper(AllTrim(value)) == \"T\"")
-        assertThat(artifact.source).contains("payload[\"DUE_DATE\"] := iif(Empty(value), NIL, CToD(value))")
+        assertThat(artifact.source).contains("CASE ValType(value) == \"D\"")
+        assertThat(artifact.source).contains("payload[\"DUE_DATE\"] := CToD(value)")
+        assertThat(artifact.source).contains("payload[\"DUE_DATE\"] := NIL")
         assertThat(artifact.source).contains("payload[\"NOTE\"] := iif(Empty(value), NIL, AllTrim(value))")
         assertThat(artifact.source).contains("provider := DaoRepositoryProvider():default()")
         assertThat(artifact.source).contains("LOCAL rows := repo:findBy(::tableName(), iif(ValType(criteria) == \"H\", criteria, {=>}), options)")
-        assertThat(artifact.source).contains("ValType(entity) == \"O\"")
+        assertThat(artifact.source).contains("ELSEIF ValType(entity) == \"H\"")
+        assertThat(artifact.source).contains("HHasKey(options, \"key\")")
+        assertThat(artifact.source).contains("RETURN .F.")
         assertThat(artifact.source).doesNotContain("\\\"")
+        assertThat(XbParser.parse(artifact.source).errors).isEmpty()
+    }
+
+    @Test
+    fun `generate persistence methods avoid object key hash misuse and support hash key extraction`() {
+        val metadata = ReverseEngineeringWorkflow.toBundle(
+            DbfTableMetadata(
+                tableName = "DbaseF5",
+                sourcePath = "fixtures/dbasef5.dbf",
+                checksum = "dao",
+                fields = listOf(
+                    DbfFieldMetadata("NF", DbfFieldType.Character, 12, 0, false, null, "PRIMARY"),
+                    DbfFieldMetadata("ARXB", DbfFieldType.Character, 12, 0, true, null, null),
+                ),
+                candidatePrimaryKey = "NF",
+                candidateForeignKeys = emptyList(),
+                warnings = emptyList(),
+            ),
+        )
+        val config = ReverseEngineerConfig(
+            schemaVersion = "1.0.0",
+            engineVersion = "1.0.0",
+            profile = ApiProfile.FULL,
+            outputDir = "out",
+            generateMethodAliases = false,
+            relations = emptyList(),
+            tableConfigs = emptyList(),
+        )
+
+        val artifact = ReverseEngineeringWorkflow.generate(metadata, config).first.single()
+
+        assertThat(artifact.source).contains("METHOD Dbasef5:getPrimaryKeyValue()")
+        assertThat(artifact.source).contains("RETURN ::NF")
+        assertThat(artifact.source).contains("RETURN Dbasef5:upsert(Self, {=>})")
+        assertThat(artifact.source).contains("LOCAL value := ::ARXB")
+        assertThat(artifact.source).doesNotContain("HHasKey(Self")
+        assertThat(artifact.source).contains("ELSEIF HHasKey(payload, \"NF\")")
+        assertThat(artifact.source).contains("key := payload[\"NF\"]")
         assertThat(XbParser.parse(artifact.source).errors).isEmpty()
     }
 
