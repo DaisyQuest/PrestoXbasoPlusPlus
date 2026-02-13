@@ -85,6 +85,7 @@ data class GeneratedClassArtifact(
     val className: String,
     val source: String,
     val methods: List<GeneratedMethod>,
+    val macros: List<String>,
 )
 
 data class DbfGenerationReport(
@@ -144,8 +145,9 @@ object ReverseEngineeringWorkflow {
             val selectedFields = override?.includeFields?.ifEmpty { table.fields.map { it.originalFieldName }.toSet() }
                 ?: table.fields.map { it.originalFieldName }.toSet()
             val aliasByField = override?.aliasByField.orEmpty()
-            val source = renderClass(className, selectedFields, aliasByField, methods)
-            GeneratedClassArtifact(className, source, methods)
+            val macros = buildMacros(className, selectedFields, methods)
+            val source = renderClass(className, selectedFields, aliasByField, methods, macros)
+            GeneratedClassArtifact(className, source, methods, macros)
         }
         return generated to DbfGenerationReport(
             schemaVersion = "1.0.0",
@@ -239,7 +241,9 @@ object ReverseEngineeringWorkflow {
         includedFields: Set<String>,
         aliasByField: Map<String, String>,
         methods: List<GeneratedMethod>,
+        macros: List<String>,
     ): String {
+        val macrosSection = macros.joinToString("\n")
         val fieldsSection = includedFields.sorted().joinToString("\n") { field ->
             val aliasComment = aliasByField[field]?.let { " // alias: $it" }.orEmpty()
             "    VAR $field$aliasComment"
@@ -249,11 +253,30 @@ object ReverseEngineeringWorkflow {
             "    METHOD ${method.methodName}(...)$aliasLine"
         }
         return """
+$macrosSection
+
 CLASS $className
 $fieldsSection
 $methodsSection
 ENDCLASS
 """.trim()
+    }
+
+    private fun buildMacros(
+        className: String,
+        includedFields: Set<String>,
+        methods: List<GeneratedMethod>,
+    ): List<String> = buildList {
+        add("/* Generated API macros for $className */")
+        includedFields.sorted().forEach { field ->
+            add("#define ${className.uppercase()}_FIELD_${field.uppercase()} \"$field\"")
+        }
+        methods.forEach { method ->
+            add("#define ${className.uppercase()}_METHOD_${method.methodName.uppercase()} \"${method.methodName}\"")
+            if (method.alias != null) {
+                add("#define ${className.uppercase()}_ALIAS_${method.methodName.uppercase()} \"${method.alias}\"")
+            }
+        }
     }
 
     private fun aliasIf(alias: String, enabled: Boolean): String? = alias.takeIf { enabled }
