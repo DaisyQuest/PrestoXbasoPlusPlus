@@ -47,6 +47,27 @@ class XbSyntaxHighlightingTest {
         }
     }
 
+
+    @Test
+    fun `highlights method declarations as declaration identifiers`() {
+        val classifier = XbSemanticTokenClassifier()
+        val tokens = listOf(
+            XbToken(XbTokenType.KEYWORD, "method", XbTextRange(0, 6)),
+            XbToken(XbTokenType.IDENTIFIER, "normalizeForPersistence", XbTextRange(7, 29)),
+            XbToken(XbTokenType.PUNCTUATION, "(", XbTextRange(29, 30)),
+            XbToken(XbTokenType.PUNCTUATION, ")", XbTextRange(30, 31)),
+        )
+
+        val styles = classifier.classify(tokens)
+
+        assertThat(styles).containsExactly(
+            XbHighlightStyle.KEYWORD,
+            XbHighlightStyle.FUNCTION_DECLARATION,
+            XbHighlightStyle.PUNCTUATION,
+            XbHighlightStyle.PUNCTUATION,
+        )
+    }
+
     @Test
     fun `highlights invalid tokens as errors`() {
         val spans = XbSyntaxHighlighter().highlight("0x")
