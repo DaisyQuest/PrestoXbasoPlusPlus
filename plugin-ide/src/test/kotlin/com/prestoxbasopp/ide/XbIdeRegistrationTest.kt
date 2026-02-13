@@ -3,6 +3,7 @@ package com.prestoxbasopp.ide
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.psi.TokenType
 import com.intellij.psi.tree.IElementType
+import com.prestoxbasopp.ide.dbf.DbfFileType
 import com.prestoxbasopp.core.lexer.XbTokenType as CoreTokenType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -31,6 +32,57 @@ class XbIdeRegistrationTest {
         assertThat(fileTypeName).isEqualTo(XbFileType.name)
         assertThat(extensions).isNotNull
         assertThat(extensions!!.split(';')).contains("ch")
+    }
+
+    @Test
+    fun `dbf file type declares expected metadata`() {
+        assertThat(DbfFileType.name).isEqualTo("DBF File")
+        assertThat(DbfFileType.description).isEqualTo("dBASE database file")
+        assertThat(DbfFileType.defaultExtension).isEqualTo("dbf")
+        assertThat(DbfFileType.icon).isNull()
+    }
+
+    @Test
+    fun `plugin xml registers dbf file association and editor provider`() {
+        val pluginXmlUrl: URL? = javaClass.classLoader.getResource("META-INF/plugin.xml")
+        assertThat(pluginXmlUrl).withFailMessage("Expected plugin.xml to be on the test classpath.").isNotNull()
+
+        val pluginXml = pluginXmlUrl!!.readText()
+        val dbfFileType =
+            Regex(
+                """<fileType\s+[^>]*name=\"DBF File\"[^>]*extensions=\"([^\"]+)\"[^>]*implementationClass=\"([^\"]+)\"""",
+            ).find(pluginXml)
+        val editorProviderClass =
+            Regex("""<fileEditorProvider\s+[^>]*implementation=\"([^\"]+)\"""")
+                .findAll(pluginXml)
+                .map { it.groupValues[1] }
+                .toList()
+
+        assertThat(dbfFileType).isNotNull
+        assertThat(dbfFileType!!.groupValues[1]).isEqualTo("dbf")
+        assertThat(dbfFileType.groupValues[2]).isEqualTo("com.prestoxbasopp.ide.dbf.DbfFileType")
+        assertThat(editorProviderClass).contains("com.prestoxbasopp.ide.dbf.DbfFileEditorProvider")
+    }
+
+    @Test
+    fun `plugin xml keeps reverse engineering action broadly accessible`() {
+        val pluginXmlUrl: URL? = javaClass.classLoader.getResource("META-INF/plugin.xml")
+        assertThat(pluginXmlUrl).withFailMessage("Expected plugin.xml to be on the test classpath.").isNotNull()
+
+        val pluginXml = pluginXmlUrl!!.readText()
+        val actionBlock =
+            Regex(
+                """<action\s+[^>]*id=\"com\.prestoxbasopp\.ide\.dbf\.ReverseEngineerDbfAction\"[\s\S]*?</action>""",
+            ).find(pluginXml)
+
+        assertThat(actionBlock).isNotNull
+        val groups =
+            Regex("""<add-to-group\s+[^>]*group-id=\"([^\"]+)\"""")
+                .findAll(actionBlock!!.value)
+                .map { it.groupValues[1] }
+                .toList()
+
+        assertThat(groups).contains("ToolsMenu", "ProjectViewPopupMenu", "EditorPopupMenu")
     }
 
     @Test
