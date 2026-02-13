@@ -7,8 +7,12 @@ import com.prestoxbasopp.ide.inspections.XbStandardInspections
 
 class XbInspectionService(
     private val engine: XbInspectionEngine = XbInspectionEngine(XbStandardInspections.all),
+    private val profileProvider: XbInspectionProfileProvider = XbDefaultInspectionProfileProvider(),
 ) {
-    fun inspect(source: String, profile: XbInspectionProfile = XbInspectionProfile()): List<XbInspectionFinding> {
+    fun inspect(
+        source: String,
+        profile: XbInspectionProfile = profileProvider.profile(),
+    ): List<XbInspectionFinding> {
         return engine.inspect(source, profile)
     }
 }

@@ -107,13 +107,16 @@ class XbIdeRegistrationTest {
     }
 
     @Test
-    fun `plugin xml registers annotator and inspections`() {
+    fun `plugin xml registers inspections without duplicate annotators`() {
         val pluginXmlUrl: URL? = javaClass.classLoader.getResource("META-INF/plugin.xml")
         assertThat(pluginXmlUrl).withFailMessage("Expected plugin.xml to be on the test classpath.").isNotNull()
 
         val pluginXml = pluginXmlUrl!!.readText()
-        val annotatorClass =
-            Regex("""<annotator\s+[^>]*implementationClass="([^"]+)"""").find(pluginXml)?.groupValues?.get(1)
+        val annotators =
+            Regex("""<annotator\s+[^>]*implementationClass="([^"]+)"""")
+                .findAll(pluginXml)
+                .map { it.groupValues[1] }
+                .toList()
         val inspectionClass =
             Regex("""<localInspection\s+[^>]*implementationClass="([^"]+)"""").find(pluginXml)?.groupValues?.get(1)
         val completionClass =
@@ -122,7 +125,7 @@ class XbIdeRegistrationTest {
                 ?.groupValues
                 ?.get(1)
 
-        assertThat(annotatorClass).isEqualTo("com.prestoxbasopp.ide.XbDiagnosticsAnnotator")
+        assertThat(annotators).isEmpty()
         assertThat(inspectionClass).isEqualTo("com.prestoxbasopp.ide.XbInspectionTool")
         assertThat(completionClass).isEqualTo("com.prestoxbasopp.ide.XbCompletionContributor")
     }
