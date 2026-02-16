@@ -86,6 +86,38 @@ class XbLexerTokenizationTest {
         assertThat(tokens.first().lexeme).isEqualTo("::isOpened")
     }
 
+
+    @Test
+    fun `tokenizes scoped instance variable with whitespace after double colon`() {
+        val tokens = XbLexer(":: isOpened := .T.").lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.ASSIGN,
+            TokenType.TRUE,
+        )
+        assertThat(tokens.first().lexeme).isEqualTo("::isOpened")
+    }
+
+    @Test
+    fun `lexes expresspp style constructor chains within timeout`() {
+        val source = buildString {
+            appendLine("FUNCTION BuildUi(oParent)")
+            repeat(2_000) { index ->
+                appendLine("LOCAL oBtn$index := XbpPushButton():new( oParent:drawingArea,, { 10, 10 }, { 80, 24 } )")
+            }
+            appendLine("RETURN NIL")
+            appendLine("ENDFUNCTION")
+        }
+
+        val tokens = assertTimeoutPreemptively(Duration.ofSeconds(4)) {
+            XbLexer(source).lex().filter { it.type != TokenType.EOF }
+        }
+
+        assertThat(tokens.none { it.type == TokenType.ERROR }).isTrue()
+        assertThat(tokens.count { it.type == TokenType.COLON }).isGreaterThanOrEqualTo(4_000)
+    }
+
     @Test
     fun `tokenizes db-alias arrow operator`() {
         val tokens = XbLexer("charges->orig_statu").lex().filter { it.type != TokenType.EOF }

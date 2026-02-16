@@ -499,4 +499,48 @@ class XbParserProductionCompatibilityTest {
         assertThat(function.body.statements).isNotEmpty()
     }
 
+
+
+    @Test
+    fun `parses scoped instance variable assignments with whitespace after double colon`() {
+        val source = """
+            FUNCTION ThreadStartWs()
+            :: isOpened := .T.
+            RETURN
+            ENDFUNCTION
+        """.trimIndent()
+
+        val result = XbParser.parse(source)
+
+        assertThat(result.errors).isEmpty()
+        val function = result.program!!.statements.single() as XbFunctionDeclaration
+        val assignment = function.body.statements[0] as XbAssignmentStatement
+        assertThat((assignment.target as XbIdentifierExpression).name).isEqualTo("::isOpened")
+    }
+
+    @Test
+    fun `parses expresspp style constructor and drawing area dispatch`() {
+        val source = """
+            FUNCTION BuildUi(oDlg)
+            LOCAL oStatic := XbpStatic():new( oDlg:drawingArea,, { 10, 10 }, { 120, 40 } )
+            RETURN oStatic
+            ENDFUNCTION
+        """.trimIndent()
+
+        val result = XbParser.parse(source)
+
+        assertThat(result.errors).isEmpty()
+        val function = result.program!!.statements.single() as XbFunctionDeclaration
+        val local = function.body.statements[0] as XbLocalDeclarationStatement
+        assertThat(local.bindings).hasSize(1)
+        assertThat(local.bindings[0].name).isEqualTo("oStatic")
+        val call = local.bindings[0].initializer as XbCallExpression
+        assertThat((call.callee as XbIdentifierExpression).name).isEqualTo("new")
+        assertThat(call.arguments).hasSize(5)
+        assertThat(call.arguments[0]).isInstanceOf(XbCallExpression::class.java)
+        val drawingArea = call.arguments[1] as XbCallExpression
+        assertThat((drawingArea.callee as XbIdentifierExpression).name).isEqualTo("drawingArea")
+        assertThat((drawingArea.arguments.single() as XbIdentifierExpression).name).isEqualTo("oDlg")
+    }
+
 }

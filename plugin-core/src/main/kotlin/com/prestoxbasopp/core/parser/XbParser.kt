@@ -1172,34 +1172,23 @@ class XbParser(private val tokens: List<Token>) {
 
     private fun isAssignmentStatementStart(): Boolean {
         if (!check(TokenType.IDENTIFIER) && !check(TokenType.INDEX)) return false
-        var index = current + 1
-        while (index < tokens.size) {
-            if (isAssignmentOperatorAt(index)) {
+        val tokenCount = tokens.size
+        var scanIndex = current + 1
+        while (scanIndex < tokenCount) {
+            if (isAssignmentOperatorAt(scanIndex)) {
                 return true
             }
-            if ((tokens[index].type == TokenType.ARROW || tokens[index].type == TokenType.COLON) &&
-                index + 1 < tokens.size &&
-                tokens[index + 1].type == TokenType.IDENTIFIER
+            val tokenType = tokens[scanIndex].type
+            if ((tokenType == TokenType.ARROW || tokenType == TokenType.COLON) &&
+                scanIndex + 1 < tokenCount &&
+                tokens[scanIndex + 1].type == TokenType.IDENTIFIER
             ) {
-                index += 2
+                scanIndex += 2
                 continue
             }
-            if (tokens[index].type == TokenType.LBRACKET) {
-                var depth = 0
-                while (index < tokens.size) {
-                    val type = tokens[index].type
-                    if (type == TokenType.LBRACKET) {
-                        depth++
-                    } else if (type == TokenType.RBRACKET) {
-                        depth--
-                        if (depth == 0) {
-                            index++
-                            break
-                        }
-                    }
-                    index++
-                }
-                if (depth != 0 || index >= tokens.size) {
+            if (tokenType == TokenType.LBRACKET) {
+                scanIndex = skipBracketAccess(scanIndex)
+                if (scanIndex == -1) {
                     return false
                 }
                 continue
@@ -1207,6 +1196,26 @@ class XbParser(private val tokens: List<Token>) {
             return false
         }
         return false
+    }
+
+    private fun skipBracketAccess(startIndex: Int): Int {
+        val tokenCount = tokens.size
+        var depth = 0
+        var scanIndex = startIndex
+        while (scanIndex < tokenCount) {
+            when (tokens[scanIndex].type) {
+                TokenType.LBRACKET -> depth++
+                TokenType.RBRACKET -> {
+                    depth--
+                    if (depth == 0) {
+                        return scanIndex + 1
+                    }
+                }
+                else -> Unit
+            }
+            scanIndex++
+        }
+        return -1
     }
 
     private fun isAssignmentOperatorAt(index: Int): Boolean {
@@ -1357,22 +1366,7 @@ class XbParser(private val tokens: List<Token>) {
         if (isTerminatorToken(token)) {
             return true
         }
-        return token.type in setOf(
-            TokenType.IF,
-            TokenType.FOR,
-            TokenType.DO,
-            TokenType.WHILE,
-            TokenType.RETURN,
-            TokenType.LOCAL,
-            TokenType.FUNCTION,
-            TokenType.PROCEDURE,
-            TokenType.BEGIN,
-            TokenType.BREAK,
-            TokenType.WAIT,
-            TokenType.EXIT,
-            TokenType.QUESTION,
-            TokenType.AT,
-        )
+        return token.type in DEFAULT_COMMAND_BOUNDARY_TOKENS
     }
 
     private fun matchNameToken(): Token? {
@@ -1429,6 +1423,23 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.QUESTION,
             TokenType.AT,
             TokenType.EOF,
+        )
+
+        private val DEFAULT_COMMAND_BOUNDARY_TOKENS = setOf(
+            TokenType.IF,
+            TokenType.FOR,
+            TokenType.DO,
+            TokenType.WHILE,
+            TokenType.RETURN,
+            TokenType.LOCAL,
+            TokenType.FUNCTION,
+            TokenType.PROCEDURE,
+            TokenType.BEGIN,
+            TokenType.BREAK,
+            TokenType.WAIT,
+            TokenType.EXIT,
+            TokenType.QUESTION,
+            TokenType.AT,
         )
 
         private val DECLARATION_START_TOKENS = setOf(
