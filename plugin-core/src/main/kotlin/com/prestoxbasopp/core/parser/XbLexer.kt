@@ -8,6 +8,7 @@ class XbLexer(
     private val sourceMap: XbSourceOffsetMapping = XbSourceOffsetMapping.identity(source.length),
 ) {
     private var index = 0
+    private val length = source.length
 
     fun lex(): List<Token> {
         val tokens = mutableListOf<Token>()
@@ -74,8 +75,11 @@ class XbLexer(
                 if (match('=')) {
                     token(TokenType.ASSIGN, ":=", start, index)
                 } else if (match(':')) {
+                    while (!isAtEnd() && peek().isWhitespace()) {
+                        advance()
+                    }
                     val scopeStart = index
-                    while (!isAtEnd() && (peek().isLetterOrDigit() || peek() == '_')) {
+                    while (!isAtEnd() && isIdentifierPart(peek())) {
                         advance()
                     }
                     val member = source.substring(scopeStart, index)
@@ -112,7 +116,7 @@ class XbLexer(
     }
 
     private fun readIdentifier(start: Int): Token {
-        while (!isAtEnd() && (peek().isLetterOrDigit() || peek() == '_')) {
+        while (!isAtEnd() && isIdentifierPart(peek())) {
             advance()
         }
         val lexeme = source.substring(start, index)
@@ -199,7 +203,7 @@ class XbLexer(
     }
 
     private fun isLikelyStringContinuation(start: Int): Boolean {
-        if (start >= source.length) {
+        if (start >= length) {
             return false
         }
         return when (source[start]) {
@@ -222,52 +226,7 @@ class XbLexer(
     }
 
     private fun keywordType(text: String): TokenType {
-        return when (text.lowercase()) {
-            "if" -> TokenType.IF
-            "then" -> TokenType.THEN
-            "else" -> TokenType.ELSE
-            "elseif" -> TokenType.ELSEIF
-            "endif" -> TokenType.ENDIF
-            "while" -> TokenType.WHILE
-            "do" -> TokenType.DO
-            "enddo" -> TokenType.ENDDO
-            "return" -> TokenType.RETURN
-            "wait" -> TokenType.WAIT
-            "exit" -> TokenType.EXIT
-            "begin" -> TokenType.BEGIN
-            "sequence" -> TokenType.SEQUENCE
-            "recover" -> TokenType.RECOVER
-            "using" -> TokenType.USING
-            "break" -> TokenType.BREAK
-            "end" -> TokenType.END
-            "say" -> TokenType.SAY
-            "get" -> TokenType.GET
-            "valid" -> TokenType.VALID
-            "on" -> TokenType.ON
-            "index" -> TokenType.INDEX
-            "function" -> TokenType.FUNCTION
-            "procedure" -> TokenType.PROCEDURE
-            "endfunction" -> TokenType.ENDFUNCTION
-            "endfunc" -> TokenType.ENDFUNCTION
-            "endproc" -> TokenType.ENDPROC
-            "endprocedure" -> TokenType.ENDPROC
-            "local" -> TokenType.LOCAL
-            "static" -> TokenType.LOCAL
-            "for" -> TokenType.FOR
-            "to" -> TokenType.TO
-            "step" -> TokenType.STEP
-            "next" -> TokenType.NEXT
-            "nil" -> TokenType.NIL
-            "and" -> TokenType.AND
-            "or" -> TokenType.OR
-            "not" -> TokenType.NOT
-            ".and." -> TokenType.AND
-            ".or." -> TokenType.OR
-            ".not." -> TokenType.NOT
-            ".t." -> TokenType.TRUE
-            ".f." -> TokenType.FALSE
-            else -> TokenType.IDENTIFIER
-        }
+        return KEYWORDS[text.lowercase()] ?: TokenType.IDENTIFIER
     }
 
     private fun skipWhitespaceAndComments(): Token? {
@@ -359,11 +318,11 @@ class XbLexer(
 
     private fun isLineContinuation(startIndex: Int): Boolean {
         var cursor = startIndex + 1
-        while (cursor < source.length) {
+        while (cursor < length) {
             val char = source[cursor]
-            if (char == '/' && cursor + 1 < source.length && source[cursor + 1] == '/') {
+            if (char == '/' && cursor + 1 < length && source[cursor + 1] == '/') {
                 cursor += 2
-                while (cursor < source.length && source[cursor] != '\n') {
+                while (cursor < length && source[cursor] != '\n') {
                     cursor++
                 }
                 continue
@@ -381,7 +340,7 @@ class XbLexer(
 
     private fun isBlankLine(startIndex: Int): Boolean {
         var cursor = startIndex
-        while (cursor < source.length) {
+        while (cursor < length) {
             val char = source[cursor]
             if (char == '\n') {
                 return true
@@ -404,13 +363,16 @@ class XbLexer(
 
     private fun peek(): Char = source[index]
 
-    private fun peekNext(): Char = if (index + 1 >= source.length) '\u0000' else source[index + 1]
+    private fun peekNext(): Char = if (index + 1 >= length) '\u0000' else source[index + 1]
 
-    private fun peekAt(position: Int): Char? = if (position in source.indices) source[position] else null
+    private fun peekAt(position: Int): Char? = if (position in 0 until length) source[position] else null
 
     private fun advance(): Char = source[index++]
 
-    private fun isAtEnd(): Boolean = index >= source.length
+    private fun isAtEnd(): Boolean = index >= length
+
+
+    private fun isIdentifierPart(char: Char): Boolean = char.isLetterOrDigit() || char == '_'
 
     private fun mapRange(start: Int, end: Int): XbTextRange {
         val mapped = sourceMap.toSourceRange(XbTextRange(start, end))
@@ -420,5 +382,54 @@ class XbLexer(
     private fun token(type: TokenType, lexeme: String, start: Int, end: Int): Token {
         val mapped = mapRange(start, end)
         return Token(type, lexeme, mapped.startOffset, mapped.endOffset)
+    }
+
+
+    companion object {
+        private val KEYWORDS = mapOf(
+            "if" to TokenType.IF,
+            "then" to TokenType.THEN,
+            "else" to TokenType.ELSE,
+            "elseif" to TokenType.ELSEIF,
+            "endif" to TokenType.ENDIF,
+            "while" to TokenType.WHILE,
+            "do" to TokenType.DO,
+            "enddo" to TokenType.ENDDO,
+            "return" to TokenType.RETURN,
+            "wait" to TokenType.WAIT,
+            "exit" to TokenType.EXIT,
+            "begin" to TokenType.BEGIN,
+            "sequence" to TokenType.SEQUENCE,
+            "recover" to TokenType.RECOVER,
+            "using" to TokenType.USING,
+            "break" to TokenType.BREAK,
+            "end" to TokenType.END,
+            "say" to TokenType.SAY,
+            "get" to TokenType.GET,
+            "valid" to TokenType.VALID,
+            "on" to TokenType.ON,
+            "index" to TokenType.INDEX,
+            "function" to TokenType.FUNCTION,
+            "procedure" to TokenType.PROCEDURE,
+            "endfunction" to TokenType.ENDFUNCTION,
+            "endfunc" to TokenType.ENDFUNCTION,
+            "endproc" to TokenType.ENDPROC,
+            "endprocedure" to TokenType.ENDPROC,
+            "local" to TokenType.LOCAL,
+            "static" to TokenType.LOCAL,
+            "for" to TokenType.FOR,
+            "to" to TokenType.TO,
+            "step" to TokenType.STEP,
+            "next" to TokenType.NEXT,
+            "nil" to TokenType.NIL,
+            "and" to TokenType.AND,
+            "or" to TokenType.OR,
+            "not" to TokenType.NOT,
+            ".and." to TokenType.AND,
+            ".or." to TokenType.OR,
+            ".not." to TokenType.NOT,
+            ".t." to TokenType.TRUE,
+            ".f." to TokenType.FALSE,
+        )
     }
 }
