@@ -5,4 +5,5 @@ data class XbUiSettingsState(
     val showInlayHints: Boolean = true,
     val tabSize: Int = 4,
     val completionLimit: Int = 50,
+    val highlightingPreferences: XbHighlightingPreferences = XbHighlightingPreferences(),
 )

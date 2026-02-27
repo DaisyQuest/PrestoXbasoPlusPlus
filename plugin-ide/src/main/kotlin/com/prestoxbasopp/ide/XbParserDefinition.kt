@@ -27,7 +27,7 @@ class XbPsiFile(viewProvider: FileViewProvider) : PsiFileBase(viewProvider, XbLa
 }
 
 class XbParserDefinition : ParserDefinition {
-    override fun createLexer(project: Project): Lexer = XbLexerAdapter()
+    override fun createLexer(project: Project): Lexer = XbLexerAdapter(mode = XbLexerAdapter.Mode.PARSING)
 
     override fun createParser(project: Project): PsiParser = XbPsiParser()
 

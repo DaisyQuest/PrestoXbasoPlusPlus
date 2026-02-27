@@ -257,24 +257,24 @@ class XbIdeRegistrationTest {
     }
 
     @Test
-    fun `syntax highlighter maps known tokens to attributes`() {
+    fun `syntax highlighter maps known style token categories to attributes`() {
         val highlighter = XbSyntaxHighlighterAdapter()
 
-        val keyword = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.KEYWORD))
-        val identifier = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.IDENTIFIER))
-        val preprocessor = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.PREPROCESSOR))
-        val macroDefinition = highlighter.getTokenHighlights(XbHighlighterTokenSet.MACRO_DEFINITION)
-        val functionDeclaration = highlighter.getTokenHighlights(XbHighlighterTokenSet.FUNCTION_DECLARATION)
-        val functionCall = highlighter.getTokenHighlights(XbHighlighterTokenSet.FUNCTION_CALL)
-        val error = highlighter.getTokenHighlights(XbHighlighterTokenSet.forToken(CoreTokenType.UNKNOWN))
+        val keyword = highlighter.getTokenHighlights(XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.KEYWORD))
+        val identifier = highlighter.getTokenHighlights(XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.IDENTIFIER))
+        val preprocessor = highlighter.getTokenHighlights(XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.PREPROCESSOR))
+        val macroDefinition = highlighter.getTokenHighlights(XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.MACRO_DEFINITION))
+        val functionDeclaration = highlighter.getTokenHighlights(XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.FUNCTION_DECLARATION))
+        val functionCall = highlighter.getTokenHighlights(XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.FUNCTION_CALL))
+        val error = highlighter.getTokenHighlights(XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.ERROR))
 
-        assertThat(keyword).containsExactly(DefaultLanguageHighlighterColors.KEYWORD)
-        assertThat(identifier).containsExactly(DefaultLanguageHighlighterColors.IDENTIFIER)
-        assertThat(preprocessor).containsExactly(DefaultLanguageHighlighterColors.PREDEFINED_SYMBOL)
+        assertThat(keyword).containsExactly(XbSyntaxHighlighterAdapter.KEYS_BY_CATEGORY.getValue(com.prestoxbasopp.ui.XbHighlightCategory.KEYWORD))
+        assertThat(identifier).containsExactly(XbSyntaxHighlighterAdapter.KEYS_BY_CATEGORY.getValue(com.prestoxbasopp.ui.XbHighlightCategory.IDENTIFIER))
+        assertThat(preprocessor).containsExactly(XbSyntaxHighlighterAdapter.KEYS_BY_CATEGORY.getValue(com.prestoxbasopp.ui.XbHighlightCategory.PREPROCESSOR))
         assertThat(macroDefinition).containsExactly(XbSyntaxHighlighterAdapter.MACRO_DEFINITION)
         assertThat(functionDeclaration).containsExactly(XbSyntaxHighlighterAdapter.FUNCTION_DECLARATION)
         assertThat(functionCall).containsExactly(XbSyntaxHighlighterAdapter.FUNCTION_CALL)
-        assertThat(error).containsExactly(DefaultLanguageHighlighterColors.INVALID_STRING_ESCAPE)
+        assertThat(error).containsExactly(XbSyntaxHighlighterAdapter.KEYS_BY_CATEGORY.getValue(com.prestoxbasopp.ui.XbHighlightCategory.ERROR))
     }
 
     @Test
@@ -285,12 +285,23 @@ class XbIdeRegistrationTest {
     }
 
     @Test
+    fun `plugin xml registers color settings page and prg support`() {
+        val pluginXml = javaClass.classLoader.getResource("META-INF/plugin.xml")!!.readText()
+        val colorPage = Regex("""<colorSettingsPage\s+[^>]*implementation="([^"]+)"""").find(pluginXml)?.groupValues?.get(1)
+        val extensions = Regex("""<fileType\s+[^>]*name="Xbase\+\+ File"[^>]*extensions="([^"]+)"""").find(pluginXml)?.groupValues?.get(1)
+
+        assertThat(colorPage).isEqualTo("com.prestoxbasopp.ide.XbColorSettingsPage")
+        assertThat(extensions).isNotNull
+        assertThat(extensions!!.split(';')).contains("prg", "ch")
+    }
+
+    @Test
     fun `lexer adapter reports offsets relative to the original buffer`() {
         val lexer = XbLexerAdapter()
         val buffer = "xx if"
         lexer.start(buffer, 3, buffer.length, 0)
 
-        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.KEYWORD))
+        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.KEYWORD))
         assertThat(lexer.tokenStart).isEqualTo(3)
         assertThat(lexer.tokenEnd).isEqualTo(5)
 
@@ -306,7 +317,7 @@ class XbIdeRegistrationTest {
         val buffer = "if  return  "
         lexer.start(buffer, 0, buffer.length, 0)
 
-        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.KEYWORD))
+        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.KEYWORD))
         assertThat(lexer.tokenStart).isEqualTo(0)
         assertThat(lexer.tokenEnd).isEqualTo(2)
 
@@ -316,7 +327,7 @@ class XbIdeRegistrationTest {
         assertThat(lexer.tokenEnd).isEqualTo(4)
 
         lexer.advance()
-        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.KEYWORD))
+        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.KEYWORD))
         assertThat(lexer.tokenStart).isEqualTo(4)
         assertThat(lexer.tokenEnd).isEqualTo(10)
 
@@ -329,7 +340,12 @@ class XbIdeRegistrationTest {
     @Test
     fun `lexer adapter uses semantic token types for directives and functions`() {
         val lexer = XbLexerAdapter()
-        val buffer = "#define FOO 1\nfunction Build()\nreturn foo(1)\n#include \"defs.ch\""
+        val buffer = """
+            #define FOO 1
+            function Build()
+            return foo(1)
+            #include "defs.ch"
+        """.trimIndent()
         lexer.start(buffer, 0, buffer.length, 0)
 
         val significantTokens = mutableListOf<IElementType>()
@@ -342,10 +358,59 @@ class XbIdeRegistrationTest {
         }
 
         assertThat(significantTokens).contains(
-            XbHighlighterTokenSet.MACRO_DEFINITION,
-            XbHighlighterTokenSet.FUNCTION_DECLARATION,
-            XbHighlighterTokenSet.FUNCTION_CALL,
-            XbHighlighterTokenSet.forToken(CoreTokenType.PREPROCESSOR),
+            XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.MACRO_DEFINITION),
+            XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.FUNCTION_DECLARATION),
+            XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.FUNCTION_CALL),
+            XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.PREPROCESSOR),
+        )
+    }
+
+    @Test
+    fun `lexer adapter applies manual override and style remapping preferences`() {
+        val provider = object : XbHighlightingPreferencesProvider {
+            override fun load() = com.prestoxbasopp.ui.XbHighlightingPreferences(
+                styleMappings = com.prestoxbasopp.ui.XbHighlightCategory.entries.associateWith {
+                    if (it == com.prestoxbasopp.ui.XbHighlightCategory.KEYWORD) com.prestoxbasopp.ui.XbHighlightCategory.STRING else it
+                },
+                wordOverrides = mapOf("foo" to com.prestoxbasopp.ui.XbHighlightCategory.KEYWORD),
+            )
+        }
+        val lexer = XbLexerAdapter(provider)
+        val buffer = "foo bar"
+
+        lexer.start(buffer, 0, buffer.length, 0)
+
+        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.STRING))
+    }
+
+
+    @Test
+    fun `parser mode preserves core token types for comments and strings`() {
+        val provider = object : XbHighlightingPreferencesProvider {
+            override fun load() = com.prestoxbasopp.ui.XbHighlightingPreferences(
+                styleMappings = com.prestoxbasopp.ui.XbHighlightCategory.entries.associateWith { com.prestoxbasopp.ui.XbHighlightCategory.ERROR },
+                wordOverrides = mapOf("comment" to com.prestoxbasopp.ui.XbHighlightCategory.KEYWORD),
+            )
+        }
+        val lexer = XbLexerAdapter(provider, XbLexerAdapter.Mode.PARSING)
+        val buffer = """
+            // note
+            local s := "value"
+        """.trimIndent()
+        lexer.start(buffer, 0, buffer.length, 0)
+
+        val seen = mutableListOf<IElementType>()
+        while (lexer.tokenType != null) {
+            lexer.tokenType?.let { seen += it }
+            lexer.advance()
+        }
+
+        assertThat(seen).contains(
+            XbHighlighterTokenSet.forToken(CoreTokenType.COMMENT),
+            XbHighlighterTokenSet.forToken(CoreTokenType.STRING),
+        )
+        assertThat(seen).doesNotContain(
+            XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.ERROR),
         )
     }
 
@@ -381,7 +446,7 @@ class XbIdeRegistrationTest {
         var sawAnyToken = false
         while (lexer.tokenType != null) {
             sawAnyToken = true
-            if (lexer.tokenType == XbHighlighterTokenSet.forToken(CoreTokenType.OPERATOR) &&
+            if (lexer.tokenType == XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.OPERATOR) &&
                 body.substring(lexer.tokenStart, lexer.tokenEnd) == "/"
             ) {
                 slashTokenCount++

@@ -1,5 +1,7 @@
 package com.prestoxbasopp.ide
 
+import com.prestoxbasopp.ui.XbHighlightCategory
+import com.prestoxbasopp.ui.XbHighlightingPreferences
 import com.prestoxbasopp.ui.XbKeyValueStore
 import com.prestoxbasopp.ui.XbUiSettingsModel
 import com.prestoxbasopp.ui.XbUiSettingsPanel
@@ -29,6 +31,9 @@ class XbSettingsConfigurableTest {
             showInlayHints = false,
             tabSize = 2,
             completionLimit = 25,
+            highlightingPreferences = XbHighlightingPreferences(
+                wordOverrides = mapOf("foo" to XbHighlightCategory.FUNCTION_CALL),
+            ),
         )
         panel.render(updatedState)
 
@@ -68,6 +73,7 @@ class XbSettingsConfigurableTest {
     private class InMemoryKeyValueStore : XbKeyValueStore {
         private val booleans = mutableMapOf<String, Boolean>()
         private val ints = mutableMapOf<String, Int>()
+        private val strings = mutableMapOf<String, String>()
 
         override fun getBoolean(key: String, defaultValue: Boolean): Boolean {
             return booleans[key] ?: defaultValue
@@ -83,6 +89,14 @@ class XbSettingsConfigurableTest {
 
         override fun putInt(key: String, value: Int) {
             ints[key] = value
+        }
+
+        override fun getString(key: String, defaultValue: String): String {
+            return strings[key] ?: defaultValue
+        }
+
+        override fun putString(key: String, value: String) {
+            strings[key] = value
         }
     }
 }
