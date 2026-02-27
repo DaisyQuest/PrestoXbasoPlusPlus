@@ -11,7 +11,13 @@ import com.prestoxbasopp.ui.XbHighlightingPreferences
 
 class XbLexerAdapter(
     private val preferencesProvider: XbHighlightingPreferencesProvider = XbHighlightingSettingsBridge,
+    private val mode: Mode = Mode.HIGHLIGHTING,
 ) : LexerBase() {
+    enum class Mode {
+        HIGHLIGHTING,
+        PARSING,
+    }
+
     private data class LexerToken(val type: IElementType, val start: Int, val end: Int)
 
     private var buffer: CharSequence = ""
@@ -97,6 +103,10 @@ class XbLexerAdapter(
         style: XbHighlightStyle,
         preferences: XbHighlightingPreferences,
     ): IElementType {
+        if (mode == Mode.PARSING) {
+            return XbHighlighterTokenSet.forToken(token.type)
+        }
+
         val baseCategory = style.toCategory()
         val overrideCategory = if (token.type == XbLexerTokenType.IDENTIFIER) {
             preferences.wordOverrides[token.text.lowercase()]

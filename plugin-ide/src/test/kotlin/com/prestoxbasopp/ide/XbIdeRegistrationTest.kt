@@ -383,6 +383,37 @@ class XbIdeRegistrationTest {
         assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.STRING))
     }
 
+
+    @Test
+    fun `parser mode preserves core token types for comments and strings`() {
+        val provider = object : XbHighlightingPreferencesProvider {
+            override fun load() = com.prestoxbasopp.ui.XbHighlightingPreferences(
+                styleMappings = com.prestoxbasopp.ui.XbHighlightCategory.entries.associateWith { com.prestoxbasopp.ui.XbHighlightCategory.ERROR },
+                wordOverrides = mapOf("comment" to com.prestoxbasopp.ui.XbHighlightCategory.KEYWORD),
+            )
+        }
+        val lexer = XbLexerAdapter(provider, XbLexerAdapter.Mode.PARSING)
+        val buffer = """
+            // note
+            local s := "value"
+        """.trimIndent()
+        lexer.start(buffer, 0, buffer.length, 0)
+
+        val seen = mutableListOf<IElementType>()
+        while (lexer.tokenType != null) {
+            lexer.tokenType?.let { seen += it }
+            lexer.advance()
+        }
+
+        assertThat(seen).contains(
+            XbHighlighterTokenSet.forToken(CoreTokenType.COMMENT),
+            XbHighlighterTokenSet.forToken(CoreTokenType.STRING),
+        )
+        assertThat(seen).doesNotContain(
+            XbHighlighterTokenSet.forHighlightCategory(com.prestoxbasopp.ui.XbHighlightCategory.ERROR),
+        )
+    }
+
     @Test
     fun `lexer adapter emits whitespace token when only spaces are present`() {
         val lexer = XbLexerAdapter()
