@@ -6,8 +6,12 @@ import com.intellij.psi.tree.IElementType
 import com.prestoxbasopp.core.lexer.XbLexer
 import com.prestoxbasopp.core.lexer.XbToken
 import com.prestoxbasopp.core.lexer.XbTokenType as XbLexerTokenType
+import com.prestoxbasopp.ui.XbHighlightCategory
+import com.prestoxbasopp.ui.XbHighlightingPreferences
 
-class XbLexerAdapter : LexerBase() {
+class XbLexerAdapter(
+    private val preferencesProvider: XbHighlightingPreferencesProvider = XbHighlightingSettingsBridge,
+) : LexerBase() {
     private data class LexerToken(val type: IElementType, val start: Int, val end: Int)
 
     private var buffer: CharSequence = ""
@@ -62,6 +66,7 @@ class XbLexerAdapter : LexerBase() {
         }
 
         val tokenStyles = XbSemanticTokenClassifier().classify(coreTokens)
+        val preferences = preferencesProvider.load().withNormalizedOverrides()
         val expanded = mutableListOf<LexerToken>()
         var cursor = 0
 
@@ -71,7 +76,7 @@ class XbLexerAdapter : LexerBase() {
             if (start > cursor) {
                 expanded += LexerToken(TokenType.WHITE_SPACE, cursor, start)
             }
-            val elementType = elementTypeFor(token, style)
+            val elementType = elementTypeFor(token, style, preferences)
             if (end > start) {
                 expanded += LexerToken(
                     elementType,
@@ -87,12 +92,38 @@ class XbLexerAdapter : LexerBase() {
         return expanded
     }
 
-    private fun elementTypeFor(token: XbToken, style: XbHighlightStyle): IElementType {
-        return when (style) {
-            XbHighlightStyle.MACRO_DEFINITION -> XbHighlighterTokenSet.MACRO_DEFINITION
-            XbHighlightStyle.FUNCTION_DECLARATION -> XbHighlighterTokenSet.FUNCTION_DECLARATION
-            XbHighlightStyle.FUNCTION_CALL -> XbHighlighterTokenSet.FUNCTION_CALL
-            else -> XbHighlighterTokenSet.forToken(token.type)
+    private fun elementTypeFor(
+        token: XbToken,
+        style: XbHighlightStyle,
+        preferences: XbHighlightingPreferences,
+    ): IElementType {
+        val baseCategory = style.toCategory()
+        val overrideCategory = if (token.type == XbLexerTokenType.IDENTIFIER) {
+            preferences.wordOverrides[token.text.lowercase()]
+        } else {
+            null
+        }
+        val mapped = preferences.styleMappings[overrideCategory ?: baseCategory] ?: (overrideCategory ?: baseCategory)
+        return XbHighlighterTokenSet.forHighlightCategory(mapped)
+    }
+
+    private fun XbHighlightStyle.toCategory(): XbHighlightCategory {
+        return when (this) {
+            XbHighlightStyle.KEYWORD -> XbHighlightCategory.KEYWORD
+            XbHighlightStyle.IDENTIFIER -> XbHighlightCategory.IDENTIFIER
+            XbHighlightStyle.FUNCTION_DECLARATION -> XbHighlightCategory.FUNCTION_DECLARATION
+            XbHighlightStyle.FUNCTION_CALL -> XbHighlightCategory.FUNCTION_CALL
+            XbHighlightStyle.NUMBER -> XbHighlightCategory.NUMBER
+            XbHighlightStyle.STRING -> XbHighlightCategory.STRING
+            XbHighlightStyle.DATE -> XbHighlightCategory.DATE
+            XbHighlightStyle.SYMBOL -> XbHighlightCategory.SYMBOL
+            XbHighlightStyle.CODEBLOCK -> XbHighlightCategory.CODEBLOCK
+            XbHighlightStyle.PREPROCESSOR -> XbHighlightCategory.PREPROCESSOR
+            XbHighlightStyle.MACRO_DEFINITION -> XbHighlightCategory.MACRO_DEFINITION
+            XbHighlightStyle.OPERATOR -> XbHighlightCategory.OPERATOR
+            XbHighlightStyle.PUNCTUATION -> XbHighlightCategory.PUNCTUATION
+            XbHighlightStyle.COMMENT -> XbHighlightCategory.COMMENT
+            XbHighlightStyle.ERROR -> XbHighlightCategory.ERROR
         }
     }
 }
