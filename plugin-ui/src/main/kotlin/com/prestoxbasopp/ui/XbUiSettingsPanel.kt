@@ -1,5 +1,6 @@
 package com.prestoxbasopp.ui
 
+import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
@@ -10,8 +11,11 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.JSpinner
-import javax.swing.JTextArea
+import javax.swing.JTable
+import javax.swing.DefaultCellEditor
+import javax.swing.ListSelectionModel
 import javax.swing.SpinnerNumberModel
+import javax.swing.table.AbstractTableModel
 
 class XbUiSettingsPanel(
     private val navigateToEditorThemeSettings: (() -> Unit)? = null,
@@ -26,7 +30,12 @@ class XbUiSettingsPanel(
         XbHighlightCategory.entries.associateWith {
             JComboBox(XbHighlightCategory.entries.toTypedArray())
         }
-    private val overrideTextArea = JTextArea(8, 48)
+    private val overrideTableModel = OverrideTableModel()
+    private val overrideTable = JTable(overrideTableModel).apply {
+        setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION)
+        fillsViewportHeight = true
+        columnModel.getColumn(1).cellEditor = DefaultCellEditor(JComboBox(XbHighlightCategory.entries.toTypedArray()))
+    }
 
     init {
         val constraints = GridBagConstraints().apply {
@@ -52,9 +61,27 @@ class XbUiSettingsPanel(
             row++
         }
 
-        add(JLabel("Manual word overrides (one per line: word=STYLE)"), constraints.withRow(row))
+        add(JLabel("Manual word overrides"), constraints.withRow(row))
         row++
-        add(JScrollPane(overrideTextArea), constraints.withRow(row))
+        add(JScrollPane(overrideTable), constraints.withRow(row).withWeight(1.0).withFill(GridBagConstraints.BOTH))
+        row++
+        add(
+            JPanel(FlowLayout(FlowLayout.LEFT, 8, 0)).apply {
+                add(JButton("Add override").apply {
+                    addActionListener { overrideTableModel.addEmptyRow() }
+                })
+                add(JButton("Remove selected").apply {
+                    addActionListener {
+                        val selectedRows = overrideTable.selectedRows
+                            .asSequence()
+                            .map { overrideTable.convertRowIndexToModel(it) }
+                            .toList()
+                        overrideTableModel.removeRows(selectedRows)
+                    }
+                })
+            },
+            constraints.withRow(row),
+        )
         row++
         add(
             JButton("Open Editor Color Scheme Settings").apply {
@@ -72,9 +99,7 @@ class XbUiSettingsPanel(
         XbHighlightCategory.entries.forEach { category ->
             styleSelectors.getValue(category).selectedItem = state.highlightingPreferences.styleMappings[category] ?: category
         }
-        overrideTextArea.text = state.highlightingPreferences.wordOverrides.entries
-            .sortedBy { it.key }
-            .joinToString("\n") { (word, style) -> "$word=${style.name}" }
+        overrideTableModel.setOverrides(state.highlightingPreferences.wordOverrides)
     }
 
     override fun currentState(): XbUiSettingsState {
@@ -88,7 +113,7 @@ class XbUiSettingsPanel(
             completionLimit = (completionLimitSpinner.value as Number).toInt(),
             highlightingPreferences = XbHighlightingPreferences(
                 styleMappings = styleMappings,
-                wordOverrides = parseOverrides(overrideTextArea.text),
+                wordOverrides = overrideTableModel.toOverridesMap(),
             ).withNormalizedOverrides(),
         )
     }
@@ -110,26 +135,112 @@ class XbUiSettingsPanel(
         }
     }
 
-    private fun parseOverrides(rawText: String): Map<String, XbHighlightCategory> {
-        return rawText.lineSequence()
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .mapNotNull { line ->
-                val delimiter = line.indexOf('=')
-                if (delimiter <= 0 || delimiter == line.lastIndex) {
-                    return@mapNotNull null
-                }
-                val word = line.substring(0, delimiter).trim().lowercase()
-                val styleName = line.substring(delimiter + 1).trim().uppercase()
-                val style = XbHighlightCategory.entries.find { it.name == styleName } ?: return@mapNotNull null
-                word to style
-            }
-            .toMap()
+    internal fun updateOverrideRow(index: Int, word: String, category: XbHighlightCategory) {
+        overrideTableModel.updateRow(index, word, category)
+    }
+
+    internal fun addOverrideRow(word: String, category: XbHighlightCategory) {
+        overrideTableModel.addRow(word, category)
     }
 
     private fun GridBagConstraints.withRow(row: Int): GridBagConstraints {
         return (clone() as GridBagConstraints).apply {
             gridy = row
+        }
+    }
+
+    private fun GridBagConstraints.withWeight(weightY: Double): GridBagConstraints {
+        return (clone() as GridBagConstraints).apply {
+            this.weighty = weightY
+        }
+    }
+
+    private fun GridBagConstraints.withFill(fillType: Int): GridBagConstraints {
+        return (clone() as GridBagConstraints).apply {
+            fill = fillType
+        }
+    }
+
+    private data class OverrideRow(
+        var word: String,
+        var category: XbHighlightCategory,
+    )
+
+    private class OverrideTableModel : AbstractTableModel() {
+        private val rows = mutableListOf<OverrideRow>()
+
+        override fun getRowCount(): Int = rows.size
+
+        override fun getColumnCount(): Int = 2
+
+        override fun getColumnName(column: Int): String {
+            return when (column) {
+                0 -> "Word"
+                1 -> "Style"
+                else -> ""
+            }
+        }
+
+        override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean = true
+
+        override fun getValueAt(rowIndex: Int, columnIndex: Int): Any {
+            val row = rows[rowIndex]
+            return when (columnIndex) {
+                0 -> row.word
+                1 -> row.category
+                else -> ""
+            }
+        }
+
+        override fun setValueAt(aValue: Any?, rowIndex: Int, columnIndex: Int) {
+            val row = rows[rowIndex]
+            when (columnIndex) {
+                0 -> row.word = (aValue as? String).orEmpty()
+                1 -> row.category = aValue as? XbHighlightCategory ?: row.category
+            }
+            fireTableCellUpdated(rowIndex, columnIndex)
+        }
+
+        fun setOverrides(overrides: Map<String, XbHighlightCategory>) {
+            rows.clear()
+            overrides.entries
+                .sortedBy { it.key }
+                .forEach { (word, category) -> rows += OverrideRow(word, category) }
+            fireTableDataChanged()
+        }
+
+        fun toOverridesMap(): Map<String, XbHighlightCategory> {
+            return rows.asSequence()
+                .map { it.word.trim().lowercase() to it.category }
+                .filter { it.first.isNotEmpty() }
+                .toMap()
+        }
+
+        fun addEmptyRow() {
+            addRow("", XbHighlightCategory.entries.first())
+        }
+
+        fun addRow(word: String, category: XbHighlightCategory) {
+            rows += OverrideRow(word, category)
+            fireTableRowsInserted(rows.lastIndex, rows.lastIndex)
+        }
+
+        fun removeRows(indices: List<Int>) {
+            val distinct = indices.distinct().sortedDescending()
+            distinct.forEach { index ->
+                if (index in rows.indices) {
+                    rows.removeAt(index)
+                }
+            }
+            fireTableDataChanged()
+        }
+
+        fun updateRow(index: Int, word: String, category: XbHighlightCategory) {
+            if (index !in rows.indices) {
+                return
+            }
+            rows[index] = OverrideRow(word, category)
+            fireTableRowsUpdated(index, index)
         }
     }
 

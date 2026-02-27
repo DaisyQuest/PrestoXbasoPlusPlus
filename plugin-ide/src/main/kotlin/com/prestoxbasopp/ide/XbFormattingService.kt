@@ -7,9 +7,12 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiFile
+import com.prestoxbasopp.ui.XbUiSettingsState
+import com.prestoxbasopp.ui.XbUiSettingsStore
 
 class XbFormattingService(
     private val formatter: XbFormatter = XbFormatter(),
+    private val settingsStore: XbUiSettingsStore = XbUiSettingsStore.defaultsStore(),
 ) : AbstractDocumentFormattingService() {
     override fun getFeatures(): Set<FormattingService.Feature> = emptySet()
 
@@ -27,7 +30,8 @@ class XbFormattingService(
             return
         }
         val indentOptions = formattingContext.codeStyleSettings.getIndentOptionsByFile(file)
-        val formatted = formatText(document.text, indentOptions.INDENT_SIZE)
+        val resolvedIndentSize = resolveIndentSize(indentOptions.INDENT_SIZE)
+        val formatted = formatText(document.text, resolvedIndentSize)
         if (formatted == document.text) {
             return
         }
@@ -41,4 +45,10 @@ class XbFormattingService(
     }
 
     internal fun formatText(source: String, indentSize: Int): String = formatter.format(source, indentSize)
+
+    internal fun resolveIndentSize(codeStyleIndentSize: Int): Int {
+        val defaultIndent = XbUiSettingsState().tabSize
+        val settingsIndent = settingsStore.load().tabSize
+        return if (codeStyleIndentSize == defaultIndent) settingsIndent else codeStyleIndentSize
+    }
 }
