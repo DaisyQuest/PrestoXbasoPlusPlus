@@ -1,6 +1,7 @@
 package com.prestoxbasopp.ui
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.entry
 import org.junit.jupiter.api.Test
 
 class XbUiSettingsPanelSnapshotTest {
@@ -51,9 +52,8 @@ class XbUiSettingsPanelSnapshotTest {
     }
 
     @Test
-    fun `currentState ignores malformed override entries`() {
+    fun `currentState normalizes override rows and ignores blanks`() {
         val panel = XbUiSettingsPanel()
-
         panel.render(
             XbUiSettingsState(
                 highlightingPreferences = XbHighlightingPreferences(
@@ -62,6 +62,22 @@ class XbUiSettingsPanelSnapshotTest {
             ),
         )
 
-        assertThat(panel.currentState().highlightingPreferences.wordOverrides).containsEntry("ok", XbHighlightCategory.STRING)
+        panel.updateOverrideRow(0, "  MixedCase  ", XbHighlightCategory.DATE)
+        panel.updateOverrideRow(99, "ignored", XbHighlightCategory.ERROR)
+
+        assertThat(panel.currentState().highlightingPreferences.wordOverrides)
+            .containsEntry("mixedcase", XbHighlightCategory.DATE)
+            .doesNotContainKey("ignored")
+    }
+
+    @Test
+    fun `currentState keeps last duplicate override entry`() {
+        val panel = XbUiSettingsPanel()
+        panel.render(XbUiSettingsState())
+        panel.addOverrideRow("dupe", XbHighlightCategory.KEYWORD)
+        panel.addOverrideRow("DUPE", XbHighlightCategory.STRING)
+
+        assertThat(panel.currentState().highlightingPreferences.wordOverrides)
+            .containsOnly(entry("dupe", XbHighlightCategory.STRING))
     }
 }
