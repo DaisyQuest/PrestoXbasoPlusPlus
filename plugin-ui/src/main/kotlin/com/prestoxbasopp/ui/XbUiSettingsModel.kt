@@ -18,6 +18,10 @@ class XbUiSettingsModel(
         settingsStore.save(newState)
     }
 
+    fun reloadFromStore() {
+        state = settingsStore.load()
+    }
+
     fun resetToDefaults() {
         updateState(XbUiSettingsState())
     }
