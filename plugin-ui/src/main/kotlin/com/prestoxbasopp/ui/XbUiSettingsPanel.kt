@@ -12,10 +12,12 @@ import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.JSpinner
 import javax.swing.JTable
+import javax.swing.JTextField
 import javax.swing.DefaultCellEditor
 import javax.swing.ListSelectionModel
 import javax.swing.SpinnerNumberModel
 import javax.swing.table.AbstractTableModel
+import javax.swing.table.TableCellEditor
 
 class XbUiSettingsPanel(
     private val navigateToEditorThemeSettings: (() -> Unit)? = null,
@@ -103,6 +105,7 @@ class XbUiSettingsPanel(
     }
 
     override fun currentState(): XbUiSettingsState {
+        flushActiveEditors()
         val styleMappings = XbHighlightCategory.entries.associateWith { category ->
             styleSelectors.getValue(category).selectedItem as? XbHighlightCategory ?: category
         }
@@ -141,6 +144,31 @@ class XbUiSettingsPanel(
 
     internal fun addOverrideRow(word: String, category: XbHighlightCategory) {
         overrideTableModel.addRow(word, category)
+    }
+
+    internal fun setOverrideCellEditor(column: Int, editor: TableCellEditor) {
+        overrideTable.columnModel.getColumn(column).cellEditor = editor
+    }
+
+    internal fun beginOverrideCellEdit(row: Int, column: Int): Boolean {
+        return overrideTable.editCellAt(row, column)
+    }
+
+    internal fun updateActiveOverrideEditorValue(value: Any?) {
+        when (val component = overrideTable.editorComponent) {
+            is JTextField -> component.text = value?.toString().orEmpty()
+            is JComboBox<*> -> component.selectedItem = value
+        }
+    }
+
+    private fun flushActiveEditors() {
+        if (!overrideTable.isEditing) {
+            return
+        }
+        val editor = overrideTable.cellEditor ?: return
+        if (!editor.stopCellEditing()) {
+            editor.cancelCellEditing()
+        }
     }
 
     private fun GridBagConstraints.withRow(row: Int): GridBagConstraints {
