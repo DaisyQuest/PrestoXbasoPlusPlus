@@ -384,6 +384,29 @@ class XbIdeRegistrationTest {
     }
 
     @Test
+    fun `lexer adapter emits dedicated parenthesis token types in highlighting mode`() {
+        val lexer = XbLexerAdapter()
+        val buffer = "()[]{}"
+
+        lexer.start(buffer, 0, buffer.length, 0)
+
+        val tokens = mutableListOf<IElementType>()
+        while (lexer.tokenType != null) {
+            lexer.tokenType?.let { tokens += it }
+            lexer.advance()
+        }
+
+        assertThat(tokens).containsExactly(
+            XbParenTokenTypes.LEFT_PAREN,
+            XbParenTokenTypes.RIGHT_PAREN,
+            XbParenTokenTypes.LEFT_BRACKET,
+            XbParenTokenTypes.RIGHT_BRACKET,
+            XbParenTokenTypes.LEFT_BRACE,
+            XbParenTokenTypes.RIGHT_BRACE,
+        )
+    }
+
+    @Test
     fun `lexer adapter applies manual override and style remapping preferences`() {
         val provider = object : XbHighlightingPreferencesProvider {
             override fun load() = com.prestoxbasopp.ui.XbHighlightingPreferences(
@@ -496,6 +519,10 @@ class XbIdeRegistrationTest {
         assertThat(lexer.tokenType).isEqualTo(TokenType.WHITE_SPACE)
         lexer.advance()
         assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.IDENTIFIER))
+        lexer.advance()
+        assertThat(lexer.tokenType).isEqualTo(XbParenTokenTypes.LEFT_PAREN)
+        lexer.advance()
+        assertThat(lexer.tokenType).isEqualTo(XbParenTokenTypes.RIGHT_PAREN)
     }
 
     @Test
