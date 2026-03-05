@@ -84,3 +84,4 @@
 - Settings persistence regression coverage for configurable reset semantics (reload persisted values instead of forcing defaults) and tab-size continuity into formatting resolution paths.
 - Formatter indentation regression coverage for tab-aware formatting service behavior, including USE_TAB_CHARACTER handling and indent-size fallback branches.
 - Formatter fallback coverage now validates explicit `TAB_SIZE` overrides, UI-tab-size fallback when code style remains default, and invalid/zero indent guardrails so tab size remains user-configurable through formatter resolution.
+- Code style tab synchronization coverage for settings apply flow, including positive sync updates, no-op guardrails for non-positive tab sizes, and propagation into IntelliJ language indent indicators.
