@@ -22,7 +22,8 @@ class XbSettingsConfigurableTest {
         val store = XbUiSettingsStore(InMemoryKeyValueStore())
         val model = XbUiSettingsModel(XbIdeLanguageService(), store)
         val panel = XbUiSettingsPanel()
-        val configurable = XbSettingsConfigurable(model = model, panelFactory = { panel })
+        val synchronizer = RecordingTabSynchronizer()
+        val configurable = XbSettingsConfigurable(model = model, panelFactory = { panel }, codeStyleTabSynchronizer = synchronizer)
 
         configurable.createComponent()
 
@@ -42,6 +43,7 @@ class XbSettingsConfigurableTest {
 
         assertThat(configurable.isModified).isFalse()
         assertThat(model.state).isEqualTo(updatedState)
+        assertThat(synchronizer.lastSyncedTabSize).isEqualTo(2)
     }
 
     @Test
@@ -105,6 +107,14 @@ class XbSettingsConfigurableTest {
 
         override fun putString(key: String, value: String) {
             strings[key] = value
+        }
+    }
+
+    private class RecordingTabSynchronizer : XbCodeStyleTabSynchronizer {
+        var lastSyncedTabSize: Int? = null
+
+        override fun sync(tabSize: Int) {
+            lastSyncedTabSize = tabSize
         }
     }
 }

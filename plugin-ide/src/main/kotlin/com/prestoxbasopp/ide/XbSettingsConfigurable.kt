@@ -16,6 +16,7 @@ class XbSettingsConfigurable(
     private val panelFactory: ((() -> Unit) -> XbUiSettingsPanel) = { navigateAction ->
         XbUiSettingsPanel(navigateAction)
     },
+    private val codeStyleTabSynchronizer: XbCodeStyleTabSynchronizer = XbIdeCodeStyleTabSynchronizer(),
 ) : Configurable {
     private var presenter: XbUiSettingsPresenter? = null
     private var panel: XbUiSettingsPanel? = null
@@ -33,6 +34,7 @@ class XbSettingsConfigurable(
 
     override fun apply() {
         presenter?.applyChanges()
+        codeStyleTabSynchronizer.sync(model.state.tabSize)
     }
 
     override fun reset() {
