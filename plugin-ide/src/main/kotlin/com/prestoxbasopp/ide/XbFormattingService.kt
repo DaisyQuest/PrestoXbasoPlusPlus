@@ -54,19 +54,36 @@ class XbFormattingService(
         codeStyleTabSize: Int,
         useTabCharacter: Boolean,
     ): String {
-        val resolvedIndentSize = resolveIndentSize(codeStyleIndentSize)
+        val resolvedTabSize = resolveTabSize(codeStyleTabSize)
+        val resolvedIndentSize = resolveIndentSize(
+            codeStyleIndentSize = codeStyleIndentSize,
+            resolvedTabSize = resolvedTabSize,
+        )
         val indentUnit = if (useTabCharacter) {
             "\t"
         } else {
-            " ".repeat(resolveSpaceIndentSize(resolvedIndentSize, codeStyleTabSize))
+            " ".repeat(resolveSpaceIndentSize(resolvedIndentSize, resolvedTabSize))
         }
         return formatter.formatWithIndentUnit(source, indentUnit)
     }
 
-    internal fun resolveIndentSize(codeStyleIndentSize: Int): Int {
+    internal fun resolveTabSize(codeStyleTabSize: Int): Int {
         val defaultIndent = XbUiSettingsState().tabSize
-        val settingsIndent = settingsStore.load().tabSize
-        return if (codeStyleIndentSize == defaultIndent) settingsIndent else codeStyleIndentSize
+        val settingsIndent = settingsStore.load().tabSize.coerceAtLeast(1)
+        return if (codeStyleTabSize > 0 && codeStyleTabSize != defaultIndent) {
+            codeStyleTabSize
+        } else {
+            settingsIndent.coerceAtLeast(defaultIndent)
+        }
+    }
+
+    internal fun resolveIndentSize(codeStyleIndentSize: Int, resolvedTabSize: Int): Int {
+        val defaultIndent = XbUiSettingsState().tabSize
+        return when {
+            codeStyleIndentSize > 0 && codeStyleIndentSize != defaultIndent -> codeStyleIndentSize
+            codeStyleIndentSize > 0 && resolvedTabSize <= 0 -> codeStyleIndentSize
+            else -> resolvedTabSize
+        }
     }
 
     internal fun resolveSpaceIndentSize(indentSize: Int, tabSize: Int): Int {
