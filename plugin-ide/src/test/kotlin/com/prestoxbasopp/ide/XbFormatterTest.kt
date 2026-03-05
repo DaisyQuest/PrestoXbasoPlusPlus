@@ -28,6 +28,19 @@ class XbFormatterTest {
     }
 
     @Test
+    fun `formats blocks with tab indentation unit`() {
+        val source = """
+            if condition
+            return 1
+            endif
+        """.trimIndent()
+
+        val formatted = XbFormatter().formatWithIndentUnit(source, "\t")
+
+        assertThat(formatted).isEqualTo("if condition\n\treturn 1\nendif")
+    }
+
+    @Test
     fun `keeps blank lines intact`() {
         val source = "if condition\n\nendif"
         val formatted = XbFormatter().format(source, indentSize = 4)

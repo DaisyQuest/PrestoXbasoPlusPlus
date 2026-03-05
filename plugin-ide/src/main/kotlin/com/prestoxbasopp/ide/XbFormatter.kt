@@ -3,6 +3,10 @@ package com.prestoxbasopp.ide
 class XbFormatter {
     fun format(source: String, indentSize: Int = 4): String {
         val indentUnit = " ".repeat(indentSize.coerceAtLeast(0))
+        return formatWithIndentUnit(source, indentUnit)
+    }
+
+    internal fun formatWithIndentUnit(source: String, indentUnit: String): String {
         var indentLevel = 0
         val formattedLines = mutableListOf<String>()
         val lines = source.split("\n")

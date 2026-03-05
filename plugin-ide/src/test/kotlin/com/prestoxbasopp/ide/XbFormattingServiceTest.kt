@@ -9,14 +9,19 @@ import org.junit.jupiter.api.Test
 
 class XbFormattingServiceTest {
     @Test
-    fun `formatting service applies formatter to text`() {
+    fun `formatting service applies formatter to text using spaces`() {
         val source = """
             if foo
             bar()
             endif
         """.trimIndent()
 
-        val formatted = XbFormattingService().formatText(source, indentSize = 2)
+        val formatted = XbFormattingService().formatText(
+            source = source,
+            codeStyleIndentSize = 2,
+            codeStyleTabSize = 2,
+            useTabCharacter = false,
+        )
 
         assertThat(formatted).isEqualTo(
             """
@@ -25,6 +30,20 @@ class XbFormattingServiceTest {
             endif
             """.trimIndent(),
         )
+    }
+
+    @Test
+    fun `formatting service applies formatter to text using tabs when enabled`() {
+        val source = "if foo\nbar()\nendif"
+
+        val formatted = XbFormattingService().formatText(
+            source = source,
+            codeStyleIndentSize = 4,
+            codeStyleTabSize = 8,
+            useTabCharacter = true,
+        )
+
+        assertThat(formatted).isEqualTo("if foo\n\tbar()\nendif")
     }
 
     @Test
@@ -47,6 +66,27 @@ class XbFormattingServiceTest {
         )
 
         assertThat(service.resolveIndentSize(codeStyleIndentSize = 8)).isEqualTo(8)
+    }
+
+    @Test
+    fun `resolveSpaceIndentSize prefers positive indent size`() {
+        val service = XbFormattingService()
+
+        assertThat(service.resolveSpaceIndentSize(indentSize = 2, tabSize = 8)).isEqualTo(2)
+    }
+
+    @Test
+    fun `resolveSpaceIndentSize falls back to tab size when indent size is zero`() {
+        val service = XbFormattingService()
+
+        assertThat(service.resolveSpaceIndentSize(indentSize = 0, tabSize = 3)).isEqualTo(3)
+    }
+
+    @Test
+    fun `resolveSpaceIndentSize clamps negative tab size to zero`() {
+        val service = XbFormattingService()
+
+        assertThat(service.resolveSpaceIndentSize(indentSize = -1, tabSize = -2)).isEqualTo(0)
     }
 
     private class InMemoryKeyValueStore : XbKeyValueStore {
