@@ -128,6 +128,8 @@ class XbParser(private val tokens: List<Token>) {
                     parseDefaultCommandStatement()
                 } else if (isIdentifierKeyword(peek(), "alertbox")) {
                     parseAlertBoxStatement()
+                } else if (isIdentifierKeyword(peek(), "menu")) {
+                    parseMenuCommandStatement()
                 } else if (
                     isIdentifierKeyword(peek(), "class") ||
                     isIdentifierKeyword(peek(), "inline") ||
@@ -248,6 +250,31 @@ class XbParser(private val tokens: List<Token>) {
         return XbExpressionStatement(
             expression = XbIdentifierExpression(setToken.lexeme, rangeFrom(setToken, setToken)),
             range = rangeFrom(setToken, endToken),
+        )
+    }
+
+    private fun parseMenuCommandStatement(): XbStatement {
+        val menuToken = advance()
+        if (match(TokenType.TO) && canStartExpression(peek().type)) {
+            parseExpression(0)
+        }
+        while (!isAtEnd() && !isTerminatorToken(peek())) {
+            if (peek().type in MENU_COMMAND_BOUNDARY_TOKENS) {
+                break
+            }
+            if (match(TokenType.SEMICOLON)) {
+                continue
+            }
+            if (canStartExpression(peek().type)) {
+                parseExpression(0)
+            } else {
+                advance()
+            }
+        }
+        val endToken = previousOr(menuToken)
+        return XbExpressionStatement(
+            expression = XbIdentifierExpression(menuToken.lexeme, rangeFrom(menuToken, menuToken)),
+            range = rangeFrom(menuToken, endToken),
         )
     }
 
@@ -766,7 +793,10 @@ class XbParser(private val tokens: List<Token>) {
 
     private fun parseParameterList(): List<String> {
         if (!match(TokenType.LPAREN)) {
-            recordError("Expected '(' to start parameter list at ${peek().startOffset}")
+            if (check(TokenType.RPAREN)) {
+                recordError("Expected '(' to start parameter list at ${peek().startOffset}")
+                advance()
+            }
             return emptyList()
         }
         val parameters = mutableListOf<String>()
@@ -1461,6 +1491,24 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.EXIT,
             TokenType.QUESTION,
             TokenType.AT,
+        )
+
+        private val MENU_COMMAND_BOUNDARY_TOKENS = setOf(
+            TokenType.IF,
+            TokenType.FOR,
+            TokenType.DO,
+            TokenType.WHILE,
+            TokenType.RETURN,
+            TokenType.LOCAL,
+            TokenType.FUNCTION,
+            TokenType.PROCEDURE,
+            TokenType.BEGIN,
+            TokenType.BREAK,
+            TokenType.WAIT,
+            TokenType.EXIT,
+            TokenType.QUESTION,
+            TokenType.AT,
+            TokenType.EOF,
         )
 
         private val DECLARATION_START_TOKENS = setOf(

@@ -6,11 +6,63 @@ import com.prestoxbasopp.core.ast.XbCallExpression
 import com.prestoxbasopp.core.ast.XbAssignmentStatement
 import com.prestoxbasopp.core.ast.XbIdentifierExpression
 import com.prestoxbasopp.core.ast.XbLocalDeclarationStatement
+import com.prestoxbasopp.core.ast.XbProcedureDeclaration
 import com.prestoxbasopp.core.ast.XbUnaryExpression
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class XbParserProductionCompatibilityTest {
+    @Test
+    fun `parses procedure and function declarations without parenthesized parameter lists`() {
+        val source = """
+            PROCEDURE Main
+            LOCAL nMenuItem := 1
+            MENU TO nMenuItem
+            RETURN
+
+            FUNCTION SelectDbfFile
+            RETURN .T.
+
+            PROCEDURE QueryDbfFile
+            RETURN
+        """.trimIndent()
+
+        val result = XbParser.parse(source)
+
+        assertThat(result.errors).isEmpty()
+        assertThat(result.program!!.statements).hasSize(3)
+        val main = result.program!!.statements[0] as XbProcedureDeclaration
+        assertThat(main.name).isEqualTo("Main")
+        assertThat(main.parameters).isEmpty()
+        assertThat(main.body.statements).hasSize(3)
+        val menu = main.body.statements[1] as XbExpressionStatement
+        assertThat((menu.expression as XbIdentifierExpression).name).isEqualTo("MENU")
+
+        val select = result.program!!.statements[1] as XbFunctionDeclaration
+        assertThat(select.name).isEqualTo("SelectDbfFile")
+        assertThat(select.parameters).isEmpty()
+
+        val query = result.program!!.statements[2] as XbProcedureDeclaration
+        assertThat(query.name).isEqualTo("QueryDbfFile")
+        assertThat(query.parameters).isEmpty()
+    }
+
+    @Test
+    fun `reports parameter list error for stray closing parenthesis in declaration`() {
+        val source = """
+            FUNCTION Broken)
+            RETURN .T.
+            ENDFUNCTION
+        """.trimIndent()
+
+        val result = XbParser.parse(source)
+
+        assertThat(result.errors).containsExactly("Expected '(' to start parameter list at 15")
+        val function = result.program!!.statements.single() as XbFunctionDeclaration
+        assertThat(function.name).isEqualTo("Broken")
+        assertThat(function.parameters).isEmpty()
+    }
+
     @Test
     fun `parses pass-by-reference arguments using at prefix in function calls`() {
         val source = """
