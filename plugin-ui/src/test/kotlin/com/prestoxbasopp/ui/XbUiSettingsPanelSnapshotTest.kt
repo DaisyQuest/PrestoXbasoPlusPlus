@@ -3,6 +3,8 @@ package com.prestoxbasopp.ui
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.entry
 import org.junit.jupiter.api.Test
+import javax.swing.DefaultCellEditor
+import javax.swing.JTextField
 
 class XbUiSettingsPanelSnapshotTest {
     @Test
@@ -79,5 +81,38 @@ class XbUiSettingsPanelSnapshotTest {
 
         assertThat(panel.currentState().highlightingPreferences.wordOverrides)
             .containsOnly(entry("dupe", XbHighlightCategory.STRING))
+    }
+
+    @Test
+    fun `currentState commits in-progress word override edit`() {
+        val panel = XbUiSettingsPanel()
+        panel.render(XbUiSettingsState())
+        panel.addOverrideRow("old", XbHighlightCategory.KEYWORD)
+
+        val started = panel.beginOverrideCellEdit(0, 0)
+        assertThat(started).isTrue()
+        panel.updateActiveOverrideEditorValue("  NewWord  ")
+
+        assertThat(panel.currentState().highlightingPreferences.wordOverrides)
+            .containsOnly(entry("newword", XbHighlightCategory.KEYWORD))
+    }
+
+    @Test
+    fun `currentState cancels edit when editor rejects commit`() {
+        val panel = XbUiSettingsPanel()
+        panel.render(XbUiSettingsState())
+        panel.addOverrideRow("stable", XbHighlightCategory.STRING)
+        panel.setOverrideCellEditor(0, RejectingTextCellEditor())
+
+        val started = panel.beginOverrideCellEdit(0, 0)
+        assertThat(started).isTrue()
+        panel.updateActiveOverrideEditorValue("transient")
+
+        assertThat(panel.currentState().highlightingPreferences.wordOverrides)
+            .containsOnly(entry("stable", XbHighlightCategory.STRING))
+    }
+
+    private class RejectingTextCellEditor : DefaultCellEditor(JTextField()) {
+        override fun stopCellEditing(): Boolean = false
     }
 }
