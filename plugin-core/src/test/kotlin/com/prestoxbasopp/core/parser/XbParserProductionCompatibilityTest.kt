@@ -461,6 +461,57 @@ class XbParserProductionCompatibilityTest {
         assertThat(result.program!!.statements).isNotEmpty()
     }
 
+
+    @Test
+    fun `parses local array declaration with bracket bound without cascading endif errors`() {
+        val source = """
+            FUNCTION Web_Browser(cUrl, lAllowNavigate)
+            LOCAL GetList[0], oWebBrowser, oToolBar, GetOptions, oStatus
+            IF lAllowNavigate
+              RETURN NIL
+            ENDIF
+            RETURN NIL
+            ENDFUNCTION
+        """.trimIndent()
+
+        val result = XbParser.parse(source)
+
+        assertThat(result.errors).isEmpty()
+        val function = result.program!!.statements.single() as XbFunctionDeclaration
+        val local = function.body.statements[0] as com.prestoxbasopp.core.ast.XbLocalDeclarationStatement
+        assertThat(local.bindings.map { it.name }).containsExactly(
+            "GetList[]",
+            "oWebBrowser",
+            "oToolBar",
+            "GetOptions",
+            "oStatus",
+        )
+    }
+
+    @Test
+    fun `parses postfix increment and decrement statements in loops`() {
+        val source = """
+            FUNCTION FormatJSONText(p_cJSONText)
+            LOCAL i := 0, nIndent := 0
+            nIndent++
+            nIndent--
+            FOR i := 1 TO Len(p_cJSONText)
+              nIndent++
+            NEXT
+            RETURN nIndent
+            ENDFUNCTION
+        """.trimIndent()
+
+        val result = XbParser.parse(source)
+
+        assertThat(result.errors).isEmpty()
+        val function = result.program!!.statements.single() as XbFunctionDeclaration
+        val incStmt = function.body.statements[1] as XbExpressionStatement
+        val decStmt = function.body.statements[2] as XbExpressionStatement
+        assertThat((incStmt.expression as com.prestoxbasopp.core.ast.XbUnaryExpression).operator).isEqualTo("++")
+        assertThat((decStmt.expression as com.prestoxbasopp.core.ast.XbUnaryExpression).operator).isEqualTo("--")
+    }
+
     @Test
     fun `parses string-join for loop with endif and next terminators`() {
         val source = """
