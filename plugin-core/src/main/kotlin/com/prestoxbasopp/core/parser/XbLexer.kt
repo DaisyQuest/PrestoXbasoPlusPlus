@@ -36,10 +36,18 @@ class XbLexer(
             current.isLetter() || current == '_' -> readIdentifier(start)
             current.isDigit() -> readNumber(start)
             current == '"' || current == '\'' -> readString(start, current)
-            current == '+' -> token(TokenType.PLUS, "+", start, index)
+            current == '+' -> {
+                if (match('+')) {
+                    token(TokenType.INCREMENT, "++", start, index)
+                } else {
+                    token(TokenType.PLUS, "+", start, index)
+                }
+            }
             current == '-' -> {
                 if (match('>')) {
                     token(TokenType.ARROW, "->", start, index)
+                } else if (match('-')) {
+                    token(TokenType.DECREMENT, "--", start, index)
                 } else {
                     token(TokenType.MINUS, "-", start, index)
                 }

@@ -528,6 +528,17 @@ class XbParser(private val tokens: List<Token>) {
                 recordError("Expected identifier after LOCAL at ${peek().startOffset}")
                 break
             }
+            var bindingName = nameToken.lexeme
+            var bindingEndOffset = nameToken.endOffset
+            if (match(TokenType.LBRACKET)) {
+                val sizeExpr = parseExpression(0)
+                bindingEndOffset = sizeExpr?.range?.endOffset ?: previousOr(nameToken).endOffset
+                if (!match(TokenType.RBRACKET)) {
+                    recordError("Expected ']' after LOCAL array bound at ${peek().startOffset}")
+                }
+                bindingEndOffset = previousOr(nameToken).endOffset
+                bindingName += "[]"
+            }
             val initializer = if (match(TokenType.ASSIGN)) {
                 parseExpression(0) ?: run {
                     recordError("Expected expression after ':=' at ${peek().startOffset}")
@@ -538,9 +549,9 @@ class XbParser(private val tokens: List<Token>) {
             }
             val bindingRange = rangeFromOffsets(
                 nameToken.startOffset,
-                initializer?.range?.endOffset ?: nameToken.endOffset,
+                initializer?.range?.endOffset ?: bindingEndOffset,
             )
-            bindings += XbLocalBinding(nameToken.lexeme, initializer, bindingRange)
+            bindings += XbLocalBinding(bindingName, initializer, bindingRange)
         } while (match(TokenType.COMMA))
         match(TokenType.SEMICOLON)
         val endToken = previousOr(localToken)
@@ -840,7 +851,7 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.TRUE -> XbLiteralExpression(XbLiteralKind.BOOLEAN, "true", rangeFrom(token, token))
             TokenType.FALSE -> XbLiteralExpression(XbLiteralKind.BOOLEAN, "false", rangeFrom(token, token))
             TokenType.IDENTIFIER, TokenType.INDEX -> XbIdentifierExpression(token.lexeme, rangeFrom(token, token))
-            TokenType.MINUS, TokenType.PLUS, TokenType.NOT, TokenType.AMP, TokenType.AT -> {
+            TokenType.MINUS, TokenType.PLUS, TokenType.NOT, TokenType.AMP, TokenType.AT, TokenType.INCREMENT, TokenType.DECREMENT -> {
                 val operator = token.lexeme
                 val expression = parseExpression(PREFIX_PRECEDENCE) ?: run {
                     recordError("Expected expression after unary '$operator' at ${peek().startOffset}")
@@ -1058,6 +1069,14 @@ class XbParser(private val tokens: List<Token>) {
                         }
                         else -> currentExpression
                     }
+                }
+                TokenType.INCREMENT, TokenType.DECREMENT -> {
+                    val opToken = advance()
+                    XbUnaryExpression(
+                        operator = opToken.lexeme,
+                        expression = currentExpression,
+                        range = rangeFromOffsets(currentExpression.range.startOffset, opToken.endOffset),
+                    )
                 }
                 else -> return currentExpression
             }
@@ -1339,6 +1358,8 @@ class XbParser(private val tokens: List<Token>) {
             TokenType.NOT,
             TokenType.AMP,
             TokenType.AT,
+            TokenType.INCREMENT,
+            TokenType.DECREMENT,
             TokenType.LPAREN,
             TokenType.LBRACE,
             -> true

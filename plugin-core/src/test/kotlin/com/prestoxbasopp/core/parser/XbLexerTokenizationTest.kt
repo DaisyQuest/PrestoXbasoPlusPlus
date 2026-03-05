@@ -130,6 +130,21 @@ class XbLexerTokenizationTest {
         assertThat(tokens[1].lexeme).isEqualTo("->")
     }
 
+
+    @Test
+    fun `tokenizes increment and decrement operators`() {
+        val tokens = XbLexer("nProcRec++ nIndent--").lex().filter { it.type != TokenType.EOF }
+
+        assertThat(tokens.map { it.type }).containsExactly(
+            TokenType.IDENTIFIER,
+            TokenType.INCREMENT,
+            TokenType.IDENTIFIER,
+            TokenType.DECREMENT,
+        )
+        assertThat(tokens[1].lexeme).isEqualTo("++")
+        assertThat(tokens[3].lexeme).isEqualTo("--")
+    }
+
     @Test
     fun `tokenizes static as local keyword for declaration parsing`() {
         val tokens = XbLexer("STATIC sFlag := .T.").lex().filter { it.type != TokenType.EOF }
