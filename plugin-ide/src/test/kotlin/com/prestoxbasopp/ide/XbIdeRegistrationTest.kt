@@ -476,4 +476,35 @@ class XbIdeRegistrationTest {
         assertThat(slashTokenCount).isEqualTo(10_000)
     }
 
+    @Test
+    fun `lexer adapter falls back to parser token categories when syntax highlighting is disabled`() {
+        val provider = object : XbHighlightingPreferencesProvider {
+            override fun load() = com.prestoxbasopp.ui.XbHighlightingPreferences(
+                styleMappings = com.prestoxbasopp.ui.XbHighlightCategory.entries.associateWith { com.prestoxbasopp.ui.XbHighlightCategory.ERROR },
+                wordOverrides = mapOf("function" to com.prestoxbasopp.ui.XbHighlightCategory.STRING),
+            )
+
+            override fun isSyntaxHighlightingEnabled(): Boolean = false
+        }
+        val lexer = XbLexerAdapter(provider)
+        val buffer = "function Build()"
+
+        lexer.start(buffer, 0, buffer.length, 0)
+
+        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.KEYWORD))
+        lexer.advance()
+        assertThat(lexer.tokenType).isEqualTo(TokenType.WHITE_SPACE)
+        lexer.advance()
+        assertThat(lexer.tokenType).isEqualTo(XbHighlighterTokenSet.forToken(CoreTokenType.IDENTIFIER))
+    }
+
+    @Test
+    fun `highlighting preferences provider defaults syntax highlighting to enabled`() {
+        val provider = object : XbHighlightingPreferencesProvider {
+            override fun load() = com.prestoxbasopp.ui.XbHighlightingPreferences()
+        }
+
+        assertThat(provider.isSyntaxHighlightingEnabled()).isTrue()
+    }
+
 }

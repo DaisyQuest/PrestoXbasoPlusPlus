@@ -71,18 +71,24 @@ class XbLexerAdapter(
             }
         }
 
-        val tokenStyles = XbSemanticTokenClassifier().classify(coreTokens)
-        val preferences = preferencesProvider.load().withNormalizedOverrides()
+        val syntaxHighlightingEnabled = mode == Mode.HIGHLIGHTING && preferencesProvider.isSyntaxHighlightingEnabled()
+        val tokenStyles = if (syntaxHighlightingEnabled) XbSemanticTokenClassifier().classify(coreTokens) else emptyList()
+        val preferences = if (syntaxHighlightingEnabled) {
+            preferencesProvider.load().withNormalizedOverrides()
+        } else {
+            XbHighlightingPreferences.defaultStyleMappings().let { XbHighlightingPreferences(styleMappings = it) }
+        }
         val expanded = mutableListOf<LexerToken>()
         var cursor = 0
 
-        for ((token, style) in coreTokens.zip(tokenStyles)) {
+        for ((index, token) in coreTokens.withIndex()) {
             val start = token.range.startOffset.coerceIn(cursor, source.length)
             val end = token.range.endOffset.coerceIn(start, source.length)
             if (start > cursor) {
                 expanded += LexerToken(TokenType.WHITE_SPACE, cursor, start)
             }
-            val elementType = elementTypeFor(token, style, preferences)
+            val semanticStyle = tokenStyles.getOrNull(index) ?: XbHighlightStyle.IDENTIFIER
+            val elementType = elementTypeFor(token, semanticStyle, preferences, syntaxHighlightingEnabled)
             if (end > start) {
                 expanded += LexerToken(
                     elementType,
@@ -102,8 +108,9 @@ class XbLexerAdapter(
         token: XbToken,
         style: XbHighlightStyle,
         preferences: XbHighlightingPreferences,
+        syntaxHighlightingEnabled: Boolean,
     ): IElementType {
-        if (mode == Mode.PARSING) {
+        if (mode == Mode.PARSING || !syntaxHighlightingEnabled) {
             if (token.type == XbLexerTokenType.PUNCTUATION) {
                 return when (token.text) {
                     "(" -> XbParenTokenTypes.LEFT_PAREN

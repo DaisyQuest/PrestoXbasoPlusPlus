@@ -79,3 +79,4 @@
 - Reverse engineering DAO generation coverage now validates commit surface generation (`commit` class method + alias macro), DB-manager utility emission/default wiring, and commit delegation through generated manager/repository integration.
 - IntelliJ Platform Gradle Plugin 2.11.0 migration coverage for compatibility validator rules (new `org.jetbrains.intellij.platform` plugin detection, `intellijPlatform/pluginConfiguration/ideaVersion` validation, and legacy plugin-id compatibility guard).
 - Editor ergonomics coverage for macro-header malformed UTF-8 resilience, commenter shortcuts, brace matching token wiring, find-usages provider registration, and structure-view default auto-expand behavior.
+- Syntax highlighting readiness coverage for runtime enable/disable preference bridging, lexer fallback tokenization when highlighting is disabled, and provider default behavior guarantees.
