@@ -55,7 +55,7 @@ class XbUiSettingsPresenterTest {
     }
 
     @Test
-    fun `reset restores defaults in model and view`() {
+    fun `reset reloads persisted settings into model and view`() {
         val model = modelWithState(
             XbUiSettingsState(
                 enableSyntaxHighlighting = false,
@@ -67,10 +67,26 @@ class XbUiSettingsPresenterTest {
         val view = FakeSettingsView()
         val presenter = XbUiSettingsPresenter(model, view)
 
+        val persisted = XbUiSettingsState(
+            enableSyntaxHighlighting = true,
+            showInlayHints = true,
+            tabSize = 7,
+            completionLimit = 70,
+        )
+        model.updateState(persisted)
+        view.updateState(
+            XbUiSettingsState(
+                enableSyntaxHighlighting = false,
+                showInlayHints = false,
+                tabSize = 2,
+                completionLimit = 15,
+            ),
+        )
+
         presenter.reset()
 
-        assertThat(model.state).isEqualTo(XbUiSettingsState())
-        assertThat(view.renderedState).isEqualTo(XbUiSettingsState())
+        assertThat(model.state).isEqualTo(persisted)
+        assertThat(view.renderedState).isEqualTo(persisted)
     }
 
     private fun modelWithState(state: XbUiSettingsState): XbUiSettingsModel {

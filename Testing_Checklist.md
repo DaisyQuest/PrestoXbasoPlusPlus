@@ -81,3 +81,4 @@
 - Editor ergonomics coverage for macro-header malformed UTF-8 resilience, commenter shortcuts, brace matching token wiring, find-usages provider registration, and structure-view default auto-expand behavior.
 - Syntax highlighting readiness coverage for runtime enable/disable preference bridging, lexer fallback tokenization when highlighting is disabled, and provider default behavior guarantees.
 - Parenthesis matching robustness coverage for highlighting-mode lexer tokenization and disabled-highlighting fallback, guaranteeing brace tokens remain available for IntelliJ paired-brace features.
+- Settings persistence regression coverage for configurable reset semantics (reload persisted values instead of forcing defaults) and tab-size continuity into formatting resolution paths.

@@ -22,7 +22,7 @@ class XbUiSettingsPresenter(
     }
 
     fun reset() {
-        model.resetToDefaults()
+        model.reloadFromStore()
         view.render(model.state)
     }
 }

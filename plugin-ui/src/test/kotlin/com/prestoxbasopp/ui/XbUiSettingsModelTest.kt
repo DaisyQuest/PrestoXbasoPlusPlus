@@ -39,6 +39,39 @@ class XbUiSettingsModelTest {
         assertThat(store.load()).isEqualTo(newState)
     }
 
+
+    @Test
+    fun `reloadFromStore pulls latest persisted values`() {
+        val service = object : XbLanguageService {
+            override fun languageId(): String = "xbase++"
+        }
+        val storage = InMemoryKeyValueStore()
+        val store = XbUiSettingsStore(storage)
+        val model = XbUiSettingsModel(service, store)
+
+        model.updateState(
+            XbUiSettingsState(
+                enableSyntaxHighlighting = false,
+                showInlayHints = false,
+                tabSize = 2,
+                completionLimit = 80,
+            ),
+        )
+
+        store.save(
+            XbUiSettingsState(
+                enableSyntaxHighlighting = true,
+                showInlayHints = true,
+                tabSize = 6,
+                completionLimit = 120,
+            ),
+        )
+
+        model.reloadFromStore()
+
+        assertThat(model.state).isEqualTo(store.load())
+    }
+
     @Test
     fun `reset to defaults restores default state`() {
         val service = object : XbLanguageService {

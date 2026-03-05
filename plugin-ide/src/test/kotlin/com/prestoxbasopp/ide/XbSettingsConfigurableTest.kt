@@ -45,11 +45,19 @@ class XbSettingsConfigurableTest {
     }
 
     @Test
-    fun `reset returns panel state to defaults`() {
+    fun `reset returns panel state to persisted settings`() {
         val store = XbUiSettingsStore(InMemoryKeyValueStore())
         val model = XbUiSettingsModel(XbIdeLanguageService(), store)
         val panel = XbUiSettingsPanel()
         val configurable = XbSettingsConfigurable(model = model, panelFactory = { panel })
+
+        val persistedState = XbUiSettingsState(
+            enableSyntaxHighlighting = true,
+            showInlayHints = true,
+            tabSize = 3,
+            completionLimit = 55,
+        )
+        model.updateState(persistedState)
 
         configurable.createComponent()
         panel.render(
@@ -63,7 +71,7 @@ class XbSettingsConfigurableTest {
 
         configurable.reset()
 
-        assertThat(panel.currentState()).isEqualTo(XbUiSettingsState())
+        assertThat(panel.currentState()).isEqualTo(persistedState)
     }
 
     private fun modelWithStore(store: XbKeyValueStore = InMemoryKeyValueStore()): XbUiSettingsModel {
