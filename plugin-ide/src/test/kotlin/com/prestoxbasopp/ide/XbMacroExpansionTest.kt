@@ -240,6 +240,21 @@ class XbMacroExpansionTest {
     }
 
     @Test
+    fun `default header file system tolerates malformed utf8 bytes`() {
+        val file = kotlin.io.path.createTempFile(prefix = "xb-malformed", suffix = ".ch")
+        try {
+            java.nio.file.Files.write(file, byteArrayOf(0x23, 0x64, 0x65, 0x66, 0x69, 0x6E, 0x65, 0x20, 0x41, 0x20, 0xC3.toByte(), 0x28))
+
+            val text = XbDefaultHeaderFileSystem.readText(file)
+
+            assertThat(text).contains("#define A")
+            assertThat(text).contains("�(")
+        } finally {
+            java.nio.file.Files.deleteIfExists(file)
+        }
+    }
+
+    @Test
     fun `table model exposes macro columns`() {
         val model = XbMacroExpansionTableModel()
         model.entries = listOf(

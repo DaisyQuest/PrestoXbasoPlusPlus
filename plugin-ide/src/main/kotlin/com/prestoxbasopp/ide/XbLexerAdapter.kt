@@ -104,6 +104,17 @@ class XbLexerAdapter(
         preferences: XbHighlightingPreferences,
     ): IElementType {
         if (mode == Mode.PARSING) {
+            if (token.type == XbLexerTokenType.PUNCTUATION) {
+                return when (token.text) {
+                    "(" -> XbParenTokenTypes.LEFT_PAREN
+                    ")" -> XbParenTokenTypes.RIGHT_PAREN
+                    "[" -> XbParenTokenTypes.LEFT_BRACKET
+                    "]" -> XbParenTokenTypes.RIGHT_BRACKET
+                    "{" -> XbParenTokenTypes.LEFT_BRACE
+                    "}" -> XbParenTokenTypes.RIGHT_BRACE
+                    else -> XbHighlighterTokenSet.forToken(token.type)
+                }
+            }
             return XbHighlighterTokenSet.forToken(token.type)
         }
 
