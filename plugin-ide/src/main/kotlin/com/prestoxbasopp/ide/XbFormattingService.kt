@@ -30,8 +30,12 @@ class XbFormattingService(
             return
         }
         val indentOptions = formattingContext.codeStyleSettings.getIndentOptionsByFile(file)
-        val resolvedIndentSize = resolveIndentSize(indentOptions.INDENT_SIZE)
-        val formatted = formatText(document.text, resolvedIndentSize)
+        val formatted = formatText(
+            source = document.text,
+            codeStyleIndentSize = indentOptions.INDENT_SIZE,
+            codeStyleTabSize = indentOptions.TAB_SIZE,
+            useTabCharacter = indentOptions.USE_TAB_CHARACTER,
+        )
         if (formatted == document.text) {
             return
         }
@@ -44,11 +48,28 @@ class XbFormattingService(
         }
     }
 
-    internal fun formatText(source: String, indentSize: Int): String = formatter.format(source, indentSize)
+    internal fun formatText(
+        source: String,
+        codeStyleIndentSize: Int,
+        codeStyleTabSize: Int,
+        useTabCharacter: Boolean,
+    ): String {
+        val resolvedIndentSize = resolveIndentSize(codeStyleIndentSize)
+        val indentUnit = if (useTabCharacter) {
+            "\t"
+        } else {
+            " ".repeat(resolveSpaceIndentSize(resolvedIndentSize, codeStyleTabSize))
+        }
+        return formatter.formatWithIndentUnit(source, indentUnit)
+    }
 
     internal fun resolveIndentSize(codeStyleIndentSize: Int): Int {
         val defaultIndent = XbUiSettingsState().tabSize
         val settingsIndent = settingsStore.load().tabSize
         return if (codeStyleIndentSize == defaultIndent) settingsIndent else codeStyleIndentSize
+    }
+
+    internal fun resolveSpaceIndentSize(indentSize: Int, tabSize: Int): Int {
+        return if (indentSize > 0) indentSize else tabSize.coerceAtLeast(0)
     }
 }
