@@ -156,11 +156,29 @@ class XbIdeRegistrationTest {
                 .find(pluginXml)
                 ?.groupValues
                 ?.get(1)
+        val commenterClass =
+            Regex("""<lang\.commenter\s+[^>]*implementationClass="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
+        val braceMatcherClass =
+            Regex("""<lang\.braceMatcher\s+[^>]*implementationClass="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
+        val findUsagesProviderClass =
+            Regex("""<lang\.findUsagesProvider\s+[^>]*implementationClass="([^"]+)"""")
+                .find(pluginXml)
+                ?.groupValues
+                ?.get(1)
 
         assertThat(foldingBuilderClass).isEqualTo("com.prestoxbasopp.ide.XbFoldingBuilder")
         assertThat(formattingServiceClass).isEqualTo("com.prestoxbasopp.ide.XbFormattingService")
         assertThat(renameHandlerClass).isEqualTo("com.prestoxbasopp.ide.XbRenameHandler")
         assertThat(editorListenerClass).isEqualTo("com.prestoxbasopp.ide.XbIfBlockHighlighter")
+        assertThat(commenterClass).isEqualTo("com.prestoxbasopp.ide.XbCommenter")
+        assertThat(braceMatcherClass).isEqualTo("com.prestoxbasopp.ide.XbBraceMatcher")
+        assertThat(findUsagesProviderClass).isEqualTo("com.prestoxbasopp.ide.XbFindUsagesProvider")
     }
 
     @Test

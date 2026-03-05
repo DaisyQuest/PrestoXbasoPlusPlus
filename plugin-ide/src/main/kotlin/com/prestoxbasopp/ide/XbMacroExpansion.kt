@@ -2,6 +2,7 @@ package com.prestoxbasopp.ide
 
 import com.prestoxbasopp.core.lexer.XbLexer
 import com.prestoxbasopp.core.lexer.XbTokenType
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -264,7 +265,7 @@ object XbDefaultHeaderFileSystem : XbHeaderFileSystem {
 
     override fun exists(path: Path): Boolean = Files.exists(path)
 
-    override fun readText(path: Path): String = Files.readString(path)
+    override fun readText(path: Path): String = String(Files.readAllBytes(path), StandardCharsets.UTF_8)
 }
 
 data class XbMacroExpansionPresentation(

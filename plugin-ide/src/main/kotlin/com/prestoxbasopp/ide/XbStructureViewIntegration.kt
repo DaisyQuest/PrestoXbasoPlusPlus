@@ -45,12 +45,21 @@ private class XbStructureViewModel(
         XbStructureViewElement(psiFile, rootItem),
     ),
 ) : StructureViewModel by delegate,
-    StructureViewModel.ElementInfoProvider {
+    StructureViewModel.ElementInfoProvider,
+    StructureViewModel.ExpandInfoProvider {
     override fun isAlwaysShowsPlus(element: StructureViewTreeElement): Boolean = when (element) {
         is XbStructureViewElement -> element.hasChildren()
         else -> false
     }
 
+
+
+    override fun isAutoExpand(element: StructureViewTreeElement): Boolean = when (element) {
+        is XbStructureViewElement -> element.isRoot()
+        else -> false
+    }
+
+    override fun isSmartExpand(): Boolean = false
     override fun isAlwaysLeaf(element: StructureViewTreeElement): Boolean = when (element) {
         is XbStructureViewElement -> !element.hasChildren()
         else -> false
@@ -85,6 +94,8 @@ private class XbStructureViewElement(
     override fun canNavigateToSource(): Boolean = canNavigate()
 
     fun hasChildren(): Boolean = item.children.isNotEmpty()
+
+    fun isRoot(): Boolean = item.elementType == com.prestoxbasopp.core.psi.XbPsiElementType.FILE
 
     private fun findPsiElement(): PsiElement? {
         if (item.elementType == com.prestoxbasopp.core.psi.XbPsiElementType.FILE) {

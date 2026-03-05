@@ -30,6 +30,12 @@
                                implementationClass="com.prestoxbasopp.ide.XbParserDefinition" />
         <lang.syntaxHighlighterFactory language="Xbase++"
                                        implementationClass="com.prestoxbasopp.ide.XbSyntaxHighlighterFactory" />
+        <lang.commenter language="Xbase++"
+                        implementationClass="com.prestoxbasopp.ide.XbCommenter" />
+        <lang.braceMatcher language="Xbase++"
+                           implementationClass="com.prestoxbasopp.ide.XbBraceMatcher" />
+        <lang.findUsagesProvider language="Xbase++"
+                                 implementationClass="com.prestoxbasopp.ide.XbFindUsagesProvider" />
         <lang.psiStructureViewFactory language="Xbase++"
                                       implementationClass="com.prestoxbasopp.ide.XbStructureViewBuilderFactory" />
         <lang.foldingBuilder language="Xbase++"
