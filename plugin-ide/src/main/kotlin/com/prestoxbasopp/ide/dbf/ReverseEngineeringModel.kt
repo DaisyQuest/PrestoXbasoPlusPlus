@@ -176,6 +176,7 @@ object ReverseEngineeringWorkflow {
                 GeneratedMethod("update", aliasIf("u", aliasesEnabled)),
                 GeneratedMethod("upsert", aliasIf("us", aliasesEnabled)),
                 GeneratedMethod("delete", aliasIf("d", aliasesEnabled)),
+                GeneratedMethod("commit", aliasIf("c", aliasesEnabled)),
             )
         }
         if (profile == ApiProfile.CRUD_RELATIONAL || profile == ApiProfile.FULL) {
@@ -256,9 +257,36 @@ object ReverseEngineeringWorkflow {
             val aliasComment = aliasByField[field]?.let { " // alias: $it" }.orEmpty()
             "    VAR $field$aliasComment"
         }
-        val classMethodsSection = methods.filter { it.methodName in setOf("load", "findBy", "insert", "update", "upsert", "delete") }.joinToString("\n") { method ->
+        val classMethodsSection = methods.filter { it.methodName in setOf("load", "findBy", "insert", "update", "upsert", "delete", "commit") }.joinToString("\n") { method ->
             val aliasLine = method.alias?.let { "\n    METHOD $it(...) INLINE ::${method.methodName}(...)" }.orEmpty()
             "    CLASS METHOD ${method.methodName}(...)$aliasLine"
+        }
+        val dbManagerUtilitySection = if (profile == ApiProfile.READ_ONLY) "" else {
+            """
+CLASS DaoDbManager
+    CLASS METHOD default()
+    METHOD init(repository)
+    METHOD repository()
+    METHOD commit()
+ENDCLASS
+
+CLASS METHOD DaoDbManager:default()
+    RETURN DaoDbManager():init(DaoRepositoryProvider():default())
+
+METHOD DaoDbManager:init(repository)
+    ::repositoryRef := repository
+RETURN Self
+
+METHOD DaoDbManager:repository()
+    RETURN ::repositoryRef
+
+METHOD DaoDbManager:commit()
+    LOCAL repo := ::repository()
+    IF repo == NIL
+        RETURN .F.
+    ENDIF
+    RETURN repo:commit()
+""".trimIndent()
         }
         val fieldHelpersSection = includedFields.sorted().joinToString("\n") { field ->
             val accessor = field.lowercase().replaceFirstChar { it.titlecase() }
@@ -290,6 +318,8 @@ object ReverseEngineeringWorkflow {
         }
         return """
 $macrosSection
+
+$dbManagerUtilitySection
 
 CLASS $className
 $fieldsSection
@@ -409,6 +439,10 @@ CLASS METHOD $className:delete(entityOrKey, options)
         RETURN .F.
     ENDIF
     RETURN repo:delete(::tableName(), key)
+
+CLASS METHOD $className:commit(options)
+    LOCAL manager := ::openDbManager(options)
+    RETURN manager:commit()
 """.trimIndent()
         } else ""}
 
@@ -431,9 +465,20 @@ CLASS METHOD $className:tableName()
     RETURN "${table.tableName}"
 
 CLASS METHOD $className:openRepository(options)
+    LOCAL manager := ::openDbManager(options)
+    RETURN manager:repository()
+
+CLASS METHOD $className:openDbManager(options)
+    LOCAL manager := iif(ValType(options) == "H" .AND. HHasKey(options, "dbManager"), options["dbManager"], NIL)
+    IF manager == NIL
+        manager := DaoDbManager():default()
+    ENDIF
+    RETURN manager
+
+CLASS METHOD $className:legacyRepository(options)
     LOCAL provider := iif(ValType(options) == "H" .AND. HHasKey(options, "repository"), options["repository"], NIL)
     IF provider == NIL
-        provider := DaoRepositoryProvider():default()
+        provider := ::openRepository(options)
     ENDIF
     RETURN provider
 """.trim()
