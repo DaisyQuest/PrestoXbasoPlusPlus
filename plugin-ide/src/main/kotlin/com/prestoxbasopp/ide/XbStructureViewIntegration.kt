@@ -31,15 +31,16 @@ class XbStructureViewBuilderFactory(
                     editorText = editor?.document?.text,
                 )
                 val rootItem = rootBuilder.buildRoot(content)
-                return XbStructureViewModel(psiFile, rootItem)
+                return XbStructureViewModel(psiFile, editor, rootItem)
             }
         }
     }
 }
 
 private class XbStructureViewModel(
-    psiFile: PsiFile,
-    rootItem: XbStructureItem,
+    private val psiFile: PsiFile,
+    private val editor: Editor?,
+    private val rootItem: XbStructureItem,
     private val delegate: StructureViewModel = StructureViewModelBase(
         psiFile,
         XbStructureViewElement(psiFile, rootItem),
@@ -63,6 +64,12 @@ private class XbStructureViewModel(
     override fun isAlwaysLeaf(element: StructureViewTreeElement): Boolean = when (element) {
         is XbStructureViewElement -> !element.hasChildren()
         else -> false
+    }
+
+    override fun getCurrentEditorElement(): Any? {
+        val offset = editor?.caretModel?.offset ?: return null
+        val selectedItem = XbStructureViewSelectionResolver.findDeepestItemAtOffset(rootItem, offset) ?: return null
+        return XbStructureViewElement.findPsiElement(psiFile, selectedItem) ?: psiFile.findElementAt(offset)
     }
 }
 
@@ -97,25 +104,55 @@ private class XbStructureViewElement(
 
     fun isRoot(): Boolean = item.elementType == com.prestoxbasopp.core.psi.XbPsiElementType.FILE
 
-    private fun findPsiElement(): PsiElement? {
-        if (item.elementType == com.prestoxbasopp.core.psi.XbPsiElementType.FILE) {
-            return psiFile
-        }
-        val startOffset = item.textRange.startOffset
-        val element = psiFile.findElementAt(startOffset) ?: return null
-        val targetRange = TextRange(item.textRange.startOffset, item.textRange.endOffset)
-        var current: PsiElement? = element
-        var bestMatch: PsiElement? = null
-        while (current != null && current != psiFile) {
-            val range = current.textRange
-            if (range == targetRange) {
-                return current
+    private fun findPsiElement(): PsiElement? = findPsiElement(psiFile, item)
+
+    companion object {
+        fun findPsiElement(psiFile: PsiFile, item: XbStructureItem): PsiElement? {
+            if (item.elementType == com.prestoxbasopp.core.psi.XbPsiElementType.FILE) {
+                return psiFile
             }
-            if (range.contains(targetRange)) {
-                bestMatch = current
+            val startOffset = item.textRange.startOffset
+            val element = psiFile.findElementAt(startOffset) ?: return null
+            val targetRange = TextRange(item.textRange.startOffset, item.textRange.endOffset)
+            var current: PsiElement? = element
+            var bestMatch: PsiElement? = null
+            while (current != null && current != psiFile) {
+                val range = current.textRange
+                if (range == targetRange) {
+                    return current
+                }
+                if (range.contains(targetRange)) {
+                    bestMatch = current
+                }
+                current = current.parent
             }
-            current = current.parent
+            return bestMatch ?: element
         }
-        return bestMatch ?: element
+    }
+}
+
+internal object XbStructureViewSelectionResolver {
+    fun findDeepestItemAtOffset(root: XbStructureItem, offset: Int): XbStructureItem? {
+        if (!containsOffset(root, offset)) {
+            return null
+        }
+
+        var current = root
+        while (true) {
+            val matchingChild = current.children
+                .filter { containsOffset(it, offset) }
+                .minByOrNull { it.textRange.endOffset - it.textRange.startOffset }
+                ?: return current
+            current = matchingChild
+        }
+    }
+
+    private fun containsOffset(item: XbStructureItem, offset: Int): Boolean {
+        val start = item.textRange.startOffset
+        val end = item.textRange.endOffset
+        return when {
+            end == start -> offset == start
+            else -> offset in start until end
+        }
     }
 }
