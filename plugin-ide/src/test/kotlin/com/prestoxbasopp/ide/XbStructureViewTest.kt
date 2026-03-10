@@ -208,6 +208,98 @@ class XbStructureViewTest {
         assertThat(root.children.map { it.name }).containsExactly("main")
     }
 
+
+
+    @Test
+    fun `selects deepest structure item at caret offset`() {
+        val nestedVariable = XbStructureItem(
+            name = "count",
+            elementType = XbPsiElementType.VARIABLE_DECLARATION,
+            textRange = XbTextRange(30, 35),
+            isMutable = true,
+            children = emptyList(),
+        )
+        val function = XbStructureItem(
+            name = "main",
+            elementType = XbPsiElementType.FUNCTION_DECLARATION,
+            textRange = XbTextRange(10, 50),
+            isMutable = null,
+            children = listOf(nestedVariable),
+        )
+        val root = XbStructureItem(
+            name = "sample.prg",
+            elementType = XbPsiElementType.FILE,
+            textRange = XbTextRange(0, 80),
+            isMutable = null,
+            children = listOf(function),
+        )
+
+        val selected = XbStructureViewSelectionResolver.findDeepestItemAtOffset(root, 32)
+
+        assertThat(selected).isEqualTo(nestedVariable)
+    }
+
+    @Test
+    fun `falls back to containing parent item when no child matches caret offset`() {
+        val function = XbStructureItem(
+            name = "main",
+            elementType = XbPsiElementType.FUNCTION_DECLARATION,
+            textRange = XbTextRange(10, 50),
+            isMutable = null,
+            children = emptyList(),
+        )
+        val root = XbStructureItem(
+            name = "sample.prg",
+            elementType = XbPsiElementType.FILE,
+            textRange = XbTextRange(0, 80),
+            isMutable = null,
+            children = listOf(function),
+        )
+
+        val selected = XbStructureViewSelectionResolver.findDeepestItemAtOffset(root, 55)
+
+        assertThat(selected).isEqualTo(root)
+    }
+
+    @Test
+    fun `returns null when caret offset is outside of root range`() {
+        val root = XbStructureItem(
+            name = "sample.prg",
+            elementType = XbPsiElementType.FILE,
+            textRange = XbTextRange(0, 80),
+            isMutable = null,
+            children = emptyList(),
+        )
+
+        val selected = XbStructureViewSelectionResolver.findDeepestItemAtOffset(root, 80)
+
+        assertThat(selected).isNull()
+    }
+
+    @Test
+    fun `treats zero-length ranges as a point selection`() {
+        val point = XbStructureItem(
+            name = "point",
+            elementType = XbPsiElementType.VARIABLE_DECLARATION,
+            textRange = XbTextRange(20, 20),
+            isMutable = true,
+            children = emptyList(),
+        )
+        val root = XbStructureItem(
+            name = "sample.prg",
+            elementType = XbPsiElementType.FILE,
+            textRange = XbTextRange(0, 80),
+            isMutable = null,
+            children = listOf(point),
+        )
+
+        val selectedAtPoint = XbStructureViewSelectionResolver.findDeepestItemAtOffset(root, 20)
+        val selectedBeforePoint = XbStructureViewSelectionResolver.findDeepestItemAtOffset(root, 19)
+
+        assertThat(selectedAtPoint).isEqualTo(point)
+        assertThat(selectedBeforePoint).isEqualTo(root)
+    }
+
     @Test
     fun `maps structure view icons by element type`() {
         val functionItem = XbStructureItem(
