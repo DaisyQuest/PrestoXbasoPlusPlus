@@ -276,7 +276,7 @@ class XbNavigationServiceTest {
             endfunction
         """.trimIndent()
         val root = XbPsiTextBuilder().build(source)
-        val declaration = root.children.filterIsInstance<com.prestoxbasopp.core.psi.XbPsiVariableDeclaration>()
+        val declaration = root.walk().filterIsInstance<com.prestoxbasopp.core.psi.XbPsiVariableDeclaration>()
             .first { it.symbolName == "count" && it.textRange.startOffset < source.indexOf("endfunction") }
         val snapshot = XbPsiSnapshot.fromElement(declaration)
 

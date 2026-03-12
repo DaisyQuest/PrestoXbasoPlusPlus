@@ -7,6 +7,7 @@ import com.prestoxbasopp.core.lexer.XbTokenType
 import com.prestoxbasopp.core.psi.XbPsiElement
 import com.prestoxbasopp.core.psi.XbPsiFile
 import com.prestoxbasopp.core.psi.XbPsiFunctionDeclaration
+import com.prestoxbasopp.core.psi.XbPsiBlock
 import com.prestoxbasopp.core.psi.XbPsiSnapshot
 import com.prestoxbasopp.core.psi.XbPsiSymbol
 import com.prestoxbasopp.core.psi.XbPsiSymbolReference
@@ -24,6 +25,7 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
         "method" to setOf("endmethod"),
     )
     private val allDeclarationEndKeywords = declarationEndKeywordsByStartKeyword.values.flatten().toSet()
+    private val classBoundaryKeywords = setOf("class", "endclass")
     private val variableKeywords = setOf("local", "static", "public", "private", "global")
     private val storageClassByKeyword = mapOf(
         "local" to XbVariableStorageClass.LOCAL,
@@ -40,14 +42,16 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
 
         collectDeclarations(tokens, source, declaredOffsets, elements)
         collectReferences(tokens, source, declaredOffsets, elements)
-
-        val sorted = elements.sortedBy { it.textRange.startOffset }
+        val sorted = elements.sortedWith(
+            compareBy<XbPsiElement> { it.textRange.startOffset }
+                .thenByDescending { it.textRange.endOffset - it.textRange.startOffset },
+        )
         val textRange = XbTextRange(0, max(source.length, 0))
         return XbPsiFile(
             name = fileName,
             textRange = textRange,
             text = source,
-            children = sorted,
+            children = nestElements(sorted, textRange),
         )
     }
 
@@ -64,6 +68,18 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
         var index = 0
         while (index < tokens.size) {
             val token = tokens[index]
+            val tokenKeyword = token.text.lowercase()
+            if (tokenKeyword == "class" && !isClassMethodDeclaration(tokens, index)) {
+                val classEndOffset = findClassEndOffset(
+                    tokens = tokens,
+                    searchStartIndex = index + 1,
+                    fallbackEndOffset = token.range.endOffset,
+                )
+                elements += XbPsiBlock(
+                    textRange = XbTextRange(token.range.startOffset, classEndOffset),
+                    text = slice(source, token.range.startOffset, classEndOffset),
+                )
+            }
             if (token.type == XbTokenType.KEYWORD) {
                 val keyword = token.text.lowercase()
                 if (keyword in functionKeywords) {
@@ -86,6 +102,14 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
                             textRange = XbTextRange(token.range.startOffset, endOffset),
                             text = slice(source, token.range.startOffset, endOffset),
                         )
+                        val bodyStartOffset = tokens.getOrNull(endIndex + 1)?.range?.startOffset
+                            ?: nameToken.range.endOffset
+                        val blockStartOffset = max(bodyStartOffset, token.range.startOffset)
+                        val normalizedBlockStartOffset = min(blockStartOffset, endOffset)
+                        elements += XbPsiBlock(
+                            textRange = XbTextRange(normalizedBlockStartOffset, endOffset),
+                            text = slice(source, normalizedBlockStartOffset, endOffset),
+                        )
                         parameterTokens.forEach { parameterToken ->
                             declaredOffsets += parameterToken.range.startOffset
                             elements += XbPsiVariableDeclaration(
@@ -104,6 +128,105 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
             }
             index++
         }
+    }
+
+    private fun nestElements(elements: List<XbPsiElement>, rootRange: XbTextRange): List<XbPsiElement> {
+        val rootNode = MutablePsiNode(
+            element = XbPsiBlock(rootRange, "", emptyList()),
+            children = mutableListOf(),
+        )
+        val stack = ArrayDeque<MutablePsiNode>()
+        stack.add(rootNode)
+
+        elements.forEach { element ->
+            while (stack.isNotEmpty() && !containsRange(stack.last().element.textRange, element.textRange)) {
+                stack.removeLast()
+            }
+            val parent = stack.lastOrNull() ?: rootNode
+            val node = MutablePsiNode(element, mutableListOf())
+            parent.children += node
+            if (canContainChildren(element)) {
+                stack.add(node)
+            }
+        }
+
+        return rootNode.children.map { cloneWithChildren(it) }
+    }
+
+    private fun cloneWithChildren(node: MutablePsiNode): XbPsiElement {
+        val nestedChildren = node.children.map { cloneWithChildren(it) }
+        val element = node.element
+        return when (element) {
+            is XbPsiFunctionDeclaration -> XbPsiFunctionDeclaration(
+                symbolName = element.symbolName,
+                parameters = element.parameters,
+                textRange = element.textRange,
+                text = element.text,
+                children = nestedChildren,
+            )
+            is XbPsiVariableDeclaration -> XbPsiVariableDeclaration(
+                symbolName = element.symbolName,
+                isMutable = element.isMutable,
+                storageClass = element.storageClass,
+                textRange = element.textRange,
+                text = element.text,
+                children = nestedChildren,
+            )
+            is XbPsiSymbolReference -> XbPsiSymbolReference(
+                symbolName = element.symbolName,
+                textRange = element.textRange,
+                text = element.text,
+                children = nestedChildren,
+            )
+            is XbPsiBlock -> XbPsiBlock(
+                textRange = element.textRange,
+                text = element.text,
+                children = nestedChildren,
+            )
+            else -> element
+        }
+    }
+
+    private fun canContainChildren(element: XbPsiElement): Boolean {
+        return element is XbPsiFunctionDeclaration || element is XbPsiBlock
+    }
+
+    private fun containsRange(parent: XbTextRange, child: XbTextRange): Boolean {
+        return parent.startOffset <= child.startOffset && parent.endOffset >= child.endOffset
+    }
+
+    private fun isClassMethodDeclaration(tokens: List<XbToken>, classKeywordIndex: Int): Boolean {
+        val nextToken = tokens.getOrNull(classKeywordIndex + 1) ?: return false
+        return nextToken.type == XbTokenType.KEYWORD && nextToken.text.equals("method", ignoreCase = true)
+    }
+
+    private fun findClassEndOffset(
+        tokens: List<XbToken>,
+        searchStartIndex: Int,
+        fallbackEndOffset: Int,
+    ): Int {
+        var nestedClassDepth = 0
+        var lastBodyTokenEndOffset = fallbackEndOffset
+        for (index in searchStartIndex until tokens.size) {
+            val token = tokens[index]
+            val keyword = token.text.lowercase()
+            if (keyword != "class" && keyword != "endclass" && keyword !in classBoundaryKeywords) {
+                lastBodyTokenEndOffset = token.range.endOffset
+                continue
+            }
+            if (keyword == "class" && !isClassMethodDeclaration(tokens, index)) {
+                nestedClassDepth++
+            } else if (keyword == "endclass") {
+                if (nestedClassDepth == 0) {
+                    return token.range.endOffset
+                }
+                nestedClassDepth--
+            } else if (keyword in classBoundaryKeywords && nestedClassDepth == 0) {
+                return lastBodyTokenEndOffset
+            }
+            lastBodyTokenEndOffset = token.range.endOffset
+        }
+        return fallbackEndOffset
     }
 
     private fun collectVariableDeclarations(
@@ -200,10 +323,6 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
         var lastBodyTokenEndOffset = fallbackEndOffset
         for (index in searchStartIndex until tokens.size) {
             val token = tokens[index]
-            if (token.type != XbTokenType.KEYWORD) {
-                lastBodyTokenEndOffset = token.range.endOffset
-                continue
-            }
             val keyword = token.text.lowercase()
             if (keyword in declarationEndKeywords) {
                 return token.range.endOffset
@@ -225,6 +344,11 @@ class XbPsiTextBuilder(private val lexer: XbLexer = XbLexer()) {
         return source.substring(safeStart, safeEnd)
     }
 }
+
+private data class MutablePsiNode(
+    val element: XbPsiElement,
+    val children: MutableList<MutablePsiNode>,
+)
 
 object XbPsiSymbolLocator {
     fun findSymbol(root: XbPsiElement, offset: Int): XbPsiSymbol? {
