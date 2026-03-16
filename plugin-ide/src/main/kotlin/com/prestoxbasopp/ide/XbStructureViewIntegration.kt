@@ -68,7 +68,7 @@ private class XbStructureViewModel(
 
     override fun getCurrentEditorElement(): Any? {
         val offset = editor?.caretModel?.offset ?: return null
-        return XbStructureViewSelectionResolver.findDeepestItemAtOffset(rootItem, offset)
+        return XbStructureViewSelectionResolver.findDeepestItemNearOffset(rootItem, offset)
     }
 }
 
@@ -131,6 +131,18 @@ private class XbStructureViewElement(
 }
 
 internal object XbStructureViewSelectionResolver {
+    fun findDeepestItemNearOffset(root: XbStructureItem, offset: Int): XbStructureItem? {
+        val current = findDeepestItemAtOffset(root, offset)
+        if (current == null) {
+            return if (offset > 0) findDeepestItemAtOffset(root, offset - 1) else null
+        }
+        val isRootSelection = current == root
+        if (!isRootSelection || offset <= root.textRange.startOffset) {
+            return current
+        }
+        return findDeepestItemAtOffset(root, offset - 1) ?: current
+    }
+
     fun findDeepestItemAtOffset(root: XbStructureItem, offset: Int): XbStructureItem? {
         if (!containsOffset(root, offset)) {
             return null
