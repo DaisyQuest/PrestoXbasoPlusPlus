@@ -167,5 +167,22 @@ class XbFoldingServiceTest {
         assertThat(ranges.map { it.placeholder }).contains("utilMain(...)")
         assertThat(ranges.map { it.placeholder }).doesNotContain("delete(...)")
     }
+
+    @Test
+    fun `folds unterminated functions through end of file`() {
+        val source = """
+            FUNCTION addTwoNumbers(a, b)
+                LOCAL sum
+                sum := a + b
+                RETURN sum
+        """.trimIndent()
+
+        val snapshot = XbPsiTextBuilder().buildSnapshot(source)
+        val ranges = XbFoldingService().foldingRanges(snapshot)
+
+        assertThat(ranges.map { it.placeholder }).contains("addTwoNumbers(...)")
+        assertThat(ranges.map { it.textRange }).contains(XbTextRange(0, source.length))
+    }
+
 }
 

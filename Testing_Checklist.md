@@ -86,4 +86,5 @@
 - Formatter fallback coverage now validates explicit `TAB_SIZE` overrides, UI-tab-size fallback when code style remains default, and invalid/zero indent guardrails so tab size remains user-configurable through formatter resolution.
 - Code style tab synchronization coverage for settings apply flow, including positive sync updates, no-op guardrails for non-positive tab sizes, and propagation into IntelliJ language indent indicators.
 - Structure view caret-sync coverage for deepest-node selection, root fallback behavior, outside-range guards, and zero-length range handling.
+- Structure view caret-sync now returns structure items directly for editor syncing, with explicit addTwoNumbers caret-selection coverage and folding recovery coverage for unterminated function/procedure declarations at EOF.
 

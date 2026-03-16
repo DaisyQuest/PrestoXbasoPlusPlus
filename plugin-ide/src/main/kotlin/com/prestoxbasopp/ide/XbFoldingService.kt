@@ -21,6 +21,7 @@ class XbFoldingService {
         val ranges = mutableListOf<XbFoldingRange>()
         collectRanges(snapshot, ranges)
         collectAstRanges(snapshot.text, ranges)
+        collectUnterminatedDeclarationRangeAtEof(snapshot.text, ranges)
         return uniqueRanges(ranges)
     }
 
@@ -96,6 +97,31 @@ class XbFoldingService {
         }
     }
 
+
+    private fun collectUnterminatedDeclarationRangeAtEof(source: String, ranges: MutableList<XbFoldingRange>) {
+        if (source.isBlank()) {
+            return
+        }
+        val declarationPattern = Regex("""(?im)^\s*(function|procedure)\s+([A-Za-z_][A-Za-z0-9_]*)""")
+        val match = declarationPattern.findAll(source).lastOrNull() ?: return
+        val matchStart = match.range.first
+        val declarationKeyword = match.groupValues[1].lowercase()
+        val endMarkerPattern = when (declarationKeyword) {
+            "function" -> Regex("""(?im)\bendfunction\b|\bendfunc\b""")
+            "procedure" -> Regex("""(?im)\bendprocedure\b|\bendproc\b""")
+            else -> return
+        }
+        val hasExplicitEndMarker = endMarkerPattern.find(source, startIndex = matchStart) != null
+        if (hasExplicitEndMarker) {
+            return
+        }
+        val inferredRange = XbTextRange(matchStart, source.length)
+        if (!isMultiChar(inferredRange)) {
+            return
+        }
+        val placeholder = "${match.groupValues[2]}(...)"
+        ranges += XbFoldingRange(inferredRange, placeholder)
+    }
     private fun uniqueRanges(ranges: List<XbFoldingRange>): List<XbFoldingRange> {
         val seen = LinkedHashSet<String>()
         val unique = mutableListOf<XbFoldingRange>()
