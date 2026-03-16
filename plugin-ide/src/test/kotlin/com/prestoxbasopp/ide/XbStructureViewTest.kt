@@ -323,6 +323,59 @@ class XbStructureViewTest {
         assertThat(selected).isEqualTo(function)
     }
 
+
+    @Test
+    fun `returns null for near-offset lookup when caret is before root start`() {
+        val root = XbStructureItem(
+            name = "sample.prg",
+            elementType = XbPsiElementType.FILE,
+            textRange = XbTextRange(3, 80),
+            isMutable = null,
+            children = emptyList(),
+        )
+
+        val selected = XbStructureViewSelectionResolver.findDeepestItemNearOffset(root, 0)
+
+        assertThat(selected).isNull()
+    }
+
+    @Test
+    fun `resolves near-offset lookup at exclusive range end to containing node`() {
+        val function = XbStructureItem(
+            name = "main",
+            elementType = XbPsiElementType.FUNCTION_DECLARATION,
+            textRange = XbTextRange(10, 50),
+            isMutable = null,
+            children = emptyList(),
+        )
+        val root = XbStructureItem(
+            name = "sample.prg",
+            elementType = XbPsiElementType.FILE,
+            textRange = XbTextRange(0, 80),
+            isMutable = null,
+            children = listOf(function),
+        )
+
+        val selected = XbStructureViewSelectionResolver.findDeepestItemNearOffset(root, 50)
+
+        assertThat(selected).isEqualTo(function)
+    }
+
+    @Test
+    fun `resolves near-offset lookup at root exclusive end to root node`() {
+        val root = XbStructureItem(
+            name = "sample.prg",
+            elementType = XbPsiElementType.FILE,
+            textRange = XbTextRange(0, 80),
+            isMutable = null,
+            children = emptyList(),
+        )
+
+        val selected = XbStructureViewSelectionResolver.findDeepestItemNearOffset(root, 80)
+
+        assertThat(selected).isEqualTo(root)
+    }
+
     @Test
     fun `maps structure view icons by element type`() {
         val functionItem = XbStructureItem(

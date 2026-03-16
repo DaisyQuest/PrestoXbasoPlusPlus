@@ -88,3 +88,4 @@
 - Structure view caret-sync coverage for deepest-node selection, root fallback behavior, outside-range guards, and zero-length range handling.
 - Structure view caret-sync now returns structure items directly for editor syncing, with explicit addTwoNumbers caret-selection coverage and folding recovery coverage for unterminated function/procedure declarations at EOF.
 
+- Structure view caret-sync boundary coverage for exclusive end offsets now selects nearest meaningful symbol (function/root) to keep editor caret and structure tab synchronized.
