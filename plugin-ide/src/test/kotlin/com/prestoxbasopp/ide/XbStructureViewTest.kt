@@ -300,6 +300,29 @@ class XbStructureViewTest {
         assertThat(selectedBeforePoint).isEqualTo(root)
     }
 
+
+    @Test
+    fun `selects function entry when caret is inside function body`() {
+        val function = XbStructureItem(
+            name = "addTwoNumbers",
+            elementType = XbPsiElementType.FUNCTION_DECLARATION,
+            textRange = XbTextRange(10, 90),
+            isMutable = null,
+            children = emptyList(),
+        )
+        val root = XbStructureItem(
+            name = "sample.prg",
+            elementType = XbPsiElementType.FILE,
+            textRange = XbTextRange(0, 120),
+            isMutable = null,
+            children = listOf(function),
+        )
+
+        val selected = XbStructureViewSelectionResolver.findDeepestItemAtOffset(root, 48)
+
+        assertThat(selected).isEqualTo(function)
+    }
+
     @Test
     fun `maps structure view icons by element type`() {
         val functionItem = XbStructureItem(

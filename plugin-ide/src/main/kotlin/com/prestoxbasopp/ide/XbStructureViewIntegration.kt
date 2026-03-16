@@ -68,8 +68,7 @@ private class XbStructureViewModel(
 
     override fun getCurrentEditorElement(): Any? {
         val offset = editor?.caretModel?.offset ?: return null
-        val selectedItem = XbStructureViewSelectionResolver.findDeepestItemAtOffset(rootItem, offset) ?: return null
-        return XbStructureViewElement.findPsiElement(psiFile, selectedItem) ?: psiFile.findElementAt(offset)
+        return XbStructureViewSelectionResolver.findDeepestItemAtOffset(rootItem, offset)
     }
 }
 
@@ -77,7 +76,7 @@ private class XbStructureViewElement(
     private val psiFile: PsiFile,
     private val item: XbStructureItem,
 ) : StructureViewTreeElement, SortableTreeElement, ItemPresentation {
-    override fun getValue(): Any = findPsiElement() ?: item
+    override fun getValue(): Any = item
 
     override fun getChildren(): Array<TreeElement> = item.children
         .map { XbStructureViewElement(psiFile, it) }
